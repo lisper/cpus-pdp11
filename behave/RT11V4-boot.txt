@@ -1,0 +1,1202 @@
+brad@mini:~/pdp11/behave$ ../simhv36-1/BIN/pdp11 simh.cmd 
+
+PDP-11 simulator V3.6-1
+Disabling XQ
+sim> boot rk
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 0
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 0
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 5
+io_rk_cpu_int_clear()
+rk: rkcs 5
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 0
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=0
+rk: buffer 000240 000416 000000 000000
+rk: done; error 0
+io_rk_cpu_int_clear()
+io_rk_write 17777404 1 decode 2
+rk: rkcs <- 0
+io_rk_cpu_int_clear()
+rk: rkcs 0
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 0
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 2
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 2000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 176000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 5
+io_rk_cpu_int_clear()
+rk: rkcs 5
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 1024
+rk: read() wc 1024
+rk: read() ret 2048
+rk: read(), dma wc=1024, ma=1000
+rk: buffer 012737 003174 000100 005037
+rk: done; error 0
+io_rk_cpu_int_clear()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 0
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 6
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 5
+io_rk_cpu_int_clear()
+rk: rkcs 5
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 3072
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=5006
+rk: buffer 000020 000002 000004 000000
+rk: done; error 0
+io_rk_cpu_int_clear()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 0
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 10
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 5
+io_rk_cpu_int_clear()
+rk: rkcs 5
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 4096
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=5006
+rk: buffer 000020 000003 000001 000000
+rk: done; error 0
+io_rk_cpu_int_clear()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 0
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 12
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 5
+io_rk_cpu_int_clear()
+rk: rkcs 5
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 5120
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=5006
+rk: buffer 000020 000004 000001 000000
+rk: done; error 0
+io_rk_cpu_int_clear()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 0
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 20
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 5
+io_rk_cpu_int_clear()
+rk: rkcs 5
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 6144
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=5006
+rk: buffer 000020 000000 000001 000000
+rk: done; error 0
+io_rk_cpu_int_clear()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 0
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 605
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 155000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 176400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 5
+io_rk_cpu_int_clear()
+rk: rkcs 5
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 150016
+rk: read() wc 768
+rk: read() ret 1536
+rk: read(), dma wc=768, ma=155000
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_clear()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 0
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 261
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 231
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177547
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 5
+io_rk_cpu_int_clear()
+rk: rkcs 5
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 68096
+rk: read() wc 153
+rk: read() ret 306
+rk: read(), dma wc=153, ma=5006
+rk: buffer 035352 035266 035270 043624
+rk: done; error 0
+io_rk_cpu_int_clear()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 0
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 262
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 121076
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 17144
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 160634
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 5
+io_rk_cpu_int_clear()
+rk: rkcs 5
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 68608
+rk: read() wc 7780
+rk: read() ret 15560
+rk: read(), dma wc=7780, ma=121076
+rk: buffer 000000 010704 104346 000415
+rk: done; error 0
+io_rk_cpu_int_clear()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 553
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+io_rk_cpu_int_set()
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 140800
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 561
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 141824
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 564
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 143360
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 567
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 144896
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 572
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 146432
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 602
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 148480
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 610
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 151552
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 620
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 153600
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 625
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 156160
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 630
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 157696
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 641
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 160256
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 652
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 164864
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 667
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 169472
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 705
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 174592
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 707
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 175616
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 711
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 176640
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 720
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 178176
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 722
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 179200
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 724
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 180224
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 727
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 181760
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 741
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5006
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 184832
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=5006
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+
+RT-11SJ  V04.00C 
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 331
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 136034
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 84480
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=136034
+rk: buffer 000167 001054 000167 001370
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 373
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 136034
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 97792
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=136034
+rk: buffer 005767 000020 001002 000167
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 6
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 140034
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 3072
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=140034
+rk: buffer 000020 000002 000004 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 1225
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 136752
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 254464
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=136752
+rk: buffer 020104 033065 032475 030460
+rk: done; error 0
+io_rk_cpu_int_set()
+
+.D 56io_rk_write 17777412 0 decode 5
+rk: rkda <- 343
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 135772
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+=io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 87552
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=135772
+rk: buffer 000167 001164 000167 001346
+rk: done; error 0
+io_rk_cpu_int_set()
+         
+         
+.TYio_rk_write 17777412 0 decode 5
+rk: rkda <- 361
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 135772
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 92672
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=135772
+rk: buffer 000167 001144 004421 012540
+rk: done; error 0
+io_rk_cpu_int_set()
+         
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 750
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 137772
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 188416
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=137772
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 751
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 6266
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 171512
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 188928
+rk: read() wc 3254
+rk: read() ret 6508
+rk: read(), dma wc=3254, ma=1000
+rk: buffer 060502 010046 010146 010246
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 762
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5610
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 2142
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 175636
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 191488
+rk: read() wc 1122
+rk: read() ret 2244
+rk: read(), dma wc=1122, ma=5610
+rk: buffer 000006 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 553
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 137772
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 140800
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=137772
+rk: buffer 000000 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 560
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 15556
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 274
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177504
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 141312
+rk: read() wc 188
+rk: read() ret 376
+rk: read(), dma wc=188, ma=15556
+rk: buffer 000000 000010 000340 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 767
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5610
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 3272
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 174506
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 194048
+rk: read() wc 1722
+rk: read() ret 3444
+rk: read(), dma wc=1722, ma=5610
+rk: buffer 000014 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 1002
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 14374
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 211
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177567
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 197632
+rk: read() wc 137
+rk: read() ret 274
+rk: read(), dma wc=137, ma=14374
+rk: buffer 000022 005767 171232 001003
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 6
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 135770
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 3072
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=135770
+rk: buffer 000020 000002 000004 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 1227
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 16350
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 255488
+rk: read() wc 256
+rk: read() ret 512
+rk: read(), dma wc=256, ma=16350
+rk: buffer 062527 061554 066557 020145
+rk: done; error 0
+io_rk_cpu_int_set()
+         
+         
+         
+         
+         
+         
+         
+         
+         
+         
+         
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 10
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 135770
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 4096
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=135770
+rk: buffer 000020 000003 000001 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 12
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 135770
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 5120
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=135770
+rk: buffer 000020 000004 000001 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 20
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 135770
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 6144
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=135770
+rk: buffer 000020 000000 000001 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 6
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 137772
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 3072
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=137772
+rk: buffer 000020 000002 000004 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 762
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 5610
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 2142
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 175636
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 191488
+rk: read() wc 1122
+rk: read() ret 2244
+rk: read(), dma wc=1122, ma=5610
+rk: buffer 000006 000000 000000 000000
+rk: done; error 0
+io_rk_cpu_int_set()
+io_rk_write 17777412 0 decode 5
+rk: rkda <- 262
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 120772
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 13400
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 164400
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 68608
+rk: read() wc 5888
+rk: read() ret 11776
+rk: read(), dma wc=5888, ma=120772
+rk: buffer 000000 010704 104346 000415
+rk: done; error 0
+io_rk_cpu_int_set()
+      io_rk_write 17777412 0 decode 5
+rk: rkda <- 343
+io_rk_write 17777410 0 decode 4
+rk: rkba <- 135772
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 1000
+io_rk_write 17777406 0 decode 3
+rk: rkwc <- 177000
+io_rk_write 17777404 0 decode 2
+rk: rkcs <- 105
+rk: rkcs 105
+rk_go!
+rk: not done
+io_rk_cpu_int_clear()
+rk_service; func 2
+rk: seek 87552
+rk: read() wc 512
+rk: read() ret 1024
+rk: read(), dma wc=512, ma=135772
+rk: buffer 000167 001164 000167 001346
+rk: done; error 0
+io_rk_cpu_int_set()
+   
+.D 56=0
+
+.
+
+Simulation stopped, PC: 156062 (MOV (SP)+,R5)
+sim> quit
+Goodbye

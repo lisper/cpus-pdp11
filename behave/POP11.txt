@@ -1,0 +1,117 @@
+
+pop-11 structure
+
+
+address_bus = mux usp, ksp, r7, src_reg, dst_reg, addr_reg
+
+alu_in1 = mux usp, ksp, r7, src_reg, dst_reg
+alu_in2 = src_reg, dst_reg
+
+alu_carry_in
+
+alu_out -> regs_input_bus, r7, usp, ksp
+
+regs_input_bus = mux  alu_out, alu_in2?
+regs_input_bus -> reg_file
+
+regs_output_bus = mux reg_file
+regs_output_bus -> src_reg, dst_reg
+
+input_bus -> op_code_reg, psw, r7, dst_reg, src_reg
+
+output_bus = mux addr_reg, alu2_in?,  regs_output_bus
+
+
+----
+
+sequence
+
+
+		-----------------------		---------
+				dec reg		load mem
+--------	-----------------------		---------
+load reg		load mem		pc+2
+--------	-----------------------		---------
+		inc reg
+		-------				---------
+						add index
+						---------
+
+
+trap__trap0 = 0;
+trap__trap1 = 1;
+trap__trap2 = 2;
+trap__trap3 = 3;
+trap__trap4 = 4;
+
+wb__wb_s0 = 0;
+
+ifetch__if0 = 0;
+ifetch__id0 = 1;
+ifetch__of0 = 2;
+ifetch__of1 = 3;
+ifetch__of2 = 4;
+ifetch__of3 = 5;
+ifetch__of4 = 6;
+ifetch__cc0 = 7;
+ifetch__br0 = 8;
+
+
+sop ->  of1 ifetch.src_op,  change_opr
+dop ->  of1 ifetch.dst_op
+rsd ->  of0 ifetch.dst_op, change_opr
+nof ->  if0 ex
+cco ->  cc0; if0
+bra ->  br0; if0
+dadd ->  
+dsub ->  
+unused -> trap
+
+
+of0 -> of1	select reg, select src
+
+of1 -> of0
+       of1
+       of2
+       of3
+
+of2 -> of3	compute ea in index mode
+
+of3 -> of0	read
+       of1
+       of4
+
+of4 -> of0	deferred
+       of1
+
+
+
+-----
+
+9
+8
+7
+6
+
+5 MODE  AUTO_DEC
+4 MODE  AUTO_INC
+3 INDR
+
+2 SPPC
+1 SPPC
+0
+     
+-----
+
+mode
+0 if0 or of1  
+1 of4
+2 if dreg=6|dreg=7, dmode=2|dmode=3,  reg<-reg+2, of3
+3 if dreg=6|dreg=7, dmode=2|dmode=3,  reg<-reg+2, of3
+4 if dreg=6|dreg=7, dmode=2|dmode=3,  reg<-reg-2, of3
+5 if dreg=6|dreg=7, dmode=2|dmode=3,  reg<-reg-2, of3
+6 of2
+7 of2
+
+
+   

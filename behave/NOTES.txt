@@ -1,0 +1,19 @@
+pdp-11
+
+mode	symbol	ea1	ea2		ea3		data		side-eff
+
+000 0	R	x	x		x		R		x
+001 1	(R)	R	x		x		M[R]		x
+010 2	(R)+	R	X		x		M[R]		R<-R+2
+011 3	@(R)+	R	M[R]		x		M[M[R]]		R<-R+2
+100 4	-(R)	R-2	x		x		M[R-2]		R<-R-2
+101 5	@-(R)	R-2	M[R-2]		x		M[M[R-2]]	R<-R-2
+110 6	X(R)	PC	M[PC]+R		x		M[M[PC]+R]	x
+111 7	@X(R)	PC	M[PC]+R		M[M[PC]+R]	M[M[M[PC]+R]]	x
+
+
+
+---
+
+clr does not need d3
+jump does not need d3
