@@ -1,0 +1,306 @@
+modes
+0	register	r
+1	(register)	(r)		mem
+2	(register)++	(r)+		mem
+3			@(r)+		mem
+4			-(r)		mem
+5			@-(r)		mem
+6			X(r)		mem
+7			@x(r)		mem
+
+ROLB	DOB	DD	1061MD  decode 10xxxx
+RORB	DOB	DD	1060MD
+
+ADCB	SOB	DD	1055MD
+ASLB	SOB	DD	1063MD
+ASRB	SOB	DD	1062MD
+TSTB	SOB	DD	1057MD
+SBCB	SOB	DD	1056MD
+NEGB	SOB	DD	1054MD
+DECB	SOB	DD	1053MD
+INCB	SOB	DD	1052MD
+COMB	SOB	DD	1051MD
+CLRB	SOB	DD	1050MD
+
+CSM	PC	DD	0070MD  decode 00xxxx
+SXT	SO	DD	0067MD
+ASL	SO	DD	0063MD
+ASR	SO	DD	0062MD
+ROL	DO	DD	0061MD
+ROR	DO	DD	0060MD
+TST	SO	DD	0057MD
+SBC	SO	DD	0056MD
+ADC	SO	DD	0055MD
+NEG	SO	DD	0054MD
+DEC	SO	DD	0053MD
+INC	SO	DD	0052MD
+COM	SO	DD	0051MD
+CLR	SO	DD	0050MD
+SWAB	SO	DD	0003MD
+
+XOR	DO	RDD	074RMD  decode 07xxxx
+
+ASH	DO	RSS	072RMR
+ASHC	DO	RSS	073RMR
+DIV	DO	RSS	071RMR
+MUL	DO	RSS	070RMR
+
+SUB	DO	SSDD	16MSMD  decode top 6 bits
+BISB	DOB	SSDD	15MSMD
+BICB	DOB	SSDD	14MSMD
+BITB	DOB	SSDD	13MSMD
+CPMB	DOB	SSDD	12MSMD
+MOVB	DOB	SSDD	11MSMD
+ADD	DO	SSDD	06MSMD
+BIS	DO	SSDD	05MSMD
+BIC	DO	SSDD	04MSMD
+BIT	DO	SSDD	03MSMD
+CMP	DO	SSDD	02MSMD
+MOV	DO	SSDD	01MSMD
+
+what is 103502 bcs?
+what is 103702 bcs?
+
+BCS	PC	8OFF	1034OO  decode 101xxx
+BCC	PC	8OFF	1030OO
+BLO	PC	8OFF	1035OO
+BHIS	PC	8OFF	1030OO
+BVS	PC	8OFF	1024OO
+BVC	PC	8OFF	1020OO
+BLOS	PC	8OFF	1014OO
+BHI	PC	8OFF	1010OO
+BMI	PC	8OFF	1004OO
+BPL	PC	8OFF	1000OO
+
+SOB	PC	R8OFF	077ROO
+BLO	PC	8OFF	0035OO
+BLE	PC	8OFF	0034OO
+BGE	PC	8OFF	0020OO
+BLT	PC	8OFF	0024OO
+BGT	PC	8OFF	0030OO
+BEQ	PC	8OFF	0014OO
+BNE	PC	8OFF	0010OO
+BR	PC	8OFF	0004OO
+
+SCC	CC	-	000277  decode 000xxx
+SEN	CC	-	000270
+SEZ	CC	-	000264
+SEV	CC	-	000262
+SEC	CC	-	000261
+S	CC	-	000260
+CCC	CC	-	000257
+CLN	CC	-	000250
+CLZ	CC	-	000244
+CLV	CC	-	000242
+CLC	CC	-	000241
+C	CC	-	000240
+
+TRAP	PC	-	104400	104777
+EMT	PC	-	104000	104377
+JSR	PC	RDD	004000
+
+MFPS	MS	DD	106700
+MTPD	MS	DD	106600
+MTPI	MS	DD	006600
+MFPD	MS	SS	106500
+MFPI	MS	SS	006500
+MTPS	MS	SS	106400
+MARK	PC	NN	006400
+
+SPL	PC	N	000230
+RTS	PC	R	000200
+JMP	PC	DD	000100
+
+MFPT	MS	-	000007
+RTT	MS	-	000006
+RESET	MS	-	000005
+IOT	PC	-	000004
+BPT	PC	-	000003
+RTI	MS	-	000002
+WAIT	MS	-	000001
+HALT	MS	-	000000
+
+
+-------------------
+
+
+DECODE
+
+decode IR[15:12]
+    /* Opcode 0: no operands, specials, branches, JSR, SOPs */
+    case 000:
+        decode IR[11:6]
+        case 000: no operand
+            decode IR[2:0]
+
+        case 001:                                       /* JMP */
+	    dstspec dd
+
+        case 002:                                       /* RTS et al*/
+	  if 0200-0207
+ 	     istate <- pop
+          if 0230-0237
+             no operand
+          if 0240-0277
+             no operand
+
+          210-227
+            illegal
+    
+        case 003:                                       /* SWAB */
+	    dstspec dd
+
+        case 004: case 005:                             /* BR */
+        case 006: case 007:                             /* BR */
+        case 010: case 011:                             /* BNE */
+        case 012: case 013:                             /* BNE */
+        case 014: case 015:                             /* BEQ */
+        case 016: case 017:                             /* BEQ */
+        case 020: case 021:                             /* BGE */
+        case 022: case 023:                             /* BGE */
+        case 024: case 025:                             /* BLT */
+        case 026: case 027:                             /* BLT */
+        case 030: case 031:                             /* BGT */
+        case 032: case 033:                             /* BGT */
+        case 034: case 035:                             /* BLE */
+        case 036: case 037:                             /* BLE */
+	    no operand
+
+        case 040: case 041: case 042: case 043:         /* JSR */
+        case 044: case 045: case 046: case 047:
+        case 050:                                       /* CLR */
+        case 051:                                       /* COM */
+        case 052:                                       /* INC */
+        case 053:                                       /* DEC */
+        case 054:                                       /* NEG */
+        case 055:                                       /* ADC */
+        case 056:                                       /* SBC */
+        case 057:                                       /* TST */
+        case 060:                                       /* ROR */
+        case 061:                                       /* ROL */
+        case 062:                                       /* ASR */
+        case 063:                                       /* ASL */
+	    dstspec dd
+
+        case 064:                                       /* MARK */
+	    istate
+
+        case 065:                                       /* MFPI */
+        case 066:                                       /* MTPI */
+        case 067:                                       /* SXT */
+	    dstspec dd
+
+        case 070:                                       /* CSM */
+	    istate
+
+	else
+	  illegal
+
+
+    /* Opcodes 01 - 06: double operand word instructions */
+    case 001:                                           /* MOV */
+    ...
+    case 006:                                           /* ADD */
+    case 016:                                           /* SUB */
+	srcspec dd
+	dstspec dd
+
+    /* Opcode 07: EIS, FIS (not implemented), CIS
+    case 007:
+        decode IR[11:9]
+        case 0:                                         /* MUL */
+        case 1:                                         /* DIV */
+        case 2:                                         /* ASH */
+        case 3:                                         /* ASHC */
+        case 4:                                         /* XOR */
+	    dstspec dd
+
+        case 5:                                         /* FIS */
+        case 6:                                         /* CIS */
+            illegal
+
+        case 7:                                         /* SOB */
+	    no operand
+
+    /* Opcode 10: branches, traps, SOPs */
+    case 010:
+        decode IR[11:6]
+        case 000: case 001:                             /* BPL */
+        case 002: case 003:                             /* BPL */
+        case 004: case 005:                             /* BMI */
+        case 006: case 007:                             /* BMI */
+        case 010: case 011:                             /* BHI */
+        case 012: case 013:                             /* BHI */
+        case 014: case 015:                             /* BLOS */
+        case 016: case 017:                             /* BLOS */
+        case 020: case 021:                             /* BVC */
+        case 022: case 023:                             /* BVC */
+        case 024: case 025:                             /* BVS */
+        case 026: case 027:                             /* BVS */
+        case 030: case 031:                             /* BCC */
+        case 032: case 033:                             /* BCC */
+        case 034: case 035:                             /* BCS */
+        case 036: case 037:                             /* BCS */
+        case 040: case 041: case 042: case 043:         /* EMT */
+        case 044: case 045: case 046: case 047:         /* TRAP */
+	    no operand
+
+        case 050:                                       /* CLRB */
+        case 051:                                       /* COMB */
+        case 052:                                       /* INCB */
+        case 053:                                       /* DECB */
+        case 054:                                       /* NEGB */
+        case 055:                                       /* ADCB */
+        case 056:                                       /* SBCB */
+        case 057:                                       /* TSTB */
+        case 060:                                       /* RORB */
+        case 061:                                       /* ROLB */
+        case 062:                                       /* ASRB */
+        case 063:                                       /* ASLB */
+        case 064:                                       /* MTPS */
+	  dstspec dd, byte
+
+        case 065:                                       /* MFPD */
+        case 066:                                       /* MTPD */
+	  dstspec dd
+
+        case 067:                                       /* MFPS */
+	  dstspec dd, byte
+
+   /* Opcodes 11 - 16: double operand byte instructions */
+    case 011:                                           /* MOVB */
+    case 012:                                           /* CMPB */
+    case 013:                                           /* BITB */
+    case 014:                                           /* BICB */
+    case 015:                                           /* BISB */
+	srcspec dd, byte
+	dstspec dd, byte
+
+    /* Opcode 17: floating point */
+    case 017:
+        illegal
+
+
+EXECUTE
+
+decode IR[15:12]
+    /* Opcode 0: no operands, specials, branches, JSR, SOPs */
+    case 000:
+        decode IR[11:6]
+        case 000: no operand
+            decode IR[2:0]
+            case 0:                                     /* HALT */
+	       if priv -> priv trap
+            case 1:                                     /* WAIT */
+	       wait
+            case 3:                                     /* BPT */
+	       trap bpt
+            case 4:                                     /* IOT */
+	       trap io
+            case 5:                                     /* RESET */
+            case 6:                                     /* RTT */
+               possible ill trap
+            case 2:                                     /* RTI */
+               istate <- pop2
+            case 7:                                     /* MFPT */
+               r0 <-
