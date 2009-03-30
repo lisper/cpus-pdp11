@@ -26,21 +26,17 @@ int interrupt;
 u16 interrupt_vector;
 
 u16 psw;
+#define cc_n  ((psw >> 3) & 1)
+#define cc_z  ((psw >> 2) & 1)
+#define cc_v  ((psw >> 1) & 1)
+#define cc_c  ((psw >> 0) & 1)
+#define ipl   ((psw >> 5) & 7)
 
 u16 regs[8];
 #define sp regs[6]
 #define pc regs[7]
 
-/* these are really part of psw */
-int cc_n, cc_z, cc_v, cc_c;
-
 /* wires */
-int dmode, dreg;
-int smode, sreg;
-u22 src, dest;
-int reg;
-int offset;
-
 wire assert_wait;
 wire assert_halt;
 wire assert_reset;
@@ -55,6 +51,7 @@ wire assert_trap_bus;
 
 wire assert_int;
 wire16 assert_int_vec;
+wire16 assert_int_ipl;
 
 wire16 isn_15_12;
 wire16 isn_15_9;
@@ -90,9 +87,11 @@ wire need_destspec_dd_word,
     need_src_data;
 
 wire need_s1,
+    need_s2,
+    need_s4,
     need_d1,
-    need_s3,
-    need_d3;
+    need_d2,
+    need_d4;
 
 wire22 dd_ea_mux;
 wire22 ss_ea_mux;
@@ -111,23 +110,44 @@ u16 isn;
 u22 dd_ea;
 u22 ss_ea;
 
-int dd_mode, dd_reg;
+int dd_mode,
+    dd_reg;
 
 wire dd_dest_mem,
     dd_dest_reg,
     dd_ea_ind,
-    dd_regdelta,
     dd_post_incr,
     dd_pre_dec;
 
 int ss_mode, ss_reg;
 
+/* regs */
+u16 ss_data;	/* result of s states */
+u16 dd_data;	/* result of d states */
+u16 e1_data;	/* result of e states */
+
 wire ss_dest_mem,
     ss_dest_reg,
     ss_ea_ind,
-    ss_regdelta,
     ss_post_incr,
     ss_pre_dec;
+
+wire16 pc_mux;
+wire16 sp_mux;
+wire16 psw_mux;
+
+wire16 ss_data_mux;
+wire16 dd_data_mux;
+wire16 e1_data_mux;
+wire16 ss_mem_data;
+wire16 dd_mem_data;
+
+wire16 pop_mem_data;
+wire16 pc_mem_data;
+wire16 psw_mem_data;
+
+wire16 e1_result;
+wire32 e32_result;
 
 /* cpudmodes */
 enum {
@@ -143,14 +163,16 @@ int current_mode;
  *
  * f1 fetch;	   clock isn
  * c1 decode;
-
+ *
  * s1 source1;	   clock ss_data
  * s2 source2;	   clock ss_data
- * s3 source2;	   clock ss_data
-
+ * s3 source3;	   clock ss_data
+ * s4 source4;	   clock ss_data
+ *
  * d1 dest1;	   clock dd_data
  * d2 dest2;	   clock dd_data
  * d3 dest3;	   clock dd_data
+ * d4 dest4;	   clock dd_data
  *
  * e1 execute;	   clock pc, sp & reg+-
  * w1 writeback1;  clock e1_result
@@ -171,74 +193,81 @@ int current_mode;
  * minimum states/instructions = 3
  * maximum states/instructions = 10
  *
+ * mode	symbol	ea1	ea2		ea3		data		side-eff
  * 
- * modes
- * 0	register	r
- * 1	(register)	(r)		mem
- * 2	(register)++	(r)+		mem
- * 3			@(r)+		mem
- * 4			-(r)		mem
- * 5			@-(r)		mem
- * 6			X(r)		mem
- * 7			@x(r)		mem
+ * 0	R	x	x		x		R		x
+ * 1	(R)	R	x		x		M[R]		x
+ * 2	(R)+	R	X		x		M[R]		R<-R+2
+ * 3	@(R)+	R	M[R]		x		M[M[R]]		R<-R+2
+ * 4	-(R)	R-2	x		x		M[R-2]		R<-R-2
+ * 5	@-(R)	R-2	M[R-2]		x		M[M[R-2]]	R<-R-2
+ * 6	X(R)	PC	M[PC]+R		x		M[M[PC]+R]	x
+ * 7	@X(R)	PC	M[PC]+R		M[M[PC]+R]	M[M[M[PC]+R]]	x
  *
  * mode 0 -
  *  f1  pc++
- *  c1  dd_data = r
+ *  c1
+ *  d1  dd_data = r
  *  e1  e1_result
  *             
  * mode 1 -
  *  f1  pc++
- *  c1  dd_ea = r
- *  d3  dd_data = mem_data	optional
+ *  c1
+ *  d1  dd_ea = r
+ *  d4  dd_data = mem_data	optional
  *  e1  e1_result
  *
  * mode 2 -
  *  f1  pc++
- *  c1  dd_ea = r
- *  d3  dd_data = mem_data	optional
- *  e1  e1_result, r++
+ *  c1
+ *  d1  dd_ea = r, r++
+ *  d4  dd_data = mem_data	optional
+ *  e1  e1_result
  *
  * mode 3 -
  *  f1  pc++
  *  c1  dd_ea = r
- *  d1  dd_ea = mem_data
- *  d3  dd_data = mem_data	optional
- *  e1  e1_result, r++
+ *  d1  dd_ea = mem_data, r++
+ *  d4  dd_data = mem_data	optional
+ *  e1  e1_result
  *
  * mode 4 -
  *  f1  pc++
- *  c1  dd_ea = r-x
- *  d3  dd_data = mem_data	optional
- *  e1  e1_result, r--
+ *  c1
+ *  d1  dd_ea = r-x, r--
+ *  d4  dd_data = mem_data	optional
+ *  e1  e1_result
  *
  * mode 5 -
  *  f1  pc++
- *  c1  dd_ea = r-x
- *  d1  dd_ea = mem_data
- *  d3  dd_data = mem_data	optional
- *  e1  e1_result, r--
+ *  c1
+ *  d1  dd_ea = r-x, r--
+ *  d2  dd_ea = mem_data
+ *  d4  dd_data = mem_data	optional
+ *  e1  e1_result
  *
  * mode 6 -
  *  f1  pc++
- *  c1  dd_ea = pc
- *  d1  dd_ea = mem_data + regs[dd_reg], pc++
- *  d3  dd_data = mem_data	optional
+ *  c1
+ *  d1  dd_ea = pc, pc++
+ *  d2  dd_ea = mem_data + regs[dd_reg]
+ *  d4  dd_data = mem_data	optional
  *  e1  e1_result
  *
  * mode 7 -
  *  f1  pc++
- *  c1  dd_ea = pc
- *  d1  dd_ea = mem_data + regs[dd_reg], pc++
- *  d2  dd_ea = mem_data
- *  d3  dd_data = mem_data	optional
+ *  c1
+ *  d1  dd_ea = pc, pc++
+ *  d2  dd_ea = mem_data + regs[dd_reg]
+ *  d3  dd_ea = mem_data
+ *  d4  dd_data = mem_data	optional
  *  e1  e1_result
  *
  */
 enum {
     h1,
     f1, c1,
-    s1, s2, s3, d1, d2, d3,
+    s1, s2, s3, s4, d1, d2, d3, d4,
     e1, w1, o1, o2, o3, p1, t1, t2, t3, t4, i1
 };
 
@@ -254,35 +283,14 @@ void fetch(void)
     }
 
     printf("------\n");
-    printf("f1: pc=%o, sp=%o, psw=%o n%d z%d v%d c%d\n",
-	   pc, sp, psw, cc_n, cc_z, cc_v, cc_c);
+    printf("f1: pc=%o, sp=%o, psw=%o ipl%d n%d z%d v%d c%d\n",
+	   pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
     printf("    regs %6o %6o %6o %6o \n", regs[0], regs[1], regs[2], regs[3]);
     printf("         %6o %6o %6o %6o \n", regs[4], regs[5], regs[6], regs[7]);
+
     isn = read_mem(pc);
     dis(isn, raw_read_memory(pc+2), raw_read_memory(pc+4));
 }
-
-wire16 pc_mux;
-wire16 sp_mux;
-wire16 psw_mux;
-
-wire16 ss_data_mux;
-wire16 dd_data_mux;
-wire16 e1_data_mux;
-wire16 ss_mem_data;
-wire16 dd_mem_data;
-
-wire16 pop_mem_data;
-wire16 pc_mem_data;
-wire16 psw_mem_data;
-
-wire16 e1_result;
-wire32 e32_result;
-
-/* latches */
-u16 ss_data;	/* result of s states */
-u16 dd_data;	/* result of d states */
-u16 e1_data;	/* result of e states */
 
 /*
  * effective address mux;
@@ -291,18 +299,16 @@ u16 e1_data;	/* result of e states */
 void
 do_ea_mux(void)
 {
-    wire dd_mode67, ss_mode67;
-
-    ss_mode67 = ss_mode == 6 || ss_mode == 7;
-    dd_mode67 = dd_mode == 6 || dd_mode == 7;
-
     /*
-     * ea calculation:
+     * source ea calculation:
      * decode - load from register or pc
      * s1 - if mode 6,7 add result of pc+2 fetch to reg
+     * s2 - result of fetch
+     * t1 - trap vector
+     * t4 - incr ea
      */
     ss_ea_mux =
-	istate == c1 ?
+	(istate == c1 || istate == s1) ?
 	(ss_mode == 0 ? regs[ss_reg] :
          ss_mode == 1 ? regs[ss_reg] :
 	 ss_mode == 2 ? regs[ss_reg] :
@@ -312,14 +318,16 @@ do_ea_mux(void)
 	 ss_mode == 6 ? pc :
 	 ss_mode == 7 ? pc :
 	 0) :
-	istate == s1 ?
+
+	istate == s2 ?
 	(ss_mode == 3 ? ss_mem_data :
          ss_mode == 5 ? ss_mem_data :
-         ss_mode == 6 ? (ss_mem_data + regs[ss_reg] + (ss_reg == 7 ? 2 : 0)) & 0xffff :
-	 ss_mode == 7 ? (ss_mem_data + regs[ss_reg] + (ss_reg == 7 ? 2 : 0)) & 0xffff :
+         ss_mode == 6 ? (ss_mem_data + regs[ss_reg]) & 0xffff :
+	 ss_mode == 7 ? (ss_mem_data + regs[ss_reg]) & 0xffff :
 	 ss_ea) :
-        istate == s2 ?
-        (ss_mem_data) :
+
+        istate == s3 ? ss_mem_data :
+
 	istate == t1 ? ((trap_odd | trap_bus) ? 004 :
                         trap_ill ? 010 :
                         trap_priv ? 010 :
@@ -329,15 +337,36 @@ do_ea_mux(void)
                         trap_trap ? 034 :
                         interrupt ? interrupt_vector :
                         0) :
+
+        istate == t2 ? ss_ea :
         istate == t3 ? ss_ea + 2 :
+        istate == t4 ? ss_ea + 2 :
 	0;
 
-    if (ss_ea != ss_ea_mux && istate < e1) {
+    if (ss_ea != ss_ea_mux && (istate < e1 || istate >= t1)) {
 	printf("  ea_mux: ss_ea_mux %6o\n", ss_ea_mux);
+
+        if (istate == s1) {
+            printf("          ss_mem_data %6o, R%d %6o\n",
+                   ss_mem_data, ss_reg, regs[ss_reg]);
+        }
+
+        if (istate >= t1) {
+            printf("          %d%d%d%d %d%d%d%d %d\n",
+                   trap_odd, trap_bus, trap_ill, trap_priv,
+                   trap_bpt, trap_iot, trap_emt, trap_trap,
+                   interrupt);
+        }
     }
 
+    /*
+     * dest ea calculation:
+     * decode - load from register or pc
+     * d1 - if mode 6,7 add result of pc+2 fetch to reg
+     * d2 - result of fetch
+     */
     dd_ea_mux =
-	istate == c1 ?
+	(istate == c1 || istate == d1) ?
 	(dd_mode == 0 ? regs[dd_reg] :
          dd_mode == 1 ? regs[dd_reg] :
 	 dd_mode == 2 ? regs[dd_reg] :
@@ -348,28 +377,22 @@ do_ea_mux(void)
 	 dd_mode == 7 ? pc :
 	 0) :
 
-//        istate == s1 ?
-//        (dd_reg == 7 && (dd_mode < 4) ? pc + 2 : dd_ea) :
-
-//        istate == s2 ?
-//        (dd_reg == 7 && (dd_mode < 4) ? pc + 2 : dd_ea) :
-
-        istate == s3 ?
-        ((dd_reg == 7 && (dd_mode < 4 || dd_mode > 5)) ? (ss_reg == 7 ? pc + 2 : pc) :
-         (dd_mode == 6 || dd_mode == 7) ? (ss_reg == 7 ? pc + 2 : pc) : dd_ea) :
-
-	istate == d1 ?
+        istate == d2 ?
 	(dd_mode == 3 ? dd_mem_data :
          dd_mode == 5 ? dd_mem_data :
-         dd_mode == 6 ? (dd_mem_data + regs[dd_reg] + (dd_reg == 7 ? 2 : 0)) & 0xffff :
-	 dd_mode == 7 ? (dd_mem_data + regs[dd_reg] + (dd_reg == 7 ? 2 : 0)) & 0xffff :
+         dd_mode == 6 ? (dd_mem_data + regs[dd_reg]) & 0xffff :
+	 dd_mode == 7 ? (dd_mem_data + regs[dd_reg]) & 0xffff :
 	 dd_ea) :
-        istate == d2 ?
-        (dd_mem_data) :
+
+        istate == d3 ? dd_mem_data :
 	dd_ea;
 
     if (dd_ea != dd_ea_mux && istate < e1) {
 	printf("  ea_mux: dd_ea_mux %6o\n", dd_ea_mux);
+        if (istate == d1) {
+            printf("          dd_mem_data %6o, R%d %6o\n",
+                   dd_mem_data, dd_reg, regs[dd_reg]);
+        }
     }
 }
 
@@ -384,13 +407,13 @@ do_data_mux(void)
 
     ss_data_mux =
 	(istate == c1) && (ss_mode == 0 || is_isn_rxx) ? regs[ss_reg] :
-	(istate == s3) ? ss_mem_data :
+	(istate == s4) ? ss_mem_data :
 	ss_data_mux;
 
     dd_data_mux =
 	(istate == c1) && dd_mode == 0 ? regs[dd_reg] :
 	(istate == c1) && (isn_15_6 == 01067) ? psw & 0377 : /* mfps */
-	(istate == d3) ? dd_mem_data :
+	(istate == d4) ? dd_mem_data :
 	dd_data_mux;
 
     e1_data_mux =
@@ -414,30 +437,17 @@ do_data_mux(void)
 void
 do_pc_mux(void)
 {
-    wire ss_mode45, ss_mode67;
-    wire dd_mode45, dd_mode67;
-
-    ss_mode45 = ss_mode == 4 || ss_mode == 5;
-    ss_mode67 = ss_mode == 6 || ss_mode == 7;
-
-    dd_mode45 = dd_mode == 4 || dd_mode == 5;
-    dd_mode67 = dd_mode == 6 || dd_mode == 7;
-
     pc_mux =
-	(istate == f1 && !assert_trap_bus) ? pc + 2 :
-	(istate == s1 && ss_mode67   ) ? pc + 2 :
-(istate == s1 && ss_reg == 7 && !need_src_data) ? pc + 2 :
-(istate == s3 && ss_reg == 7 && (ss_mode == 2 || ss_mode == 3)) ? pc + 2 :
-(istate == d1 && dd_reg == 7 && !need_dest_data && !need_d3) ? pc + 2 :
-//(istate == d1 && dd_mode67   ) ? pc + 2 :
-(istate == d3 && (dd_reg == 7 || dd_mode67)) ? pc + 2 :
-	(istate == e1 && latch_pc    ) ? new_pc :
-        (istate == o1 || istate == t3) ? pc_mem_data :
+	(istate == f1 && !assert_trap_bus              ) ? pc + 2 :
+	(istate == s1 && (ss_mode == 6 || ss_mode == 7)) ? pc + 2 :
+	(istate == d1 && (dd_mode == 6 || dd_mode == 7)) ? pc + 2 :
+	(istate == e1 && latch_pc                      ) ? new_pc :
+        (istate == o1 || istate == t3                  ) ? pc_mem_data :
 	pc;
 
     if (pc_mux != pc) {
-	printf("  pc_mux: istate %d, ss %d dd %d, delta %o %o, pc %o\n",
-	       istate, ss_mode, dd_mode, ss_regdelta, dd_regdelta, pc_mux);
+	printf("  pc_mux: istate %d, ss %d dd %d, latch_pc %d, pc_mux %o\n",
+	       istate, ss_mode, dd_mode, latch_pc, pc_mux);
     }
 }
 
@@ -459,18 +469,21 @@ do_sp_mux(void)
 void
 do_cc_mux(void)
 {
-    wire16 new_psw;
+    wire16 new_psw = psw;
 
-    cc_n = latch_cc ? new_cc_n : cc_n;
-    cc_z = latch_cc ? new_cc_z : cc_z;
-    cc_v = latch_cc ? new_cc_v : cc_v;
-    cc_c = latch_cc ? new_cc_c : cc_c;
+    if (latch_cc && istate == e1) {
+        if (1) printf("  new cc: %d %d %d %d\n", 
+                      new_cc_n,new_cc_z,new_cc_v,new_cc_c);
 
-    /* wire */
-    new_psw = (psw & 0xf0) | (cc_n << 3) | (cc_z << 2) | (cc_v << 1) | cc_c;
+        new_psw &= ~017;
+        if (new_cc_n) new_psw |= 1 << 3;
+        if (new_cc_z) new_psw |= 1 << 2;
+        if (new_cc_v) new_psw |= 1 << 1;
+        if (new_cc_c) new_psw |= 1 << 0;
+    }
 
     if (new_psw != psw)
-        printf(" cc_mux: new_psw %o\n", new_psw);
+        printf("  cc_mux: new_psw %o\n", new_psw);
 
     psw = new_psw;
 }
@@ -490,6 +503,42 @@ do_psw_mux(void)
 void
 do_reg_mux(void)
 {
+    if (istate == c1) {
+        printf("  reg_mux: ss post %d pre %d reg %d\n",
+               ss_post_incr, ss_pre_dec, ss_reg);
+        printf("           dd post %d pre %d reg %d\n",
+               dd_post_incr, dd_pre_dec, dd_reg);
+    }
+
+    if (istate == s1)
+    {
+        if (ss_post_incr)
+        {
+            regs[ss_reg] += (need_srcspec_dd_byte && ss_reg < 6) ? 1 : 2;
+            printf(" R%d <- %o (ss r++)\n", ss_reg, regs[ss_reg]);
+        }
+        else
+            if (ss_pre_dec)
+            {
+                regs[ss_reg] -= (need_srcspec_dd_byte && ss_reg < 6) ? 1 : 2;
+                printf(" R%d <- %o (ss r--)\n", ss_reg, regs[ss_reg]);
+            }
+    }
+
+    if (istate == d1)
+    {
+        if (dd_post_incr)
+        {
+            regs[dd_reg] += (need_destspec_dd_byte && dd_reg < 6) ? 1 : 2;
+            printf(" R%d <- %o (dd r++)\n", dd_reg, regs[dd_reg]);
+        }
+        else
+            if (dd_pre_dec)
+            {
+                regs[dd_reg] -= (need_destspec_dd_byte && dd_reg < 6) ? 1 : 2;
+                printf(" R%d <- %o (dd r--)\n", dd_reg, regs[dd_reg]);
+            }
+    }
 }
 
 void decode1(void)
@@ -509,7 +558,8 @@ void decode1(void)
 	(isn_15_12 == 0 && (isn_11_6 >= 065 && isn_11_6 <= 067)) || /* m*,sxt */
 	(isn_15_12 >= 001 && isn_15_12 <= 006) ||		    /* mov-add */
 	(isn_15_12 == 007 && (isn_11_9 >= 0 && isn_11_9 <= 4)) ||   /* mul-xor */
-	(isn_15_12 == 010 && (isn_11_6 >= 065 && isn_11_6 <= 066)); /* mtpx */
+	(isn_15_12 == 010 && (isn_11_6 >= 065 && isn_11_6 <= 066))|| /* mtpx */
+	(isn_15_12 == 016);					     /* sub */
 
     need_destspec_dd_byte =
 	(isn_15_12 == 010 && (isn_11_6 >= 050 && isn_11_6 <= 064)) || /* xxxb */
@@ -532,7 +582,7 @@ void decode1(void)
 	(isn_15_6 == 0002 && (isn_5_0 >= 30 && isn_5_0 <= 77)) ||
 	(isn_15_12 == 0 && (isn_11_6 >= 004 && isn_11_6 <= 037)) ||
 	(isn_15_12 == 007 && (isn_11_9 == 7)) ||
-	(isn_15_6 == 0047);
+0/*	(isn_15_6 == 0047) */;
 
     is_illegal =
 	(isn_15_6 == 0000 && isn_5_0 > 007) ||
@@ -566,13 +616,15 @@ void decode1(void)
 	!(isn_15_12 == 002) && !(isn_15_12 == 012) &&	/* cmp/cmpb */
 	!(isn_15_12 == 003) &&				/* bit */
 	!(isn_15_9 == 0004) &&					/* jsr */
-	!((isn_15_6 >= 01000) && (isn_15_6 <= 01034)) && 	/* bcs-bpl */
+	!((isn_15_6 >= 01000) && (isn_15_6 <= 01037)) && 	/* bcs-blo */
 	!((isn_15_6 >= 00004) && (isn_15_6 <= 00034)); 		/* br-ble */
 
     need_dest_data = 
 	!(isn_15_12 == 001) &&				/* mov */
 	!(isn_15_12 == 011) &&				/* movb */
-        !(isn_15_9 == 004);				/* jsr */
+        !(isn_15_9 == 004) &&				/* jsr */
+        !((isn_15_6 == 00050) || (isn_15_6 == 01050)) && /* clr/clrb */
+        !(isn_15_6 == 00001);				/* jmp */
 
     is_isn_byte = (isn & (u16)0100000 ? 1 : 0) &&
 	!(isn_15_12 == 016);				/* sub */
@@ -593,33 +645,36 @@ void decode1(void)
     is_isn_r32 =
 	(isn_15_9 == 071);				/* div */
 
+    need_src_data =
+        !((isn_15_6 == 00050) || (isn_15_6 == 01050));	/* clr/clrb */
+
     printf("c1: isn %06o ss %d, dd %d, no_op %d, ill %d, push %d, pop %d\n",
 	   isn, need_srcspec_dd, need_destspec_dd,
 	   no_operand, is_illegal, need_push_state, need_pop_reg);
+
+    printf("    need_src_data %d, need_dest_data %d\n",
+           need_src_data, need_dest_data);
 
     /* ea setup */
     ss_mode = (isn >> 9) & 7;
     ss_reg = (isn >> 6) & 7;
 
-    store_ss_reg = (isn_15_9 == 004 && ss_reg != 7);	/* jsr */
-
     ss_dest_mem = ss_mode != 0;
     ss_dest_reg = ss_mode == 0;
     ss_ea_ind = ss_mode == 7;
 
-    ss_regdelta = ss_reg > 5 ? 2 : 0;
+    store_ss_reg = (isn_15_9 == 004 && ss_reg != 7);	/* jsr */
 
     ss_post_incr =
         need_srcspec_dd &&
-ss_reg != 7 &&
         (ss_mode == 2 || ss_mode == 3);
 
     ss_pre_dec =
         need_srcspec_dd &&
         (ss_mode == 4 || ss_mode == 5);
 
-    printf(" ss: mode%d reg%d ea %06o ind%d delta %d post %d pre %d\n",
-	   ss_mode, ss_reg, ss_ea, ss_ea_ind, ss_regdelta,
+    printf(" ss: mode%d reg%d ind%d post %d pre %d\n",
+	   ss_mode, ss_reg, ss_ea_ind,
 	   ss_post_incr, ss_pre_dec);
 
     /* */
@@ -630,77 +685,88 @@ ss_reg != 7 &&
     dd_dest_reg = dd_mode == 0;
     dd_ea_ind = dd_mode == 7;
 
-    dd_regdelta = dd_reg > 5 ? 2 : 0;
-
     dd_post_incr =
         need_destspec_dd &&
-dd_reg != 7 &&
         (dd_mode == 2 || dd_mode == 3);
 
     dd_pre_dec =
         need_destspec_dd &&
         (dd_mode == 4 || dd_mode == 5);
 
-    printf(" dd: mode%d reg%d ea %06o ind%d delta %d post %d pre %d\n",
-	   dd_mode, dd_reg, dd_ea, dd_ea_ind, dd_regdelta,
+    printf(" dd: mode%d reg%d ea %06o ind%d post %d pre %d\n",
+	   dd_mode, dd_reg, dd_ea, dd_ea_ind,
 	   dd_post_incr, dd_pre_dec);
 
     /* */
-    need_s1 = need_srcspec_dd && (ss_mode == 3 || ss_mode >= 5);
-    need_d1 = need_destspec_dd && (dd_mode == 3 || dd_mode >= 5);
+    need_s1 = need_srcspec_dd;
+    need_d1 = need_destspec_dd;
 
-    need_src_data = 1;
+    need_s2 = need_srcspec_dd && (ss_mode == 3 || ss_mode >= 5);
+    need_d2 = need_destspec_dd && (dd_mode == 3 || dd_mode >= 5);
 
-    need_s3 = need_srcspec_dd && ss_mode != 0 && need_src_data;
-    need_d3 = need_destspec_dd && dd_mode != 0 && need_dest_data;
+    need_s4 = need_srcspec_dd && ss_mode != 0 && need_src_data;
+    need_d4 = need_destspec_dd && dd_mode != 0 && need_dest_data;
 
-    printf(" need dest_data %d; s1 %d, s3 %d; d1 %d, d3 %d\n", 
+    printf(" need: dest_data %d; s1 %d, s2 %d, s4 %d; d1 %d, d2 %d, d4 %d\n", 
            need_dest_data,
-           need_s1, need_s3, need_d1, need_d3);
+           need_s1, need_s2, need_s4, need_d1, need_d2, need_d4);
+}
+
+wire22 se_addr(wire22 addr)
+{
+//    if (addr & 0x8000) return addr | 0x3f0000;
+    if (addr >= 0xe000) return addr | 0x3f0000;
+    return addr;
 }
 
 void source1(void)
 {
-if (ss_ea & 0x8000) ss_ea |= 0x3f0000;
-    ss_mem_data = read_mem(ss_ea);
-    printf("s1: ss_ea %6o, [ea]=%6o\n", ss_ea, ss_mem_data);
+    printf("s1:\n");
 }
 
 void source2(void)
 {
-    printf("s2: ss_ea %6o\n", ss_ea);
-    ss_mem_data = read_mem(ss_ea);
+    ss_mem_data = read_mem(se_addr(ss_ea_mux));
+    printf("s2: ss_ea_mux %6o, [ea]=%6o\n", ss_ea_mux, ss_mem_data);
 }
 
 void source3(void)
 {
-if (ss_ea & 0x8000) ss_ea |= 0x3f0000;
-    printf("s3: ss_ea %6o\n", ss_ea);
-    ss_mem_data = read_mem(ss_ea);
+    printf("s3: ss_ea_mux %6o\n", ss_ea_mux);
+    ss_mem_data = read_mem(se_addr(ss_ea_mux));
+}
+
+void source4(void)
+{
+    printf("s4: ss_ea_mux %6o\n", ss_ea_mux);
+    ss_mem_data = is_isn_byte ?
+        read_mem_byte(se_addr(ss_ea_mux)) :
+        read_mem(se_addr(ss_ea_mux));
 }
 
 void dest1(void)
 {
-    printf("d1: dd_ea %6o\n", dd_ea);
-//hack
-if (dd_ea & 0x8000) dd_ea |= 0x3f0000;
-    dd_mem_data = read_mem(dd_ea);
+    printf("d1: dd_ea %6o, dd_ea_mux %6o\n", dd_ea, dd_ea_mux);
 }
 
 void dest2(void)
 {
-    printf("d2:\n");
-//hack
-if (dd_ea & 0x8000) dd_ea |= 0x3f0000;
-    dd_mem_data = read_mem(dd_ea);
+    printf("d2: dd_ea %6o, dd_ea_mux %6o\n", dd_ea, dd_ea_mux);
+    dd_mem_data = read_mem(se_addr(dd_ea));
 }
 
 void dest3(void)
 {
     printf("d3:\n");
-//hack
-if (dd_ea & 0x8000) dd_ea |= 0x3f0000;
-    dd_mem_data = read_mem(dd_ea);
+    dd_mem_data = read_mem(se_addr(dd_ea_mux));
+}
+
+void dest4(void)
+{
+    printf("d4:\n");
+    dd_mem_data = is_isn_byte ?
+        read_mem_byte(se_addr(dd_ea_mux)) :
+        read_mem(se_addr(dd_ea_mux));
 }
 
 wire sign_l(wire32 v)
@@ -776,11 +842,11 @@ void execute(void)
         if (0) printf("e: isn_15_12 == 0\n");
 
 	if (isn_11_6 == 000 && isn_5_0 < 010) {
-	    if (0) printf("e: ms\n");
+	    if (0) printf("e: MS\n");
 	    switch (isn & 7) {
 
 	    case 0:					    /* halt */
-		printf("e: halt\n");
+		printf("e: HALT\n");
 		if (current_mode == mode_kernel)
 		    assert_halt = 1;
 		else
@@ -788,7 +854,7 @@ void execute(void)
 		break;
 
 	    case 1:					    /* wait */
-		printf("e: wait\n");
+		printf("e: WAIT\n");
 		assert_wait = 1;
 		break;
 
@@ -1061,8 +1127,8 @@ void execute(void)
 		e1_result = (dd_data >> 1) | (dd_data & 0100000);
 		new_cc_n = sign_w(e1_result);
 		new_cc_z = zero_w(e1_result);
-		new_cc_c = ss_data & 1 ? 1 : 0;
-		new_cc_v = new_cc_n ^ new_cc_c ? 1 : 0;
+		new_cc_c = (dd_data & 1) ? 1 : 0;
+		new_cc_v = (new_cc_n ^ new_cc_c) ? 1 : 0;
 		latch_cc = 1;
 		break;
 
@@ -1103,9 +1169,9 @@ void execute(void)
 	    e1_result = ss_data - dd_data;
 	    new_cc_n = sign_w(e1_result);
 	    new_cc_z = zero_w(e1_result);
-	    new_cc_v = ((ss_data ^ dd_data) &
-			(~dd_data ^ e1_result)) & 0x8000 ? 1 : 0;
-	    new_cc_c = ss_data < dd_data;
+	    new_cc_v = sign_w((ss_data ^ dd_data) &
+                              (~dd_data ^ e1_result));
+	    new_cc_c = ss_data < dd_data ? 1 : 0;
 	    latch_cc = 1;
 	    break;
 
@@ -1153,8 +1219,8 @@ void execute(void)
 		new_cc_n = e32_result & 0x80000000 ? 1 : 0;
 		new_cc_z = e32_result & 0xffffffff ? 0 : 1;
 		new_cc_v = 0;
-		new_cc_c = ((e32_result > 077777) ||
-			    (e32_result < -0100000)) ? 1 : 0;
+		new_cc_c = (((int)e32_result > 077777) ||
+			    ((int)e32_result < -0100000)) ? 1 : 0;
 		latch_cc = 1;
 		break;
 
@@ -1254,7 +1320,7 @@ void execute(void)
 		    new_cc_c = (ss_data >> 31) & 1 ? 1 : 0;
 		}
 		else {					/* [33,63] = -31,-1 */
-		    e32_result = (src >> (64 - shift)) | (-sign << (shift - 32));
+		    e32_result = (ss_data >> (64 - shift)) | (-sign << (shift - 32));
 		    new_cc_v = 0;
 		    new_cc_c = ((ss_data >> (63 - shift)) & 1);
 		}
@@ -1327,47 +1393,47 @@ void execute(void)
 
             case 016: case 017:				/* blos */
                 new_pc_b;
-                latch_pc = (cc_c | cc_z);
+                latch_pc = (cc_c | cc_z) ? 1 : 0;
                 break;
 
             case 020: case 021:				/* bvc */
                 new_pc_w;
-                latch_pc = cc_v == 0;
+                latch_pc = cc_v == 0 ? 1 : 0;
                 break;
 
             case 022: case 023:				/* bvc */
                 new_pc_b;
-                latch_pc = cc_v == 0;
+                latch_pc = cc_v == 0 ? 1 : 0;
                 break;
 
             case 024: case 025:				/* bvs */
                 new_pc_w;
-                latch_pc = cc_v;
+                latch_pc = cc_v ? 1 : 0;
                 break;
 
             case 026: case 027:				/* bvs */
                 new_pc_b;
-                latch_pc = cc_v;
+                latch_pc = cc_v ? 1 : 0;
                 break;
 
             case 030: case 031:				/* bcc */
                 new_pc_w;
-                latch_pc = cc_c == 0;
+                latch_pc = cc_c == 0 ? 1 : 0;
                 break;
 
             case 032: case 033:				/* bcc */
                 new_pc_b;
-                latch_pc = cc_c == 0;
+                latch_pc = cc_c == 0 ? 1 : 0;
                 break;
 
             case 034: case 035:				/* bcs */
                 new_pc_w;
-                latch_pc = cc_c;
+                latch_pc = cc_c ? 1 : 0;
                 break;
 
             case 036: case 037:				/* bcs */
                 new_pc_b;
-                latch_pc = cc_c;
+                latch_pc = cc_c ? 1 : 0;
                 break;
 
             case 040: case 041: case 042: case 043:	/* emt */
@@ -1387,7 +1453,7 @@ void execute(void)
                 new_cc_z = 1;
                 latch_cc = 1;
 
-                e1_result = ss_data & 0xff00;
+                e1_result = 0/*ss_data & 0xff00*/;
 //note: byte write of src - rmw to memory word
                 break;
 
@@ -1593,12 +1659,12 @@ void execute(void)
 
 	case 016:					    /* sub */
 	    if (0) printf(" SUB %6o %6o\n", ss_data, dd_data);
-	    e1_result = dd_data - ss_data;
+	    e1_result = (dd_data - ss_data) & 0xffff;
 	    new_cc_n = sign_w(e1_result);
 	    new_cc_z = zero_w(e1_result);
-	    new_cc_v = ((ss_data ^ dd_data) &
-			(~dd_data ^ e1_result)) & 0x8000 ? 1 : 0;
-	    new_cc_c = dd_data < ss_data;
+	    new_cc_v = sign_w(((int)ss_data ^ (int)dd_data) &
+                              (~(int)ss_data ^ (int)e1_result));
+	    new_cc_c = (int)dd_data < (int)ss_data ? 1 : 0;
 	    latch_cc = 1;
 	    break;
 	}
@@ -1614,17 +1680,21 @@ void writeback1(void)
 {
     printf("w1: dd%d %d, dd_data %o, ss%d %d, ss_data %o, e1_data %o\n",
 	   dd_mode, dd_reg, dd_data, ss_mode, ss_reg, ss_data, e1_data);
-    printf("    dd_ea %06o, store_result %d, store_ss_reg %d, store_32 %d\n",
-	   dd_ea, store_result, store_ss_reg, store_result32);
+    printf("    dd_ea_mux %06o, store_result %d, store_ss_reg %d, store_32 %d\n",
+	   dd_ea_mux, store_result, store_ss_reg, store_result32);
 
     if (store_result && dd_dest_mem) {
-//hack
-if (dd_ea & 0x8000) dd_ea |= 0x3f0000;
-	write_mem(dd_ea, e1_data);
+        if (is_isn_byte)
+            write_mem_byte(se_addr(dd_ea_mux), e1_data);
+        else
+            write_mem(se_addr(dd_ea_mux), e1_data);
     }
     else if (store_result && dd_dest_reg) {
 	printf(" r%d <- %06o (dd)\n", dd_reg, e1_data);
-	regs[dd_reg] = e1_data;
+        if (is_isn_byte)
+            regs[dd_reg] = (regs[dd_reg] & 0xff00) | (e1_data & 0xff);
+        else
+            regs[dd_reg] = e1_data;
     }
     else if (store_ss_reg) {
 	printf(" r%d <- %06o (ss)\n", ss_reg, e1_data);
@@ -1656,20 +1726,12 @@ void pop3(void) {
 
 void push1(void) {
     printf("p1:\n");
-//    write_mem(sp-2, regs[ss_reg]);
-//this is so wrong
-    write_mem((dd_mode == 2 || dd_mode == 3) && dd_reg == 6 ? sp : sp-2, regs[ss_reg]);
+    write_mem(sp-2, regs[ss_reg]);
 }
 
 void trap1(void) {
     printf("t1: sp %o\n", sp);
     write_mem(sp-2, psw);
-
-        /* hack - need to unify bits & psw in rtl */
-        cc_n = (psw >> 3) & 1;
-        cc_z = (psw >> 2) & 1;
-        cc_v = (psw >> 1) & 1;
-        cc_c = (psw >> 0) & 1;
 }
 
 void trap2(void) {
@@ -1678,13 +1740,13 @@ void trap2(void) {
 }
 
 void trap3(void) {
-    printf("t3: ss_ea %o\n", ss_ea);
-    pc_mem_data = read_mem(ss_ea);
+    printf("t3: ss_ea %o, ss_ea_mux %o\n", ss_ea, ss_ea_mux);
+    pc_mem_data = read_mem(ss_ea_mux);
 }
 
 void trap4(void) {
-    printf("t4: ss_ea %o\n", ss_ea);
-    psw_mem_data = read_mem(ss_ea);
+    printf("t4: ss_ea %o, ss_ea_mux %o\n", ss_ea, ss_ea_mux);
+    psw_mem_data = read_mem(ss_ea_mux);
 }
 
 void wait1(void) {
@@ -1779,6 +1841,22 @@ void check_traps(void)
     }
 }
 
+int ipl_below(int psw_ipl, int ipl_bits)
+{
+    int mask;
+
+    if (psw_ipl == 7)
+        return 0;
+
+    mask = ~((1 << psw_ipl) - 1);
+    printf("ipl: mask 0x%x, bits 0x%x\n", mask, ipl_bits);
+
+    if (ipl_bits & mask)
+        return 1;
+
+    return 0;
+}
+
 void check_interrupts(void)
 {
     wire ok_to_assert_int;
@@ -1787,12 +1865,13 @@ void check_interrupts(void)
     ok_to_assert_int = istate == f1 || istate == i1;
 
     if (ok_to_assert_int) {
-        if (assert_int) {
+        if (assert_int & ipl_below(ipl, assert_int_ipl)) {
             interrupt = 1;
             interrupt_vector = assert_int_vec;
-        } else {
-            interrupt = 0;
+            printf("interrupt: asserts; vector %o\n", interrupt_vector);
         }
+    } else {
+        interrupt = 0;
     }
 }
 
@@ -1825,38 +1904,46 @@ next_state()
     switch (istate) {
     case f1: new_istate = c1; break;
 
-    case c1: new_istate = need_s1 ? s1 :
-			  need_s3 ? s3 :
-			  need_d1 ? d1 :
-			  need_d3 ? d3 :
-        		  need_push_state ? p1 :
-			  e1;
+    case c1: new_istate = no_operand ? e1 :
+        		  need_s1 ? s1 :
+        		  need_d1 ? d1 :
+        		  e1;
+                          break;
+
+    case s1: new_istate = need_s2 ? s2 :
+			  need_s4 ? s4 :
+			  d1;
 			  break;
 
-    case s1: new_istate = ss_ea_ind ? s2 :
-        		  need_s3 ? s3 :
-                          need_d1 ? d1 :
-                          need_push_state ? p1 :
-                          e1;
+    case s2: new_istate = ss_ea_ind ? s3 :
+        		  need_s4 ? s4 :
+                          d1;
                           break;
 
-    case s2: new_istate = s3; break;
+    case s3: new_istate = s4; break;
 
-    case s3: new_istate = need_d1 ? d1 : 
-        		  need_d3 ? d3 :
+    case s4: new_istate = d1; break;
+
+    case d1: new_istate = need_d2 ? d2 : 
+        		  need_d4 ? d4 :
         		  need_push_state ? p1 :
         		  e1;
                           break;
 
-    case d1: new_istate = dd_ea_ind ? d2 :
-        		  need_d3 ? d3 :
+    case d2: new_istate = dd_ea_ind ? d3 :
+        		  need_d4 ? d4 :
         		  need_push_state ? p1 :
         		  e1;
                           break;
 
-    case d2: new_istate = d3; break;
+    case d3: new_istate = need_d4 ? d4 :
+        		  need_push_state ? p1 :
+        		  e1;
+                          break;
 
-    case d3: new_istate = need_push_state ? p1 : e1; break;
+    case d4: new_istate = need_push_state ? p1 :
+        		  e1;
+                          break;
 
     case e1: new_istate = need_pop_reg ? o3 :
 			  need_pop_pc_psw ? o1 :
@@ -1893,6 +1980,10 @@ void update_muxes(void)
     do_cc_mux();
     do_reg_mux();
     do_psw_mux();
+
+    /* do it again since I'm a poor sim writer */
+    do_pc_mux();
+    do_sp_mux();
 }
 
 void clock_registers(void)
@@ -1904,19 +1995,15 @@ void clock_registers(void)
 
     if (istate == o2 || istate == t4) {
         psw = psw_mux;
-
-        /* hack - need to unify bits & psw in rtl */
-        cc_n = (psw >> 3) & 1;
-        cc_z = (psw >> 2) & 1;
-        cc_v = (psw >> 1) & 1;
-        cc_c = (psw >> 0) & 1;
     }
 
     ss_ea = (istate == c1 ||
 	     istate == s1 ||
 	     istate == s2 ||
+	     istate == s3 ||
 	     istate == d1 ||
 	     istate == d2 ||
+	     istate == d3 ||
 	     istate == t1 ||
 	     istate == t3) ?
 	ss_ea_mux : ss_ea;
@@ -1926,11 +2013,12 @@ void clock_registers(void)
 	     istate == s2 ||
 	     istate == s3 ||
 	     istate == d1 ||
-	     istate == d2) ?
+	     istate == d2 ||
+	     istate == d3) ?
 	dd_ea_mux : dd_ea;
 
     if (istate == c1 ||
-	istate == s3 || istate == d3)
+	istate == s4 || istate == d4)
     {
 	ss_data = ss_data_mux;
 	dd_data = dd_data_mux;
@@ -1941,43 +2029,16 @@ void clock_registers(void)
 
     if (istate == e1) {
 	e1_data = e1_data_mux;
-
-	if (0) {
-	    printf("clock: ss post %d pre %d reg %d\n",
-		   ss_post_incr, ss_pre_dec, ss_reg);
-	    printf("	   dd post %d pre %d reg %d\n",
-		   dd_post_incr, dd_pre_dec, dd_reg);
-	}
-
-	if (ss_post_incr) {
-	    regs[ss_reg] += need_srcspec_dd_byte ? 1 : 2;
-	    printf("clock: R%d <- %06o (ss++)\n", ss_reg, regs[ss_reg]);
-	}
-	if (ss_pre_dec) {
-	    regs[ss_reg] -= need_srcspec_dd_byte ? 1 : 2;
-	    printf("clock: R%d <- %06o (--ss)\n", ss_reg, regs[ss_reg]);
-	}
-
-	if (dd_post_incr) {
-	    regs[dd_reg] += need_destspec_dd_byte ? 1 : 2;
-	    printf("clock: R%d <- %06o (dd++)\n", dd_reg, regs[dd_reg]);
-	}
-
-	if (dd_pre_dec) {
-	    regs[dd_reg] -= need_destspec_dd_byte ? 1 : 2;
-	    printf("clock: R%d <- %06o (--dd)\n", dd_reg, regs[dd_reg]);
-	}
-
-//hack
-if (dd_mode == 1) dd_ea = regs[dd_reg];
     }
-    else if (istate == o3)
+
+    if (istate == o3)
         e1_data = pop_mem_data;
     else
 	e1_data = e1_data;
 
     next_state();
 }
+
 
 void step(int *did_trap)
 {
@@ -1993,9 +2054,11 @@ refetch:
 	case s1: source1(); break;
 	case s2: source2(); break;
 	case s3: source3(); break;
+	case s4: source4(); break;
 	case d1: dest1(); break;
 	case d2: dest2(); break;
 	case d3: dest3(); break;
+	case d4: dest4(); break;
 	case e1: execute(); break;
 	case w1: writeback1(); break;
 	case o1: pop1(); break;
@@ -2013,13 +2076,6 @@ refetch:
         if (istate == h1)
             break;
     }
-
-#if 0
-    if (pc > 0555) {
-	printf("pc %o; halting\n", pc);
-	halted = 1;
-    }
-#endif
 }
 
 void run(void)
@@ -2030,6 +2086,8 @@ void run(void)
     istate = f1;
 
     while (1) {
+        reset_transactions();
+
 	if (istate != h1)
 	    step(&did_trap);
         else {
@@ -2045,8 +2103,10 @@ void run(void)
             if (did_trap) {
                 trap_sync = 1;
                 did_trap = 0;
-            } else
+            } else {
                 cosim_check();
+                check_transactions();
+            }
         }
     }
 }
@@ -2067,6 +2127,7 @@ void debug_reset(void)
 
     regs[6] = 0;
     regs[7] = 0;
+    psw = 0340;
 }
 
 void
