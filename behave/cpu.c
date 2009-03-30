@@ -355,7 +355,8 @@ do_ea_mux(void)
 //        (dd_reg == 7 && (dd_mode < 4) ? pc + 2 : dd_ea) :
 
         istate == s3 ?
-        (dd_reg == 7 && (dd_mode < 4 || dd_mode > 5) ? (ss_reg == 7 ? pc + 2 : pc) : dd_ea) :
+        ((dd_reg == 7 && (dd_mode < 4 || dd_mode > 5)) ? (ss_reg == 7 ? pc + 2 : pc) :
+         (dd_mode == 6 || dd_mode == 7) ? (ss_reg == 7 ? pc + 2 : pc) : dd_ea) :
 
 	istate == d1 ?
 	(dd_mode == 3 ? dd_mem_data :
@@ -429,7 +430,7 @@ do_pc_mux(void)
 (istate == s3 && ss_reg == 7 && (ss_mode == 2 || ss_mode == 3)) ? pc + 2 :
 (istate == d1 && dd_reg == 7 && !need_dest_data && !need_d3) ? pc + 2 :
 //(istate == d1 && dd_mode67   ) ? pc + 2 :
-(istate == d3 && dd_reg == 7) ? pc + 2 :
+(istate == d3 && (dd_reg == 7 || dd_mode67)) ? pc + 2 :
 	(istate == e1 && latch_pc    ) ? new_pc :
         (istate == o1 || istate == t3) ? pc_mem_data :
 	pc;
@@ -451,8 +452,7 @@ do_sp_mux(void)
 	sp;
 
     if (sp_mux != sp) {
-	printf(" sp_mux: istate %d, sp %o\n",
-	       istate, sp);
+	printf(" sp_mux: sp_mux %o\n", sp_mux);
     }
 }
 
@@ -514,7 +514,7 @@ void decode1(void)
     need_destspec_dd_byte =
 	(isn_15_12 == 010 && (isn_11_6 >= 050 && isn_11_6 <= 064)) || /* xxxb */
 	(isn_15_12 == 010 && (isn_11_6 == 067)) ||		      /* mfps */
-	(isn_15_12 >= 011 && isn_15_12 <= 016);			      /* xxxb */
+	(isn_15_12 >= 011 && isn_15_12 < 016);			      /* xxxb */
 
     need_destspec_dd = need_destspec_dd_word | need_destspec_dd_byte;
 
@@ -574,7 +574,8 @@ void decode1(void)
 	!(isn_15_12 == 011) &&				/* movb */
         !(isn_15_9 == 004);				/* jsr */
 
-    is_isn_byte = isn & (u16)0100000 ? 1 : 0;
+    is_isn_byte = (isn & (u16)0100000 ? 1 : 0) &&
+	!(isn_15_12 == 016);				/* sub */
 
     is_isn_rdd = 
 	(isn_15_9 == 004) ||				/* jsr */
@@ -1655,7 +1656,9 @@ void pop3(void) {
 
 void push1(void) {
     printf("p1:\n");
-    write_mem(sp-2, regs[ss_reg]);
+//    write_mem(sp-2, regs[ss_reg]);
+//this is so wrong
+    write_mem((dd_mode == 2 || dd_mode == 3) && dd_reg == 6 ? sp : sp-2, regs[ss_reg]);
 }
 
 void trap1(void) {
