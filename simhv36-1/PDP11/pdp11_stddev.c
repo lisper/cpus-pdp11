@@ -102,8 +102,22 @@ t_stat clk_show_freq (FILE *st, UNIT *uptr, int32 val, void *desc);
    tti_reg      TTI register list
 */
 
+
+extern int private_clk_rd (int32 *data, int32 PA, int32 access);
+extern int private_clk_wr (int32 data, int32 PA, int32 access);
+
+extern int private_tti_rd (int32 *data, int32 PA, int32 access);
+extern int private_tti_wr (int32 data, int32 PA, int32 access);
+
+extern int private_tto_rd (int32 *data, int32 PA, int32 access);
+extern int private_tto_wr (int32 data, int32 PA, int32 access);
+
 DIB tti_dib = {
+#if 0
     IOBA_TTI, IOLN_TTI, &tti_rd, &tti_wr,
+#else
+    IOBA_TTI, IOLN_TTI, &private_tti_rd, &private_tti_wr,
+#endif
     1, IVCL (TTI), VEC_TTI, { NULL }
     };
 
@@ -149,7 +163,11 @@ DEVICE tti_dev = {
 */
 
 DIB tto_dib = {
+#if 0
     IOBA_TTO, IOLN_TTO, &tto_rd, &tto_wr,
+#else
+    IOBA_TTO, IOLN_TTO, &private_tto_rd, &private_tto_wr,
+#endif
     1, IVCL (TTO), VEC_TTO, { NULL }
     };
 
@@ -195,7 +213,11 @@ DEVICE tto_dev = {
 */
 
 DIB clk_dib = {
+#if 0
     IOBA_CLK, IOLN_CLK, &clk_rd, &clk_wr,
+#else
+    IOBA_CLK, IOLN_CLK, &private_clk_rd, &private_clk_wr,
+#endif
     1, IVCL (CLK), VEC_CLK, { &clk_inta }
     };
 

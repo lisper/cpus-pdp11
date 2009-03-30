@@ -110,7 +110,11 @@ void io_rk_cpu_int_set(struct rk_context_s *rk)
 {
     extern int int_req[];
 
-    printf("io_rk_cpu_int_set()\n");
+    printf("io_rk_cpu_int_set() %s\n",
+           rk == &rk_context[1] ? "rtl" :
+           rk == &rk_context[0] ? "simh" :
+           "unknown");
+
     if (rk == &rk_context[1])
         cpu_int_set(3);
     if (rk == &rk_context[0])
@@ -121,7 +125,11 @@ void io_rk_cpu_int_clear(struct rk_context_s *rk)
 {
     extern int int_req[];
 
-    printf("io_rk_cpu_int_clear()\n");
+    printf("io_rk_cpu_int_clear() %s\n",
+           rk == &rk_context[1] ? "rtl" :
+           rk == &rk_context[0] ? "simh" :
+           "unknown");
+
     if (rk == &rk_context[1])
         cpu_int_clear(3);
     if (rk == &rk_context[0])
@@ -264,7 +272,12 @@ void rk_service(struct rk_context_s *rk)
 //        rker |= RKER_OVR;
 //    }
 
-    printf("rk: seek %d\n", da * sizeof(short));
+//    printf("rk: seek %d\n", da * sizeof(short));
+    printf("rk: seek %s %d\n",
+           rk == &rk_context[1] ? "rtl" :
+           rk == &rk_context[0] ? "simh" :
+           "unknown", da * sizeof(short));
+
     err = lseek(rk->rk_fd, da * sizeof(short), SEEK_SET);
     if (wc && (err >= 0)) {
         err = 0;
@@ -445,7 +458,8 @@ static void rk_go(struct rk_context_s *rk)
 
 void _io_rk_write(struct rk_context_s *rk, u22 addr, u16 data, int writeb)
 {
-    printf("_io_rk_write %o %d decode %o\n", addr, writeb, ((addr >> 1) & 07));
+    if (0) printf("_io_rk_write %o %d decode %o\n",
+                  addr, writeb, ((addr >> 1) & 07));
 
     if (!rk->has_init) {
         io_rk_reset();
