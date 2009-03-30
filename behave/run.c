@@ -283,6 +283,13 @@ u16 test11[] = {
     000506, 0000000,
 };
 
+u16 test12[] = {
+    000500, 0012706,
+    000502, 0000200,
+    000504, 0000261,
+    000506, 0000000,
+};
+
 u16 boot_code[] = {
     0042113,                        /* "KD" */
     0012706, 0002000,               /* MOV #boot_start, SP */
@@ -328,6 +335,7 @@ struct {
     { 9, 2, test9, sizeof(test9), 0500 },
     { 10, 1, test10, sizeof(test10), 0500 },
     { 11, 1, test11, sizeof(test11), 0500 },
+    { 12, 1, test12, sizeof(test12), 0500 },
     { 0, 0, NULL }
 };
 
@@ -450,6 +458,8 @@ void cosim_trap(void)
         steps++;
         simh_step();
         simh_read_reg(7, &pc);
+        if (1) printf("syncing: simh pc %o, rtl pc %o\n", pc, regs[7]);
+
         if (pc == regs[7]) {
             V_SIMH printf("simh: traps sync after %d steps\n", steps);
             break;
@@ -469,6 +479,22 @@ cosim_setup(void)
 	simh_command("set cpu 11/34");
 	simh_command("set cpu 256k");
         simh_command("att rk0 rk.dsk");
+
+        if (1) {
+            simh_command("set RHA disabled");
+            simh_command("set CR disabled");
+            simh_command("set LPT disabled");
+            simh_command("set DZ disabled");
+            simh_command("set VH disabled");
+            simh_command("set RL disabled");
+            simh_command("set HK disabled");
+            simh_command("set KE disabled");
+            simh_command("set RX disabled");
+            simh_command("set RP disabled");
+            simh_command("set RQ disabled");
+            simh_command("set TM disabled");
+            simh_command("set TQ disabled");
+        }
 }
 #else
 void cosim_setup(void) {}

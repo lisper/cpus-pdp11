@@ -15,5 +15,4 @@ mode	symbol	ea1	ea2		ea3		data		side-eff
 
 ---
 
-clr does not need d3
-jump does not need d3
+004736 JSR @(sp)+

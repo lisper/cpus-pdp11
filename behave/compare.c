@@ -129,13 +129,13 @@ record_transaction(T_SIMH, T_READW, T_IO, pa, data);
 
 void simh_record_mem_write_word(u22 pa, u16 data)
 {
-printf("simh: writew %o -> %o\n", pa, data & 0xffff);
+printf("simh: writew %o <- %o\n", pa, data & 0xffff);
 record_transaction(T_SIMH, T_WRITEW, T_MEM, pa, data);
 }
 
 void simh_record_io_write_word(u22 pa, u16 data)
 {
-printf("simh: io write %o -> %o\n", pa, data & 0xffff);
+printf("simh: io write %o <- %o\n", pa, data & 0xffff);
 record_transaction(T_SIMH, T_WRITEW, T_IO, pa, data);
 }
 
@@ -153,13 +153,13 @@ record_transaction(T_SIMH, T_READB, T_IO, pa, data);
 
 void simh_record_mem_write_byte(u22 pa, u16 data)
 {
-printf("simh: writeb %o -> %o\n", pa, data & 0xffff);
+printf("simh: writeb %o <- %o\n", pa, data & 0xffff);
 record_transaction(T_SIMH, T_WRITEB, T_MEM, pa, data);
 }
 
 void simh_record_io_write_byte(u22 pa, u16 data)
 {
-printf("simh: io writeb %o -> %o\n", pa, data & 0xffff);
+printf("simh: io writeb %o <- %o\n", pa, data & 0xffff);
 record_transaction(T_SIMH, T_WRITEB, T_IO, pa, data);
 }
 

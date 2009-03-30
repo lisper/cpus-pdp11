@@ -174,7 +174,7 @@ void write_mem_byte(u22 addr, u16 data)
 {
     if (addr >= IOPAGEBASE) {
         rtl_record_io_write_byte(addr, data & 0xff);
-        return io_write(addr, data, 0);
+        return io_write(addr, data, 1);
     }
 
     if (addr & 1) {

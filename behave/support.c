@@ -11,11 +11,16 @@ extern wire assert_int;
 extern wire16 assert_int_vec;
 extern wire16 assert_int_ipl;
 
-void cpu_int_set(int flag)
+void support_clear_int_bits(void)
 {
-    printf("cpu_int_set(%o)\n", flag);
+    support_int_bits = 0;
+}
 
-    support_int_bits |= flag;
+void cpu_int_set(int bit)
+{
+    printf("cpu_int_set(%d)\n", bit);
+
+    support_int_bits |= 1 << bit;
     /* flag cpu here */
     assert_int = 1;
     if (support_int_bits & 1) {
@@ -34,19 +39,25 @@ void cpu_int_set(int flag)
         assert_int_vec = VECTOR_RK;
         assert_int_ipl = 1 << IPL_RK;
     }
+
+    if (assert_int_ipl) {
+        printf("cpu_int_set; vector %o,ipl bits 0x%x\n", 
+               assert_int_vec, assert_int_ipl);
+    }
 }
 
-void cpu_int_clear(int flag)
+void cpu_int_clear(int bit)
 {
-    printf("cpu_int_clear(%o)\n", flag);
+    printf("cpu_int_clear(%o)\n", bit);
 
-    support_int_bits &= ~flag;
+    support_int_bits &= ~(1 << bit);
     if (support_int_bits == 0)
         assert_int = 0;
     else
         cpu_int_set(0);
 }
 
+#if 0
 static u16 clk_csr;
 static u16 pclk_csr;
 static u16 pclk_ctr;
@@ -78,17 +89,18 @@ u16 io_tti_read(u22 addr)
 
 void io_tti_write(u22 addr, u16 data)
 {
-    printf("io_tti_write() %o\n", data);
+    printf("io_tti_write() addr=%o, data=%o\n", addr, data);
     if ((addr & 2) == 0) {
-        if ((addr & 1) == 0) {
-            if ((data & CSR_IE) == 0)
-                cpu_int_clear(1);
-            else
-                if ((tti_csr & (CSR_DONE | CSR_IE)) == CSR_DONE)
-                    cpu_int_set(1);
+        if (addr & 1)
+            return;
 
-            tti_csr = (tti_csr & ~CSR_IE) | (data & CSR_IE);
-        }
+        if ((data & CSR_IE) == 0)
+            cpu_int_clear(1);
+        else
+            if ((tti_csr & (CSR_DONE | CSR_IE)) == CSR_DONE)
+                cpu_int_set(1);
+
+        tti_csr = (tti_csr & ~CSR_IE) | (data & CSR_IE);
     }
 }
 
@@ -113,15 +125,16 @@ void io_tto_write(u22 addr, u16 data)
         tto_csr = tto_csr & ~CSR_DONE;
         cpu_int_clear(2);
     } else {
-        if ((addr & 1) == 0) {
-            if (data & CSR_IE)
-                cpu_int_clear(2);
-            else
-                if ((tto_csr & (CSR_DONE | CSR_IE)) == CSR_DONE)
-                    cpu_int_set(2);
+        if (addr & 1)
+            return;
 
-            tto_csr = (tto_csr & ~CSR_IE) | (data & CSR_IE);
-        }
+        if ((data & CSR_IE) == 0)
+            cpu_int_clear(2);
+        else
+            if ((tto_csr & (CSR_DONE | CSR_IE)) == CSR_DONE)
+                cpu_int_set(2);
+
+        tto_csr = (tto_csr & ~CSR_IE) | (data & CSR_IE);
     }
 }
 
@@ -137,11 +150,18 @@ u16 io_psw_read(u22 addr)
     return psw;
 }
 
-void io_psw_write(u22 addr, u16 data)
+void io_psw_write(u22 addr, u16 data, int writeb)
 {
     extern u16 psw;
-    printf("psw: write\n");
-    psw = data;
+    printf("psw: write; data %o, writeb %d\n");
+    if (writeb) {
+        if (addr & 1)
+            psw = (psw & 0xff) | (data << 8);
+        else
+            psw = (psw & 0xff00) | (data & 0xff);
+    } else
+        psw = data;
+    printf("psw: new %o", psw);
 }
 
 u16 io_clk_read(u22 addr)
@@ -228,6 +248,11 @@ u16 io_read(u22 addr)
     if (addr == 017777776)
         return 0;
 
+//    if (addr == 017776710) return 0300;    /* rm03? */
+//    if (addr == 017777170) return 0100040; /* rx11 */
+//    if (addr == 017777460) return 0;  /* rf11 */
+//    if (addr == 017777440) return 0200; /* rk611 */
+
     support_signals_bus_error();
 
     return 0xffff;
@@ -235,9 +260,9 @@ u16 io_read(u22 addr)
 
 void io_write(u22 addr, u16 data, int writeb)
 {
-    printf("io_write(addr=%o)\n", addr);
+    printf("io_write(addr=%o, data=%o, writeb=%d)\n", addr, data, writeb);
 
-    if (addr >= IOBASE_TTI && addr <= IOBASE_TTI+4) {
+    if (addr >= IOBASE_TTI && addr < IOBASE_TTI+4) {
 	return io_tti_write(addr, data);
     }
 
@@ -255,7 +280,7 @@ void io_write(u22 addr, u16 data, int writeb)
     }
 
     if (addr >= IOBASE_PSW && addr < IOBASE_PSW+2) {
-        io_psw_write(addr, data);
+        io_psw_write(addr, data, writeb);
         return;
     }
 
@@ -282,6 +307,118 @@ reset_support(void)
     pclk_csr = 0;
 }
 
+#else
+
+
+u16 io_sr_read(u22 addr)
+{
+    return 0;
+}
+
+u16 io_psw_read(u22 addr)
+{
+    extern u16 psw;
+    printf("psw: read\n");
+    return psw;
+}
+
+void io_psw_write(u22 addr, u16 data, int writeb)
+{
+    extern u16 psw;
+    printf("psw: write; data %o, writeb %d\n");
+    if (writeb) {
+        if (addr & 1)
+            psw = (psw & 0xff) | (data << 8);
+        else
+            psw = (psw & 0xff00) | (data & 0xff);
+    } else
+        psw = data;
+    printf("psw: new %o", psw);
+}
+
+u16 io_read(u22 addr)
+{
+    if (addr >= IOBASE_TTI && addr < IOBASE_TTI+4)
+	return io_tti_read(addr);
+
+    if (addr >= IOBASE_TTO && addr < IOBASE_TTO+4)
+	return io_tto_read(addr);
+
+    if (addr >= IOBASE_CLK && addr < IOBASE_CLK+4)
+	return io_clk_read(addr);
+
+    if (addr >= IOBASE_SR && addr < IOBASE_SR+2)
+        return io_sr_read(addr);
+
+    if (addr >= IOBASE_PSW && addr < IOBASE_PSW+2) {
+        return io_psw_read(addr);
+    }
+
+//    if (addr >= IOBASE_PCLK && addr < IOBASE_PCLK+4)
+//	return io_pclk_read(addr);
+
+    if (addr >= IOBASE_RK && addr < IOBASE_RK+32)
+	return io_rk_read(addr);
+
+    if (addr == 017777776)
+        return 0;
+
+//    if (addr == 017776710) return 0300;    /* rm03? */
+//    if (addr == 017777170) return 0100040; /* rx11 */
+//    if (addr == 017777460) return 0;  /* rf11 */
+//    if (addr == 017777440) return 0200; /* rk611 */
+
+    support_signals_bus_error();
+
+    return 0xffff;
+}
+
+void io_write(u22 addr, u16 data, int writeb)
+{
+    printf("io_write(addr=%o, data=%o, writeb=%d)\n", addr, data, writeb);
+
+    if (addr >= IOBASE_TTI && addr < IOBASE_TTI+4) {
+	io_tti_write(addr, data);
+        return;
+    }
+
+    if (addr >= IOBASE_TTO && addr < IOBASE_TTO+4) {
+	io_tto_write(addr, data);
+        return;
+    }
+
+    if (addr >= IOBASE_CLK && addr < IOBASE_CLK+4) {
+	io_clk_write(addr, data);
+        return;
+    }
+
+    if (addr >= IOBASE_SR && addr < IOBASE_SR+2) {
+        return;
+    }
+
+    if (addr >= IOBASE_PSW && addr < IOBASE_PSW+2) {
+        io_psw_write(addr, data, writeb);
+        return;
+    }
+
+//    if (addr >= IOBASE_PCLK && addr < IOBASE_PCLK+4) {
+//	io_pclk_write(addr, data);
+//        return;
+//    }
+
+    if (addr >= IOBASE_RK && addr < IOBASE_RK+32) {
+	io_rk_write(addr, data, writeb);
+        return;
+    }
+
+    support_signals_bus_error();
+}
+
+void reset_support(void)
+{
+}
+
+#endif
 
 
 /*

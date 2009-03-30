@@ -197,9 +197,9 @@ int current_mode;
  * 
  * 0	R	x	x		x		R		x
  * 1	(R)	R	x		x		M[R]		x
- * 2	(R)+	R	X		x		M[R]		R<-R+2
+ * 2	(R)+	R	X		x		M[R]		R<-R+n
  * 3	@(R)+	R	M[R]		x		M[M[R]]		R<-R+2
- * 4	-(R)	R-2	x		x		M[R-2]		R<-R-2
+ * 4	-(R)	R-2	x		x		M[R-2]		R<-R-n
  * 5	@-(R)	R-2	M[R-2]		x		M[M[R-2]]	R<-R-2
  * 6	X(R)	PC	M[PC]+R		x		M[M[PC]+R]	x
  * 7	@X(R)	PC	M[PC]+R		M[M[PC]+R]	M[M[M[PC]+R]]	x
@@ -274,8 +274,15 @@ enum {
 wire new_istate;
 int istate;
 
+int verbose_mux;
+int verbose_data;
+int verbose_psw;
+int verbose_cc;
+
 void fetch(void)
 {
+    assert_trap_odd = 0;
+
     if (pc & 1) {
         printf("fetch: odd pc %o\n", pc);
 	assert_trap_odd = 1;
@@ -285,6 +292,7 @@ void fetch(void)
     printf("------\n");
     printf("f1: pc=%o, sp=%o, psw=%o ipl%d n%d z%d v%d c%d\n",
 	   pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
+    printf("    trap=%d, interrupt=%d\n", trap, interrupt);
     printf("    regs %6o %6o %6o %6o \n", regs[0], regs[1], regs[2], regs[3]);
     printf("         %6o %6o %6o %6o \n", regs[4], regs[5], regs[6], regs[7]);
 
@@ -343,8 +351,10 @@ do_ea_mux(void)
         istate == t4 ? ss_ea + 2 :
 	0;
 
-    if (ss_ea != ss_ea_mux && (istate < e1 || istate >= t1)) {
-	printf("  ea_mux: ss_ea_mux %6o\n", ss_ea_mux);
+    if (verbose_mux &&
+        ss_ea != ss_ea_mux && (istate < e1 || istate >= t1))
+    {
+        printf("  ea_mux: ss_ea_mux %6o\n", ss_ea_mux);
 
         if (istate == s1) {
             printf("          ss_mem_data %6o, R%d %6o\n",
@@ -387,7 +397,7 @@ do_ea_mux(void)
         istate == d3 ? dd_mem_data :
 	dd_ea;
 
-    if (dd_ea != dd_ea_mux && istate < e1) {
+    if (dd_ea != dd_ea_mux && istate < e1 && verbose_mux) {
 	printf("  ea_mux: dd_ea_mux %6o\n", dd_ea_mux);
         if (istate == d1) {
             printf("          dd_mem_data %6o, R%d %6o\n",
@@ -420,12 +430,12 @@ do_data_mux(void)
 	(istate == e1) ? e1_result :
 	e1_data_mux;
 
-    if (ss_data != ss_data_mux) {
+    if (ss_data != ss_data_mux && verbose_mux) {
 	printf("  data_mux: ss%d reg%d mem %o mux %o\n",
 	       ss_mode, ss_reg, ss_mem_data, ss_data_mux);
     }
 
-    if (dd_data != dd_data_mux) {
+    if (dd_data != dd_data_mux && verbose_mux) {
 	printf("  data_mux: dd%d reg%d mem %o mux %o\n",
 	       dd_mode, dd_reg, dd_mem_data, dd_data_mux);
     }
@@ -437,15 +447,19 @@ do_data_mux(void)
 void
 do_pc_mux(void)
 {
+    wire trap_or_int;
+
+    trap_or_int = trap || interrupt;
+
     pc_mux =
-	(istate == f1 && !assert_trap_bus              ) ? pc + 2 :
+	(istate == f1 && !trap_or_int                  ) ? pc + 2 :
 	(istate == s1 && (ss_mode == 6 || ss_mode == 7)) ? pc + 2 :
 	(istate == d1 && (dd_mode == 6 || dd_mode == 7)) ? pc + 2 :
 	(istate == e1 && latch_pc                      ) ? new_pc :
         (istate == o1 || istate == t3                  ) ? pc_mem_data :
 	pc;
 
-    if (pc_mux != pc) {
+    if (pc_mux != pc && verbose_mux) {
 	printf("  pc_mux: istate %d, ss %d dd %d, latch_pc %d, pc_mux %o\n",
 	       istate, ss_mode, dd_mode, latch_pc, pc_mux);
     }
@@ -461,7 +475,7 @@ do_sp_mux(void)
 	(istate == t2		     ) ? sp - 2 :
 	sp;
 
-    if (sp_mux != sp) {
+    if (sp_mux != sp && verbose_mux) {
 	printf(" sp_mux: sp_mux %o\n", sp_mux);
     }
 }
@@ -472,8 +486,8 @@ do_cc_mux(void)
     wire16 new_psw = psw;
 
     if (latch_cc && istate == e1) {
-        if (1) printf("  new cc: %d %d %d %d\n", 
-                      new_cc_n,new_cc_z,new_cc_v,new_cc_c);
+        if (verbose_cc) printf("  new cc: %d %d %d %d\n", 
+                               new_cc_n,new_cc_z,new_cc_v,new_cc_c);
 
         new_psw &= ~017;
         if (new_cc_n) new_psw |= 1 << 3;
@@ -482,7 +496,7 @@ do_cc_mux(void)
         if (new_cc_c) new_psw |= 1 << 0;
     }
 
-    if (new_psw != psw)
+    if (new_psw != psw && verbose_psw)
         printf("  cc_mux: new_psw %o\n", new_psw);
 
     psw = new_psw;
@@ -495,7 +509,7 @@ do_psw_mux(void)
         (istate == o2 || istate == t4) ? psw_mem_data :
         psw;
 
-    if (psw_mux != psw) {
+    if (psw_mux != psw && verbose_mux) {
         printf(" psw_mux: mux %o\n", psw_mux);
     }
 }
@@ -503,7 +517,7 @@ do_psw_mux(void)
 void
 do_reg_mux(void)
 {
-    if (istate == c1) {
+    if (istate == c1 && verbose_mux) {
         printf("  reg_mux: ss post %d pre %d reg %d\n",
                ss_post_incr, ss_pre_dec, ss_reg);
         printf("           dd post %d pre %d reg %d\n",
@@ -514,13 +528,15 @@ do_reg_mux(void)
     {
         if (ss_post_incr)
         {
-            regs[ss_reg] += (need_srcspec_dd_byte && ss_reg < 6) ? 1 : 2;
+            regs[ss_reg] +=
+                (need_srcspec_dd_byte && ss_reg < 6 && ss_mode == 2) ? 1 : 2;
             printf(" R%d <- %o (ss r++)\n", ss_reg, regs[ss_reg]);
         }
         else
             if (ss_pre_dec)
             {
-                regs[ss_reg] -= (need_srcspec_dd_byte && ss_reg < 6) ? 1 : 2;
+                regs[ss_reg] -=
+                    (need_srcspec_dd_byte && ss_reg < 6 && ss_mode == 4) ? 1:2;
                 printf(" R%d <- %o (ss r--)\n", ss_reg, regs[ss_reg]);
             }
     }
@@ -529,13 +545,15 @@ do_reg_mux(void)
     {
         if (dd_post_incr)
         {
-            regs[dd_reg] += (need_destspec_dd_byte && dd_reg < 6) ? 1 : 2;
+            regs[dd_reg] +=
+                (need_destspec_dd_byte && dd_reg < 6 && dd_mode == 2) ? 1 : 2;
             printf(" R%d <- %o (dd r++)\n", dd_reg, regs[dd_reg]);
         }
         else
             if (dd_pre_dec)
             {
-                regs[dd_reg] -= (need_destspec_dd_byte && dd_reg < 6) ? 1 : 2;
+                regs[dd_reg] -=
+                    (need_destspec_dd_byte && dd_reg < 6 && dd_mode == 4) ?1:2;
                 printf(" R%d <- %o (dd r--)\n", dd_reg, regs[dd_reg]);
             }
     }
@@ -557,7 +575,8 @@ void decode1(void)
 	(isn_15_12 == 0 && (isn_11_6 >= 040 && isn_11_6 <= 063)) || /* jsr-asl */
 	(isn_15_12 == 0 && (isn_11_6 >= 065 && isn_11_6 <= 067)) || /* m*,sxt */
 	(isn_15_12 >= 001 && isn_15_12 <= 006) ||		    /* mov-add */
-	(isn_15_12 == 007 && (isn_11_9 >= 0 && isn_11_9 <= 4)) ||   /* mul-xor */
+//	(isn_15_12 == 007 && (isn_11_9 >= 0 && isn_11_9 <= 4)) ||   /* mul-xor */
+	(isn_15_9 >= 0070 && isn_15_9 <= 0074) ||   		    /* mul-xor */
 	(isn_15_12 == 010 && (isn_11_6 >= 065 && isn_11_6 <= 066))|| /* mtpx */
 	(isn_15_12 == 016);					     /* sub */
 
@@ -581,7 +600,8 @@ void decode1(void)
 	(isn_15_6 == 0000 && isn_5_0 < 010) ||
 	(isn_15_6 == 0002 && (isn_5_0 >= 30 && isn_5_0 <= 77)) ||
 	(isn_15_12 == 0 && (isn_11_6 >= 004 && isn_11_6 <= 037)) ||
-	(isn_15_12 == 007 && (isn_11_9 == 7)) ||
+//	(isn_15_12 == 007 && (isn_11_9 == 7)) ||
+	(isn_15_9 == 0104) ||				/* trap/emt */
 0/*	(isn_15_6 == 0047) */;
 
     is_illegal =
@@ -835,8 +855,10 @@ void execute(void)
     new_cc_c = cc_c;
     latch_cc = 0;
 
-    printf(" ss_data %6o, dd_data %6o\n", ss_data, dd_data);
-    printf(" ss_ea   %6o, dd_ea   %6o\n", ss_ea, dd_ea);
+    if (verbose_data) {
+        printf(" ss_data %6o, dd_data %6o\n", ss_data, dd_data);
+        printf(" ss_ea   %6o, dd_ea   %6o\n", ss_ea, dd_ea);
+    }
 
     if (isn_15_12 == 0) {
         if (0) printf("e: isn_15_12 == 0\n");
@@ -897,14 +919,14 @@ void execute(void)
 
 	    case 002:					    /* rts */
                 switch(isn_5_0) {
-                case 00: case 01: case 02: case 03:
-                case 04: case 05: case 06: case 07:
+                case 000: case 001: case 002: case 003:
+                case 004: case 005: case 006: case 007:
                     printf("e: RTS\n");
                     new_pc = dd_data;
                     latch_pc = 1;
                     break;
 
-                case 30:				    /* spl */
+                case 030:				    /* spl */
 //xxx
                     break;
 
@@ -914,10 +936,10 @@ void execute(void)
                     /* clv	cc	-	000242 */
                     /* clc	cc	-	000241 */
                     /* c	cc	-	000240 */
-                case 40: case 41: case 42: case 43:
-                case 44: case 45: case 46: case 47:
-                case 50: case 51: case 52: case 53:
-                case 54: case 55: case 56: case 57:
+                case 040: case 041: case 042: case 043:
+                case 044: case 045: case 046: case 047:
+                case 050: case 051: case 052: case 053:
+                case 054: case 055: case 056: case 057:
                     if (isn_3_0 & 010) new_cc_n = 0;
                     if (isn_3_0 & 004) new_cc_z = 0;
                     if (isn_3_0 & 002) new_cc_v = 0;
@@ -929,10 +951,10 @@ void execute(void)
                     /* sev	cc	-	000262 */
                     /* sec	cc	-	000261 */
                     /* s	cc	-	000260 */
-                case 60: case 61: case 62: case 63:
-                case 64: case 65: case 66: case 67:
-                case 70: case 71: case 72: case 73:
-                case 74: case 75: case 76: case 77:
+                case 060: case 061: case 062: case 063:
+                case 064: case 065: case 066: case 067:
+                case 070: case 071: case 072: case 073:
+                case 074: case 075: case 076: case 077:
                     if (isn_3_0 & 010) new_cc_n = 1;
                     if (isn_3_0 & 004) new_cc_z = 1;
                     if (isn_3_0 & 002) new_cc_v = 1;
@@ -1453,8 +1475,7 @@ void execute(void)
                 new_cc_z = 1;
                 latch_cc = 1;
 
-                e1_result = 0/*ss_data & 0xff00*/;
-//note: byte write of src - rmw to memory word
+                e1_result = dd_data & 0xff00;
                 break;
 
             case 051:					/* comb */
@@ -1615,7 +1636,7 @@ void execute(void)
             break;
 
 	case 011:					    /* movb */
-	    e1_result = (dd_data & 0xff00) |
+	    e1_result = /*(dd_data & 0xff00) |*/
 		(ss_data & 0377);
 	    new_cc_n = sign_b(e1_result);
 	    new_cc_z = zero_b(e1_result);
@@ -1670,10 +1691,12 @@ void execute(void)
 	}
     }
 
-    printf(" ss_data %6o, dd_data %6o, e1_result %6o\n",
-	   ss_data, dd_data, e1_result);
-    printf(" latch_pc %d, latch_cc %d\n", latch_pc, latch_cc);
-    printf(" psw %o\n", psw);
+    if (verbose_data) {
+        printf(" ss_data %6o, dd_data %6o, e1_result %6o\n",
+               ss_data, dd_data, e1_result);
+        printf(" latch_pc %d, latch_cc %d\n", latch_pc, latch_cc);
+        printf(" psw %o\n", psw);
+    }
 }
 
 void writeback1(void)
@@ -1691,9 +1714,9 @@ void writeback1(void)
     }
     else if (store_result && dd_dest_reg) {
 	printf(" r%d <- %06o (dd)\n", dd_reg, e1_data);
-        if (is_isn_byte)
-            regs[dd_reg] = (regs[dd_reg] & 0xff00) | (e1_data & 0xff);
-        else
+//        if (is_isn_byte)
+//            regs[dd_reg] = (regs[dd_reg] & 0xff00) | (e1_data & 0xff);
+//        else
             regs[dd_reg] = e1_data;
     }
     else if (store_ss_reg) {
@@ -1752,14 +1775,19 @@ void trap4(void) {
 void wait1(void) {
 }
 
-void check_traps(void)
+void check_for_traps(void)
 {
     wire ok_to_assert_trap;
+    wire ok_to_reset_trap;
 
     /* */
-    ok_to_assert_trap = istate == f1 || istate == c1 || istate == e1;
+    ok_to_assert_trap =
+        istate == f1 || istate == c1 || istate == e1 ||
+        istate == s4 || istate == d4 || istate == w1;
 
-    if (!ok_to_assert_trap) {
+    ok_to_reset_trap = istate == t4;
+
+    if (ok_to_reset_trap) {
         /* */
         trap_odd = 0; /* f1 */
         trap_ill = 0; /* c1 */
@@ -1773,12 +1801,15 @@ void check_traps(void)
         trap_bus = 0;
 
         trap = 0;
-    } else {
+    }
+
+    if (ok_to_assert_trap) {
+
         if (assert_trap_odd && istate == f1) {
             trap_odd = 1;
         }
 
-        if (assert_trap_bus && istate == f1) {
+        if (assert_trap_bus) {
             trap_bus = 1;
             assert_trap_bus = 0;
         }
@@ -1849,6 +1880,7 @@ int ipl_below(int psw_ipl, int ipl_bits)
         return 0;
 
     mask = ~((1 << psw_ipl) - 1);
+    mask <<= 1;
     printf("ipl: mask 0x%x, bits 0x%x\n", mask, ipl_bits);
 
     if (ipl_bits & mask)
@@ -1857,18 +1889,25 @@ int ipl_below(int psw_ipl, int ipl_bits)
     return 0;
 }
 
-void check_interrupts(void)
+void check_for_interrupts(void)
 {
     wire ok_to_assert_int;
 
     /* */
-    ok_to_assert_int = istate == f1 || istate == i1;
+    ok_to_assert_int =
+        istate == f1 || istate == i1 ||
+        istate == s4 || istate == d4 | istate == w1;
 
     if (ok_to_assert_int) {
         if (assert_int & ipl_below(ipl, assert_int_ipl)) {
             interrupt = 1;
             interrupt_vector = assert_int_vec;
             printf("interrupt: asserts; vector %o\n", interrupt_vector);
+
+            /* hack, but ok; */
+            assert_int = 0;
+            assert_int_vec =0;
+            support_clear_int_bits();
         }
     } else {
         interrupt = 0;
@@ -1878,8 +1917,8 @@ void check_interrupts(void)
 void
 next_state()
 {
-    check_traps();
-    check_interrupts();
+    check_for_traps();
+    check_for_interrupts();
 
     if (halted) {
 	new_istate = h1;
@@ -1893,21 +1932,18 @@ next_state()
 	return;
     }
 
-    if (trap || interrupt) {
-	new_istate = t1;
-        istate = new_istate;
-	return;
-    }
-
     new_istate = 0;
 
     switch (istate) {
-    case f1: new_istate = c1; break;
+    case f1: new_istate = (trap || interrupt) ? t1 :
+        		  c1;
+                          break;
 
-    case c1: new_istate = no_operand ? e1 :
+    case c1: new_istate = is_illegal ? f1 :
+        	          no_operand ? e1 :
         		  need_s1 ? s1 :
         		  need_d1 ? d1 :
-        		  e1;
+                          e1;
                           break;
 
     case s1: new_istate = need_s2 ? s2 :
@@ -2044,7 +2080,6 @@ void step(int *did_trap)
 {
     istate = f1;
 
-refetch:
     fetch();
     clock_registers();
 
@@ -2088,9 +2123,9 @@ void run(void)
     while (1) {
         reset_transactions();
 
-	if (istate != h1)
-	    step(&did_trap);
-        else {
+        step(&did_trap);
+
+	if (istate == h1) {
 	    printf("halted\n");
 	    break;
 	}
@@ -2133,6 +2168,7 @@ void debug_reset(void)
 void
 support_signals_bus_error(void)
 {
+    printf("assert_trap_bus = 1\n");
     assert_trap_bus = 1;
 }
 
