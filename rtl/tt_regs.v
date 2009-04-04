@@ -1,4 +1,7 @@
 // tt_regs.v
+//
+// simulated DL11 uart for pdp11
+// copyright Brad Parker <brad@heeltoe.com> 2009
 
 `include "brg.v"
 `include "uart.v"
@@ -63,10 +66,11 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 		.rx_in(rs232_rx),
 		.rx_empty(rx_empty));
 
+   wire 	 rx_int, tx_int;
+   reg 		 rx_int_enable, tx_int_enable;
 
-   reg 		 rx_int, rx_int_enable;
-   reg 		 tx_int, tx_int_enable;
 
+   // iopage reads
    always @(clk or iopage_addr or iopage_rd or iopage_byte_op)
      begin
 	if (decode)
@@ -77,7 +81,8 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	    13'o17566: data_out = tto_data;
 	  endcase
      end
-   
+
+   // iopage writes   
    always @(posedge clk)
      if (reset)
        begin
@@ -91,10 +96,10 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
      else
        if (iopage_wr)
 	 case (iopage_addr)
-	   13'o17560: rx_int_enable <= data_in[6];
-	   	   //13'o17562: tti_data <= data_in;
-	   13'o17564: tx_int_enable <= data_in[6];
-	   13'o17566: tto_data <= data_in; // uart out
+	   13'o17560: rx_int_enable <= data_in[6];	// tti csr
+   	   //13'o17562: tti_data <= data_in;
+	   13'o17564: tx_int_enable <= data_in[6];	// tto csr
+	   13'o17566: tto_data <= data_in;		// tto data
 	 endcase
 
    assign tx_enable = 1'b1;
@@ -103,6 +108,9 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    // tto state machine
    // assert ld_tx_data until uart catches up
    // hold off cpu until tx_empty does full transition
+   // state 0 - idle; wait for iopage write to data
+   // state 1 - wait for tx_empty to assert
+   // state 2 - wait for tx_empty to deassert
    reg [1:0] tto_state;
    wire [1:0] tto_state_next;
    
@@ -124,6 +132,9 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    
    // tti state machine
    // don't become ready until we've clock data out of uart holding reg
+   // state 0 - idle; wait for rx_empty to deassert
+   // state 1 - wait for rx_empty to assert
+   // state 2 - wait for iopage read of uart (tti)
    reg [1:0] tti_state;
    wire [1:0] tti_state_next;
 
@@ -151,22 +162,13 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	 tti_data <= rx_data;
 
    // interrupts
-   always @(posedge clk or reset)
-     if (reset)
-       begin
-	  rx_int <= 0;
-	  tx_int <= 0;
-       end
-     else
-       begin
-	  if (rx_int_enable && ~tti_empty)
-	    rx_int <= 1;
+   assign rx_int = rx_int_enable && ~tti_empty;
+   assign tx_int = tx_int_enable && tto_empty;
 
-	  if (tx_int_enable && tto_empty)
-	    tx_int <= 1;
-	  else
-	    tx_int <= 0;
-       end
+   assign interrupt = rx_int || tx_int;
+   assign vector = rx_int ? 16'o0060 :
+		   tx_int ? 16'o0064 :
+		   0;
    
 endmodule
 

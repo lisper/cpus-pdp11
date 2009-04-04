@@ -1,40 +1,8 @@
-//
+// iopage.v
+// iopage decoding and muxing
+// copyright Brad Parker <brad@heeltoe.com> 2009
 
-module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
-		 iopage_rd, iopage_wr, iopage_byte_op);
-
-   input clk;
-   input reset;
-   input [12:0] iopage_addr;
-   input [15:0] data_in;
-   input 	iopage_rd, iopage_wr, iopage_byte_op;
-   output [15:0] data_out;
-   reg [15:0] 	 data_out;
-   output 	 decode;
-
-   reg [15:0] 	 mmr0, mmr1, mmr2, mmr3;
-
-   assign 	 decode = (iopage_addr == 13'o17516) |
-			  (iopage_addr == 13'o17572) |
-			  (iopage_addr == 13'o17574) |
-			  (iopage_addr == 13'o17576);
-   
-   always @(posedge clk)
-     if (reset)
-       begin
-	  mmr3 <= 0;
-       end
-     else
-       if (iopage_wr)
-	 case (iopage_addr)
-	   13'o17572: mmr0 <= data_in;
-	   13'o17574: mmr1 <= data_in;
-	   13'o17576: mmr2 <= data_in;
-	   13'o17516: mmr3 <= data_in;
-	 endcase
-   
-endmodule
-
+`include "mmu_regs.v"
 `include "clk_regs.v"
 `include "sr_regs.v"
 `include "psw_regs.v"
@@ -48,7 +16,10 @@ module iopage(clk, reset, address, data_in, data_out,
 
 	      ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 
-	      psw, psw_io_wr
+	      psw, psw_io_wr,
+
+   	      dma_req, dma_ack, dma_addr, dma_data_in, dma_data_out,
+	      dma_rd, dma_wr
 	      );
 
    input clk;
@@ -69,6 +40,14 @@ module iopage(clk, reset, address, data_in, data_out,
 
    input [15:0] psw;
    output 	psw_io_wr;
+
+   output 	dma_req;
+   input 	dma_ack;
+   output [17:0] dma_addr;
+   output [15:0]  dma_data_in;
+   input [15:0] dma_data_out;
+   output 	 dma_rd;
+   output 	 dma_wr;
    
    //
    wire [12:0] 	iopage_addr;
@@ -104,7 +83,7 @@ module iopage(clk, reset, address, data_in, data_out,
    assign vector = tt_interrupt ? tt_vector :
 		     clk_interrupt ? clk_vector :
 		     rk_interrupt ? rk_vector :
-		     vector;
+		     0;
 
    
    mmu_regs mmu_regs1(.clk(clk),
@@ -184,6 +163,14 @@ module iopage(clk, reset, address, data_in, data_out,
 		    // connection to ide drive
 		    .ide_data_bus(ide_data_bus),
 		    .ide_dior(ide_dior), .ide_diow(ide_diow),
-		    .ide_cs(ide_cs), .ide_da(ide_da));
+		    .ide_cs(ide_cs), .ide_da(ide_da),
+
+		    // dma upward to memory
+		    .dma_req(dma_req), .dma_ack(dma_ack),
+		    .dma_addr(dma_addr),
+		    .dma_data_in(dma_data_in),
+		    .dma_data_out(ram_bus_out),
+		    .dma_rd(dma_rd), .dma_wr(dma_wr)
+		    );
 
 endmodule

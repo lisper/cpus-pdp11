@@ -1,17 +1,19 @@
 // rk_regs.v
 //
-// simulated rk05 drive
+// simulated rk05 (RK11) drive
 // simple state machine which talks to IDE drive
-// (this idea came from pop-11)
-//
+// (the idea came from pop-11, thanks!)
+// copyright Brad Parker <brad@heeltoe.com> 2009
 
 `include "ide.v"
 
 module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		iopage_rd, iopage_wr, iopage_byte_op,
 		interrupt, vector,
-		ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da);
-
+		ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
+   		dma_req, dma_ack, dma_addr, dma_data_in, dma_data_out,
+		dma_rd, dma_wr);
+   
    input clk;
    input reset;
    input [12:0] iopage_addr;
@@ -24,6 +26,21 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    output 	 interrupt;
    output [7:0]  vector;
 
+   output 	 dma_req;
+   input 	 dma_ack;
+   output [17:0] dma_addr;
+   output [15:0] dma_data_in;
+   input [15:0]  dma_data_out;
+   output 	 dma_rd;
+   output 	 dma_wr;
+
+   reg 		 dma_req;
+   reg [17:0] 	 dma_addr;
+   reg [15:0] 	 dma_data_in;
+   reg 		 dma_rd;
+   reg 		 dma_wr;
+   
+   //
    reg [7:0]  vector;
    
    reg [15:0] 	 rkds, rker, rkwc, rkda;
@@ -49,7 +66,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    parameter CSR_BIT_DONE = 7;
 
    parameter ATA_ALTER   = 5'b01110;
-   parameter ATA_DEVCTRL = 5'b01110; /* bit <2> is a nIEN */
+   parameter ATA_DEVCTRL = 5'b01110; /* bit [2] is a nIEN */
    parameter ATA_DATA    = 5'b10000;
    parameter ATA_ERROR   = 5'b10001;
    parameter ATA_FEATURE = 5'b10001;
@@ -57,13 +74,18 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    parameter ATA_SECNUM  = 5'b10011; /* LBA[7:0] */
    parameter ATA_CYLLOW  = 5'b10100; /* LBA[15:8] */
    parameter ATA_CYLHIGH = 5'b10101; /* LBA[23:16] */
-   parameter ATA_DEVHEAD = 5'b10110; /* 0b0 || LBA || 0b0 || DEV || LBA[27:24] */
+   parameter ATA_DRVHEAD = 5'b10110; /* LBA + DRV + LBA[27:24] */
    parameter ATA_STATUS  = 5'b10111;
    parameter ATA_COMMAND = 5'b10111;
 
-   parameter IDE_STATUS_BSY = 7;
-   parameter IDE_STATUS_DRQ = 3;
-   parameter IDE_STATUS_ERR = 0;
+   parameter IDE_STATUS_BSY =  7;
+   parameter IDE_STATUS_DRDY = 6;
+   parameter IDE_STATUS_DWF =  5;
+   parameter IDE_STATUS_DSC =  4;
+   parameter IDE_STATUS_DRQ =  3;
+   parameter IDE_STATUS_CORR = 2;
+   parameter IDE_STATUS_IDX =  1;
+   parameter IDE_STATUS_ERR =  0;
    
    parameter ATA_CMD_READ = 16'h0020;
    parameter ATA_CMD_WRITE = 16'h0030;
@@ -204,18 +226,22 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		 rkwc <= rkwc + 1;
 	       
 	    end
-	  
-	  
        end
+
+   assign interrupt = assert_int;
    
    // rk state machine
    always @(posedge clk)
      if (reset)
        rk_state <= ready;
      else
-       rk_state <= rk_state_next;
+       begin
+	  rk_state <= rk_state_next;
+	  $display("rk_state %d, dma_req %b, dma_ack %b, rkwc %o",
+		   rk_state, dma_req, dma_ack, rkwc);
+       end
 
-   always @(rk_state or rkcs_cmd or rkcs_ie or ata_done or ata_out)
+   always @(rk_state or rkcs_cmd or rkcs_ie or ata_done or ata_out or dma_ack)
      begin
 	rk_state_next = rk_state;
 
@@ -232,6 +258,12 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 
 	ata_rd = 0;
 	ata_wr = 0;
+
+	dma_req = 0;
+	dma_rd = 0;
+	dma_wr = 0;
+	dma_addr = 0;
+	dma_data_in = 0;
 	
 	case (rk_state)
 	  ready:
@@ -253,7 +285,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	  init1:
 	    begin
 	       ata_wr = 1;
-	       ata_addr = ATA_DEVHEAD;
+	       ata_addr = ATA_DRVHEAD;
 	       ata_in = 16'h0040;
 	       if (ata_done)
 		 rk_state_next = wait0;
@@ -280,7 +312,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	    begin
 	       ata_wr = 1;
 	       ata_addr = ATA_DEVCTRL;
-	       ata_in = 16'h0002;
+	       ata_in = 16'h0002;	// nIEN
 	       if (ata_done)
 		 rk_state_next = init4;
 	    end
@@ -325,7 +357,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	  init8:
 	    begin
 	       ata_wr = 1;
-	       ata_addr = ATA_DEVHEAD;
+	       ata_addr = ATA_DRVHEAD;
 	       ata_in = 16'h0040;		// LBA[27:24] + LBA
 	       if (ata_done)
 		 rk_state_next = init9;
@@ -384,11 +416,9 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	       ata_rd = 1;
 	       ata_addr = ATA_DATA;
 
-	       
 	       if (ata_done)
 		 begin
 		    inc_wc = 1;
-		    // grab data
 		    rk_state_next = read1;
 		 end
 	    end
@@ -397,26 +427,43 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	    begin
 	       // mem write
 	       // after mem-ack, inc18 {mex,ba}, set mex bits
-	       inc_ba = 1;
-	       if (rkwc == 0)
-		 rk_state_next = last0;
-	       else
-	       if (rkwc == 16'hff00)
-		 rk_state_next = init10;
-	       else
-		 rk_state_next = read0;
+	       dma_req = 1;
+	       dma_addr = { rkcs_mex, rkba };
+	       dma_data_in = ata_out;
+			    
+	       if (dma_ack)
+		 begin
+		    dma_wr = 1;
+		    inc_ba = 1;
+		    if (rkwc == 0)
+		      rk_state_next = last0;
+		    else
+		      if (rkwc == 16'hff00)
+			rk_state_next = init10;
+		      else
+			rk_state_next = read0;
+		 end
 	    end
 
 	  write0:
 	    begin
 	       //mem read
-	       inc_wc = 1;
-	       rk_state_next = write1;
+	       //after mem-ack, inc wc
+	       dma_req = 1;
+	       dma_addr = { rkcs_mex, rkba };
+	       
+	       if (dma_ack)
+		 begin
+		    dma_rd = 1;
+		    ata_in = dma_data_out;
+		    inc_wc = 1;
+		    rk_state_next = write1;
+		 end
 	    end
 
 	  write1:
 	    begin
-	       // after mem-ack, inc18 {mex,ba}, set mex bits
+	       // inc18 {mex,ba}, set mex bits
 	       inc_ba = 1;
 	       if (rkwc == 0)
 		 rk_state_next = last0;

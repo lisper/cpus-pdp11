@@ -1,4 +1,7 @@
 // clk_regs.v
+//
+// simulated KW11L line clock for pdp11
+// copyright Brad Parker <brad@heeltoe.com> 2009
 
 module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 		iopage_rd, iopage_wr, iopage_byte_op,
@@ -27,6 +30,9 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	    13'o17546: data_out = clk_csr;
 	  endcase
      end
+
+   assign interrupt = 1'b0;
+   assign vector = 8'b0;
    
    always @(posedge clk)
      if (reset)

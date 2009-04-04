@@ -1,4 +1,6 @@
 // uart.v
+// simple low speed async uart for RS-232
+// brad@heeltoe.com 2009
 
 module uart (clk, reset,
 	     txclk, ld_tx_data, tx_data, tx_enable, tx_out, tx_empty,

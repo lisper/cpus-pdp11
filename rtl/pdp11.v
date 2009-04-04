@@ -1,11 +1,11 @@
 //
 // pdp-11 in verilog
-// brad@heeltoe.com
+// copyright Brad Parker <brad@heeltoe.com> 2009
 //
 
 `include "ipl_below.v"
 `include "add8.v"
-`include "memory.v"
+`include "bus.v"
 `include "execute.v"
 
 module pdp11(clk, reset_n, switches);
@@ -210,53 +210,53 @@ module pdp11(clk, reset_n, switches);
    //  f1  pc++
    //  c1
    //  d1  dd_ea = r
-   //  d4  dd_data = mem_data	optional
+   //  d4  dd_data = bus_data	optional
    //  e1  e1_result
    //
    // mode 2 -
    //  f1  pc++
    //  c1
    //  d1  dd_ea = r, r++
-   //  d4  dd_data = mem_data	optional
+   //  d4  dd_data = bus_data	optional
    //  e1  e1_result
    //
    // mode 3 -
    //  f1  pc++
    //  c1  dd_ea = r
-   //  d1  dd_ea = mem_data, r++
-   //  d4  dd_data = mem_data	optional
+   //  d1  dd_ea = bus_data, r++
+   //  d4  dd_data = bus_data	optional
    //  e1  e1_result
    //
    // mode 4 -
    //  f1  pc++
    //  c1
    //  d1  dd_ea = r-x, r--
-   //  d4  dd_data = mem_data	optional
+   //  d4  dd_data = bus_data	optional
    //  e1  e1_result
    //
    // mode 5 -
    //  f1  pc++
    //  c1
    //  d1  dd_ea = r-x, r--
-   //  d2  dd_ea = mem_data
-   //  d4  dd_data = mem_data	optional
+   //  d2  dd_ea = bus_data
+   //  d4  dd_data = bus_data	optional
    //  e1  e1_result
    //
    // mode 6 -
    //  f1  pc++
    //  c1
    //  d1  dd_ea = pc, pc++
-   //  d2  dd_ea = mem_data + regs[dd_reg]
-   //  d4  dd_data = mem_data	optional
+   //  d2  dd_ea = bus_data + regs[dd_reg]
+   //  d4  dd_data = bus_data	optional
    //  e1  e1_result
    //
    // mode 7 -
    //  f1  pc++
    //  c1
    //  d1  dd_ea = pc, pc++
-   //  d2  dd_ea = mem_data + regs[dd_reg]
-   //  d3  dd_ea = mem_data
-   //  d4  dd_data = mem_data	optional
+   //  d2  dd_ea = bus_data + regs[dd_reg]
+   //  d3  dd_ea = bus_data
+   //  d4  dd_data = bus_data	optional
    //  e1  e1_result
    //
 
@@ -288,33 +288,35 @@ module pdp11(clk, reset_n, switches);
 
 
    //
-   // memory unit
+   // bus unit
    //
-   wire [15:0] mem_in;
-   wire [15:0] mem_out;
-   wire [15:0] mem_addr;
-   wire       mem_wr, mem_rd, mem_byte_op;
+   wire [15:0] bus_in;
+   wire [15:0] bus_out;
+   wire [15:0] bus_addr;
+   wire        bus_wr, bus_rd, bus_byte_op;
 
-   wire       psw_io_wr;
-   
-   memory mem1(.clk(clk), .reset(~reset_n),
-	       .mem_addr({ 6'b0, mem_addr }),
-	       .data_in(mem_in),
-	       .data_out(mem_out),
-	       .mem_rd(mem_rd),
-	       .mem_wr(mem_wr),
-	       .mem_byte_op(mem_byte_op),
+   wire        psw_io_wr;
+   wire        bus_ack;
+        
+   bus bus1(.clk(clk), .reset(~reset_n),
+	    .bus_addr({ 6'b0, bus_addr }),
+	    .data_in(bus_in),
+	    .data_out(bus_out),
+	    .bus_rd(bus_rd),
+	    .bus_wr(bus_wr),
+	    .bus_byte_op(bus_byte_op),
 
-	       .bus_error(assert_trap_bus),
-	       .interrupt(assert_int),
-	       .vector(assert_int_vec);
+	    .bus_ack(bus_ack),
+	    .bus_error(assert_trap_bus),
+	    .interrupt(assert_int),
+	    .vector(assert_int_vec),
 
-   	       .ide_data_bus(ide_data_bus),
-	       .ide_dior(ide_dior), .ide_diow(ide_diow),
-	       .ide_cs(ide_cs), .ide_da(ide_da),
+   	    .ide_data_bus(ide_data_bus),
+	    .ide_dior(ide_dior), .ide_diow(ide_diow),
+	    .ide_cs(ide_cs), .ide_da(ide_da),
 
-	       .psw(psw), .psw_io_wr(psw_io_wr),
-	       );
+	    .psw(psw), .psw_io_wr(psw_io_wr)
+	    );
    
   
    //
@@ -385,13 +387,13 @@ module pdp11(clk, reset_n, switches);
 		      0) :
 
      istate == s2 ?
-		     (ss_mode == 3 ? mem_out :
-		      ss_mode == 5 ? mem_out :
-		      ss_mode == 6 ? (mem_out + regs[ss_reg]) & 16'hffff :
-		      ss_mode == 7 ? (mem_out + regs[ss_reg]) & 16'hffff :
+		     (ss_mode == 3 ? bus_out :
+		      ss_mode == 5 ? bus_out :
+		      ss_mode == 6 ? (bus_out + regs[ss_reg]) & 16'hffff :
+		      ss_mode == 7 ? (bus_out + regs[ss_reg]) & 16'hffff :
 		      ss_ea) :
 		     
-     istate == s3 ? mem_out :
+     istate == s3 ? bus_out :
 
      istate == t1 ? ((trap_odd | trap_bus) ? 16'o4 :
 		     trap_ill ? 16'o10 :
@@ -426,13 +428,13 @@ module pdp11(clk, reset_n, switches);
 		       0) :
 
 		      istate == d2 ?
-		      (dd_mode == 3 ? mem_out :
-		       dd_mode == 5 ? mem_out :
-		       dd_mode == 6 ? (mem_out + regs[dd_reg]) :
-		       dd_mode == 7 ? (mem_out + regs[dd_reg]) :
+		      (dd_mode == 3 ? bus_out :
+		       dd_mode == 5 ? bus_out :
+		       dd_mode == 6 ? (bus_out + regs[dd_reg]) :
+		       dd_mode == 7 ? (bus_out + regs[dd_reg]) :
 		       dd_ea) :
 
-		      istate == d3 ? mem_out :
+		      istate == d3 ? bus_out :
 		      dd_ea;
 
 
@@ -441,13 +443,13 @@ module pdp11(clk, reset_n, switches);
    //
    assign ss_data_mux =
 	       (istate == c1 && (ss_mode == 0 || is_isn_rxx)) ? regs[ss_reg] :
-	       (istate == s4) ? mem_out :
+	       (istate == s4) ? bus_out :
 	       ss_data_mux;
 
    assign dd_data_mux =
 	       (istate == c1 && dd_mode == 0) ? regs[dd_reg] :
 	       (istate == c1 && (isn_15_6 == 10'o1067)) ? psw[7:0] : // mfps 
-	       (istate == d4) ? mem_out :
+	       (istate == d4) ? bus_out :
 	       dd_data_mux;
 
    assign e1_data_mux =
@@ -465,7 +467,7 @@ module pdp11(clk, reset_n, switches);
 	  (istate == s1 && (ss_mode == 6 || ss_mode == 7)) ? pc + 2 :
 	  (istate == d1 && (dd_mode == 6 || dd_mode == 7)) ? pc + 2 :
 	  (istate == e1 && latch_pc                      ) ? new_pc :
-	  (istate == o1 || istate == t3                  ) ? mem_out :
+	  (istate == o1 || istate == t3                  ) ? bus_out :
 	  pc;
 
    //
@@ -509,10 +511,10 @@ module pdp11(clk, reset_n, switches);
 	   psw <= { psw[15:8], new_psw_prio, psw[3:0]};
        else
          if (istate == o2 || istate == t4)
-	   psw <= mem_out;
+	   psw <= bus_out;
 	 else
 	   if (istate == w1 && psw_io_wr)
-	     psw <= mem_out;
+	     psw <= bus_out;
 
    //
    // instruction decode
@@ -674,25 +676,25 @@ module pdp11(clk, reset_n, switches);
 
 
    // memory i/o
-   assign mem_rd =
+   assign bus_rd =
 		  istate == f1 ||
 		  (istate == s2 || istate == s3 || istate == s4) ||
 		  (istate == d2 || istate == d3 || istate == d4) ||
 		  (istate == o1 || istate == o2 || istate == o3);
 	   
-   assign mem_wr =
+   assign bus_wr =
 	   (istate == w1 && store_result && dd_dest_mem) ||
 	   istate == p1 ||
 	   istate == t1 ||
 	   istate == t2;
 
-   assign mem_in =
+   assign bus_in =
 		  istate == w1 ? e1_data :
 		  istate == p1 ? regs[ss_reg] :
 		  istate == t1 ? psw :
-   		  istate == t2 ? pc : mem_in;
+   		  istate == t2 ? pc : bus_in;
    
-   assign mem_addr =
+   assign bus_addr =
 		    istate == f1 ? pc :
 		    istate == s2 ? ss_ea :
 		    istate == s3 ? ss_ea :
@@ -707,10 +709,10 @@ module pdp11(clk, reset_n, switches);
 		    istate == t1 ? sp - 2 :
 		    istate == t2 ? sp - 2 :
 		    istate == t3 ? ss_ea_mux :
-		    istate == t4 ? ss_ea_mux : mem_addr;
+		    istate == t4 ? ss_ea_mux : bus_addr;
    
 
-   assign mem_byte_op = (istate == w1 || istate == s4 || istate == d4) ?
+   assign bus_byte_op = (istate == w1 || istate == s4 || istate == d4) ?
 			is_isn_byte: 0;
 
    //
@@ -742,7 +744,7 @@ module pdp11(clk, reset_n, switches);
 	  case (istate)
 	    f1:
 	    begin
-	       isn <= mem_out;
+	       isn <= bus_out;
 	    end
 
 	  c1:
@@ -1101,7 +1103,7 @@ module pdp11(clk, reset_n, switches);
     if (reset_n == 0)
       istate <= f1;
    else
-     istate <= new_istate;
+     istate <= bus_ack ? new_istate : istate;
 
 
    //
@@ -1147,7 +1149,7 @@ module pdp11(clk, reset_n, switches);
 	    end
 
 	  e1_data <= (istate == e1 || istate == w1) ? e1_data_mux :
-		     (istate == o3) ? mem_out :
+		     (istate == o3) ? bus_out :
 		     e1_data;
        end
 
@@ -1198,7 +1200,7 @@ module pdp11(clk, reset_n, switches);
 	  
 	  s2:
 	    begin
-	       $display("s2: ss_ea_mux %0o, [ea]=%0o", ss_ea_mux, mem_out);
+	       $display("s2: ss_ea_mux %0o, [ea]=%0o", ss_ea_mux, bus_out);
 	    end
 
 	  s3:
@@ -1208,8 +1210,8 @@ module pdp11(clk, reset_n, switches);
 
 	  s4:
 	    begin
-	       $display("s4: ss_ea_mux %0o, ss_data_mux %o, mem_out %o",
-			ss_ea_mux, ss_data_mux, mem_out);
+	       $display("s4: ss_ea_mux %0o, ss_data_mux %o, bus_out %o",
+			ss_ea_mux, ss_data_mux, bus_out);
 	    end
 
 	  d1:
@@ -1318,13 +1320,13 @@ module pdp11(clk, reset_n, switches);
 
 	endcase // case(istate)
 
-	$display("    mem_rd=%d, mem_wr=%d", mem_rd, mem_wr);
+	$display("    bus_rd=%d, bus_wr=%d", bus_rd, bus_wr);
 	$display("    regs %0o %0o %0o %0o ",
 		 regs[0], regs[1], regs[2], regs[3]);
 	$display("         %0o %0o %0o %0o ",
 		 regs[4], regs[5], regs[6], regs[7]);
 
-	$display("    mem_out %o", mem_out);
+	$display("    bus_out %o", bus_out);
 	$display("    ss_ea_mux %0o, ss_ea %0o, dd_ea_mux %0o, dd_ea %0o",
 		 ss_ea_mux, ss_ea, dd_ea_mux, dd_ea);
 	$display("    ss_data %0o, dd_data %0o",

@@ -22,7 +22,8 @@ module test;
    wire       tx;
    wire       interrupt;
    wire [7:0] vector;
-   
+
+   // write iopage register
    tt_regs tt(.clk(clk),
 	      .reset(reset),
 	      .iopage_addr(iopage_addr),
@@ -54,6 +55,7 @@ module test;
       end
    endtask
 
+   // read iopage register
    task read_tt_reg;
       input [12:0] addr;
 
@@ -68,7 +70,7 @@ module test;
       end
    endtask
 
-   // send rs232 data
+   // send rs232 data by wiggling rs232 input
    task send_tt_rx;
       input [7:0] data;
       begin
@@ -114,14 +116,15 @@ module test;
        #1 reset = 1;
        #20 reset = 0;
 
+	// send some output
 	write_tt_reg(13'o17566, 16'o15);
 	wait_tto_ready;
 
 	write_tt_reg(13'o17566, 16'o12); 
 	wait_tto_ready;
 
+	// enable tto interrupts
 	write_tt_reg(13'o17564, 16'o100); 
-	wait_tto_ready;
 
 	write_tt_reg(13'o17566, 16'o0); 
 	wait_tto_ready;
@@ -129,6 +132,10 @@ module test;
 	write_tt_reg(13'o17566, 16'o0); 
 	wait_tto_ready;
 
+	// disable tto interrupts
+	write_tt_reg(13'o17564, 16'o000); 
+
+	// recieve input
 	#30 send_tt_rx(8'o15);
 	wait_tti_ready;
 	read_tt_reg(13'o17562);
@@ -136,8 +143,30 @@ module test;
 	send_tt_rx(8'o12);
 	wait_tti_ready;
 	read_tt_reg(13'o17562);
+
+	// enable interrupts
+	write_tt_reg(13'o17560, 16'o100); 
+
+	send_tt_rx(8'o20);
+	wait_tti_ready;
+	read_tt_reg(13'o17562);
+
+	send_tt_rx(8'o21);
+	wait_tti_ready;
+	read_tt_reg(13'o17562);
+
+	// disable interrupts
+	write_tt_reg(13'o17560, 16'o000); 
+
+	send_tt_rx(8'o22);
+	wait_tti_ready;
+	read_tt_reg(13'o17562);
+
+	#100000;
+	read_tt_reg(13'o17562);
+	#100000;
 	
-       #100000 $finish;
+       #120000 $finish;
     end
 
   always
@@ -148,6 +177,8 @@ module test;
 
    always @(posedge clk)
      #2 begin
+//	if (interrupt)
+//	  $display("interrupt, vector %o", vector);
      end
    
 endmodule
