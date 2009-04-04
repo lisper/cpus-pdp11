@@ -1,7 +1,7 @@
 
-`include "pdp11.v"
-
 `timescale 1ns / 1ns
+
+`include "pdp11.v"
 
 module test;
 
@@ -27,11 +27,11 @@ module test;
           reset_n = 0;
        end
 
-       #100 begin
+       #40 begin
           reset_n = 1;
        end
   
-       #200 $finish;
+       #2000 $finish;
 //       #1500000 $finish;
     end
 
@@ -50,8 +50,12 @@ module test;
   always @(posedge cpu.clk)
     begin
       cycle = cycle + 1;
-      #1 $display("cycle %d, pc %o, psw %o, istate %d",
+      #1 begin
+	 if (cpu.istate == 1)
+	   $display("------------------------------");
+	 $display("cycle %d, pc %o, psw %o, istate %d",
 		  cycle, cpu.pc, cpu.psw, cpu.istate);
+	 end
     end
 
 endmodule

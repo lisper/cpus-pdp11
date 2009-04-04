@@ -1,11 +1,11 @@
 //
-module ipl_below_func ibf(ipl, asserting, result);
+module ipl_below_func(ipl, asserting, result);
    input [2:0] ipl;
    input [7:0] asserting;
    output      result;
    reg 	       result;
 
-   always @(ipl, asserting)
+   always @(ipl or asserting)
      begin
 	case (ipl)
 	  0: result <= |asserting;

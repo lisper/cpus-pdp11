@@ -3,8 +3,9 @@
 // brad@heeltoe.com
 //
 
-`include "ram.v"
 `include "ipl_below.v"
+`include "add8.v"
+`include "memory.v"
 `include "execute.v"
 
 module pdp11(clk, reset_n, switches);
@@ -27,7 +28,7 @@ module pdp11(clk, reset_n, switches);
    reg 		trap_priv;
 
    reg 		interrupt;
-   reg [15:0] 	interrupt_vector;
+   reg [7:0] 	interrupt_vector;
 
    reg [15:0] 	psw;
 
@@ -53,7 +54,7 @@ module pdp11(clk, reset_n, switches);
    wire 	assert_trap_bus;
 
    wire 	assert_int;
-   wire [15:0] 	assert_int_vec;
+   wire [7:0] 	assert_int_vec;
    wire [7:0] 	assert_int_ipl;
 
    wire [3:0] 	isn_15_12;
@@ -141,18 +142,11 @@ module pdp11(clk, reset_n, switches);
    wire [15:0] 	ss_data_mux;
    wire [15:0] 	dd_data_mux;
    wire [15:0] 	e1_data_mux;
-   reg [15:0] 	ss_mem_data;
-   reg [15:0] 	dd_mem_data;
-
-   reg [15:0] 	pop_mem_data;
-   reg [15:0] 	pc_mem_data;
-   reg [15:0] 	psw_mem_data;
 
    wire [15:0] 	e1_result;
    wire [31:0] 	e32_result;
 
-   // cpudmodes
-
+   // cpu modes
    parameter 	mode_kernel = 0;
    parameter 	mode_super = 1;
    parameter 	mode_undef = 2;
@@ -294,24 +288,41 @@ module pdp11(clk, reset_n, switches);
 
 
    //
-   // memory
+   // memory unit
    //
    wire [15:0] mem_in;
    wire [15:0] mem_out;
    wire [15:0] mem_addr;
    wire       mem_wr, mem_rd, mem_byte_op;
-		 
-   ram_4kx16 ram(.A(mem_addr),
-		 .DI(mem_in),
-		 .DO(mem_out),
-		 .CE_N(~mem_rd/*1'b0*/),
-		 .WE_N(~mem_wr),
-		 .BYTE_OP(mem_byte_op));
 
+   wire       psw_io_wr;
+   
+   memory mem1(.clk(clk), .reset(~reset_n),
+	       .mem_addr({ 6'b0, mem_addr }),
+	       .data_in(mem_in),
+	       .data_out(mem_out),
+	       .mem_rd(mem_rd),
+	       .mem_wr(mem_wr),
+	       .mem_byte_op(mem_byte_op),
+
+	       .bus_error(assert_trap_bus),
+	       .interrupt(assert_int),
+	       .vector(assert_int_vec);
+
+   	       .ide_data_bus(ide_data_bus),
+	       .ide_dior(ide_dior), .ide_diow(ide_diow),
+	       .ide_cs(ide_cs), .ide_da(ide_da),
+
+	       .psw(psw), .psw_io_wr(psw_io_wr),
+	       );
+   
+  
    //
+   // execute unit
    //
-   //
-   execute exec1(.pc(pc), .psw(psw),
+   execute exec1(.clk(clk), .reset(~reset_n),
+		 .enable(istate == e1 ? 1'b1 : 1'b0),
+		 .pc(pc), .psw(psw),
 		 .ss_data(ss_data), .dd_data(dd_data),
 		 .cc_n(cc_n), .cc_z(cc_z), .cc_v(cc_v), .cc_c(cc_c),
 		 .current_mode(current_mode),
@@ -344,7 +355,7 @@ module pdp11(clk, reset_n, switches);
 		 .latch_cc(latch_cc),
 		 .latch_psw_prio(latch_psw_prio),
 		 .new_psw_prio(new_psw_prio));
-
+   
    //
    // effective address mux;
    // set address of next memory operation in various states
@@ -374,22 +385,22 @@ module pdp11(clk, reset_n, switches);
 		      0) :
 
      istate == s2 ?
-		     (ss_mode == 3 ? ss_mem_data :
-		      ss_mode == 5 ? ss_mem_data :
-		      ss_mode == 6 ? (ss_mem_data + regs[ss_reg]) & 16'hffff :
-		      ss_mode == 7 ? (ss_mem_data + regs[ss_reg]) & 16'hffff :
+		     (ss_mode == 3 ? mem_out :
+		      ss_mode == 5 ? mem_out :
+		      ss_mode == 6 ? (mem_out + regs[ss_reg]) & 16'hffff :
+		      ss_mode == 7 ? (mem_out + regs[ss_reg]) & 16'hffff :
 		      ss_ea) :
 		     
-     istate == s3 ? ss_mem_data :
+     istate == s3 ? mem_out :
 
-     istate == t1 ? ((trap_odd | trap_bus) ? 004 :
-		     trap_ill ? 010 :
-		     trap_priv ? 010 :
-		     trap_bpt ? 014 :
-		     trap_iot ? 020 :
-		     trap_emt ? 030 :
-		     trap_trap ? 034 :
-		     interrupt ? interrupt_vector :
+     istate == t1 ? ((trap_odd | trap_bus) ? 16'o4 :
+		     trap_ill ? 16'o10 :
+		     trap_priv ? 16'o10 :
+		     trap_bpt ? 16'o14 :
+		     trap_iot ? 16'o20 :
+		     trap_emt ? 16'o30 :
+		     trap_trap ? 16'o34 :
+		     interrupt ? { 8'b0, interrupt_vector } :
 		     0) :
 
      istate == t2 ? ss_ea :
@@ -415,13 +426,13 @@ module pdp11(clk, reset_n, switches);
 		       0) :
 
 		      istate == d2 ?
-		      (dd_mode == 3 ? dd_mem_data :
-		       dd_mode == 5 ? dd_mem_data :
-		       dd_mode == 6 ? (dd_mem_data + regs[dd_reg]) :
-		       dd_mode == 7 ? (dd_mem_data + regs[dd_reg]) :
+		      (dd_mode == 3 ? mem_out :
+		       dd_mode == 5 ? mem_out :
+		       dd_mode == 6 ? (mem_out + regs[dd_reg]) :
+		       dd_mode == 7 ? (mem_out + regs[dd_reg]) :
 		       dd_ea) :
 
-		      istate == d3 ? dd_mem_data :
+		      istate == d3 ? mem_out :
 		      dd_ea;
 
 
@@ -430,13 +441,13 @@ module pdp11(clk, reset_n, switches);
    //
    assign ss_data_mux =
 	       (istate == c1 && (ss_mode == 0 || is_isn_rxx)) ? regs[ss_reg] :
-	       (istate == s4) ? ss_mem_data :
+	       (istate == s4) ? mem_out :
 	       ss_data_mux;
 
    assign dd_data_mux =
 	       (istate == c1 && dd_mode == 0) ? regs[dd_reg] :
-	       (istate == c1 && (isn_15_6 == 10'o01067)) ? psw[7:0] : // mfps 
-	       (istate == d4) ? dd_mem_data :
+	       (istate == c1 && (isn_15_6 == 10'o1067)) ? psw[7:0] : // mfps 
+	       (istate == d4) ? mem_out :
 	       dd_data_mux;
 
    assign e1_data_mux =
@@ -454,7 +465,7 @@ module pdp11(clk, reset_n, switches);
 	  (istate == s1 && (ss_mode == 6 || ss_mode == 7)) ? pc + 2 :
 	  (istate == d1 && (dd_mode == 6 || dd_mode == 7)) ? pc + 2 :
 	  (istate == e1 && latch_pc                      ) ? new_pc :
-	  (istate == o1 || istate == t3                  ) ? pc_mem_data :
+	  (istate == o1 || istate == t3                  ) ? mem_out :
 	  pc;
 
    //
@@ -498,7 +509,10 @@ module pdp11(clk, reset_n, switches);
 	   psw <= { psw[15:8], new_psw_prio, psw[3:0]};
        else
          if (istate == o2 || istate == t4)
-	   psw <= psw_mem_data;
+	   psw <= mem_out;
+	 else
+	   if (istate == w1 && psw_io_wr)
+	     psw <= mem_out;
 
    //
    // instruction decode
@@ -597,7 +611,7 @@ module pdp11(clk, reset_n, switches);
 		     (isn_15_6 == 10'o1050)) && 		// clr/clrb
 		   !(isn_15_6 == 10'o0001);			// jmp
 
-   assign is_isn_byte = isn[15] && !(isn_15_12 == 4'o016); 	// sub
+   assign is_isn_byte = isn[15] && !(isn_15_12 == 4'o16); 	// sub
 
    assign is_isn_rdd = 
 		       (isn_15_9 == 7'o004) ||			// jsr
@@ -615,8 +629,8 @@ module pdp11(clk, reset_n, switches);
    assign is_isn_r32 = (isn_15_9 == 7'o071);			// div
 
    assign need_src_data =
-			 !((isn_15_6 == 10'o00050) ||
-			   (isn_15_6 == 10'o01050));		// clr/clrb
+			 !((isn_15_6 == 10'o0050) ||
+			   (isn_15_6 == 10'o1050));		// clr/clrb
 
    // ea setup - ss
    assign ss_mode = isn[11:9];
@@ -673,19 +687,20 @@ module pdp11(clk, reset_n, switches);
 	   istate == t2;
 
    assign mem_in =
+		  istate == w1 ? e1_data :
 		  istate == p1 ? regs[ss_reg] :
 		  istate == t1 ? psw :
    		  istate == t2 ? pc : mem_in;
    
    assign mem_addr =
 		    istate == f1 ? pc :
-		    istate == s2 ? ss_ea_mux :
-		    istate == s3 ? ss_ea_mux :
-		    istate == s4 ? ss_ea_mux :
+		    istate == s2 ? ss_ea :
+		    istate == s3 ? ss_ea :
+		    istate == s4 ? ss_ea :
 		    istate == d2 ? dd_ea :
-    		    istate == d3 ? dd_ea_mux :
-    		    istate == d4 ? dd_ea_mux :
-		    istate == w1 ? dd_ea_mux :
+    		    istate == d3 ? dd_ea :
+    		    istate == d4 ? dd_ea :
+		    istate == w1 ? dd_ea :
 		    istate == o1 ? sp :
 		    istate == o2 ? sp :
 		    istate == o3 ? sp :
@@ -704,216 +719,173 @@ module pdp11(clk, reset_n, switches);
    always @(posedge clk)
      if (reset_n == 0)
        begin
+	  regs[0] <= 0;
+	  regs[1] <= 0;
+	  regs[2] <= 0;
+	  regs[3] <= 0;
+	  regs[4] <= 0;
+	  regs[5] <= 0;
+	  regs[6] <= 0;
+	  regs[7] <= 16'o0500;
+
 	  isn <= 0;
        end
      else
        begin
+
+	  if (istate != w1)
+	    begin
+	       regs[7] <= pc_mux; // pc
+	       regs[6] <= sp_mux; // sp
+	    end
+
 	  case (istate)
 	    f1:
 	    begin
-	       $display("f1: pc=%o, sp=%o, psw=%o ipl%d n%d z%d v%d c%d",
-			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
-	       $display("    trap=%d, interrupt=%d", trap, interrupt);
-	       $display("    mem_rd=%d, mem_wr=%d", mem_rd, mem_wr);
-	       $display("    regs %6o %6o %6o %6o ",
-			regs[0], regs[1], regs[2], regs[3]);
-	       $display("         %6o %6o %6o %6o ",
-			regs[4], regs[5], regs[6], regs[7]);
-
 	       isn <= mem_out;
-	       $display("mem_out %o", mem_out);
-	    end // case: f1
+	    end
 
 	  c1:
 	    begin
-	       $display("c1: isn %06o ss %d, dd %d, no_op %d, ill %d, push %d, pop %d",
-			isn, need_srcspec_dd, need_destspec_dd,
-			no_operand, is_illegal, need_push_state, need_pop_reg);
-
-	       $display("    need_src_data %d, need_dest_data %d",
-			need_src_data, need_dest_data);
-
-	       $display(" ss: mode%d reg%d ind%d post %d pre %d",
-			ss_mode, ss_reg, ss_ea_ind,
-			ss_post_incr, ss_pre_dec);
-
-
-	       $display(" dd: mode%d reg%d ea %06o ind%d post %d pre %d",
-			dd_mode, dd_reg, dd_ea, dd_ea_ind,
-			dd_post_incr, dd_pre_dec);
-
-	       $display(" need: dest_data %d; s1 %d, s2 %d, s4 %d; d1 %d, d2 %d, d4 %d", 
-			need_dest_data,
-			need_s1, need_s2, need_s4, need_d1, need_d2, need_d4);
-
-
 	    end
 
 	  s1:
 	    begin
-	       $display("s1:");
 	       if (ss_post_incr)
 		 begin
 		    regs[ss_reg] <= regs[ss_reg] +
-				    (need_srcspec_dd_byte &&
-				     ss_reg < 6 && ss_mode == 2) ? 1 : 2;
-		    $display(" R%d <- %o (ss r++)", ss_reg, regs[ss_reg]);
+				    ((need_srcspec_dd_byte &&
+				      ss_reg < 6 && ss_mode == 2) ? 1 : 2);
+		    $display(" R%d <- (ss r++)", ss_reg);
 		 end
 	       else
 		 if (ss_pre_dec)
 		   begin
 		      regs[ss_reg] <= regs[ss_reg] -
-				      (need_srcspec_dd_byte &&
-				       ss_reg < 6 && ss_mode == 4) ? 1:2;
-		      $display(" R%d <- %o (ss r--)", ss_reg, regs[ss_reg]);
+				      ((need_srcspec_dd_byte &&
+					ss_reg < 6 && ss_mode == 4) ? 1 : 2);
+		      $display(" R%d <- (ss r--)", ss_reg);
 		   end
 	    end // case: s1
 	  
 	  s2:
 	    begin
-	       ss_mem_data <= mem_out;
-	       $display("s2: ss_ea_mux %6o, [ea]=%6o", ss_ea_mux, ss_mem_data);
 	    end
 
 	  s3:
 	    begin
-	       $display("s3: ss_ea_mux %6o", ss_ea_mux);
-	       ss_mem_data <= mem_out;
 	    end
 
 	  s4:
 	    begin
-	       $display("s4: ss_ea_mux %6o", ss_ea_mux);
-	       ss_mem_data <= mem_out;
 	    end
 
 	  d1:
 	    begin
-	       $display("d1: dd_ea %6o, dd_ea_mux %6o", dd_ea, dd_ea_mux);
                if (dd_post_incr)
 		 begin
 		    regs[dd_reg] <= regs[dd_reg] +
-				    (need_destspec_dd_byte &&
-				     dd_reg < 6 && dd_mode == 2) ? 1 : 2;
-		    $display(" R%d <- %o (dd r++)", dd_reg, regs[dd_reg]);
+				    ((need_destspec_dd_byte &&
+				      dd_reg < 6 && dd_mode == 2) ? 1 : 2);
+		    $display(" R%d <- (dd r++)", dd_reg);
 		 end
                else
 		 if (dd_pre_dec)
 		   begin
 		      regs[dd_reg] <= regs[dd_reg] - 
-				      (need_destspec_dd_byte &&
-				       dd_reg < 6 && dd_mode == 4) ?1:2;
-		      $display(" R%d <- %o (dd r--)", dd_reg, regs[dd_reg]);
+				      ((need_destspec_dd_byte &&
+					dd_reg < 6 && dd_mode == 4) ? 1 : 2);
+		      $display(" R%d <- (dd r--)", dd_reg);
 		   end
-	    end // case: d1
+	    end
 
 	  d2:
 	    begin
-	       $display("d2: dd_ea %6o, dd_ea_mux %6o", dd_ea, dd_ea_mux);
-	       dd_mem_data <= mem_out;
+	       // note: cycle needs to be long enough for memory read and
+	       // addition to take place
+	       // (or, possibly move mode 6/7 +reg to ea for d3)
 	    end
 
 	  d3:
 	    begin
-	       $display("d3:");
-	       dd_mem_data <= mem_out;
 	    end
 
 	  d4:
 	    begin
-	       $display("d4:");
-	       dd_mem_data <= mem_out;
 	    end
 
 	  e1:
 	    begin
-	       $display("e1:");
 	    end
 	  
 	  w1:
 	    begin
-	       $display("w1: dd%d %d, dd_data %o, ss%d %d, ss_data %o, e1_data %o",
-		      dd_mode, dd_reg, dd_data, ss_mode, ss_reg, ss_data, e1_data);
-	       $display("    dd_ea_mux %06o, store_result %d, store_ss_reg %d, store_32 %d",
-		      dd_ea_mux, store_result, store_ss_reg, store_result32);
-
 	       if (store_result && dd_dest_mem)
 		 begin
 		 end
 	       else
 		 if (store_result && dd_dest_reg)
 		   begin
-		      $display(" r%d <- %06o (dd)", dd_reg, e1_data);
+		      $display(" r%d <- %0o (dd)", dd_reg, e1_data);
 		      regs[dd_reg] <= e1_data;
 		   end
 		 else
 		   if (store_ss_reg)
 		     begin
-			$display(" r%d <- %06o (ss)", ss_reg, e1_data);
+			$display(" r%d <- %0o (ss)", ss_reg, e1_data);
 			regs[ss_reg] <= e1_data;
 		     end
 		   else
 		     if (store_result32)
 		       begin
-			  $display(" r%d <- %06o (e32)", ss_reg, e32_result >> 16);
-			  $display(" r%d <- %06o (e32)", ss_reg|1, e32_result & 16'hffff);
-			  regs[ss_reg    ] <= e32_result >> 16;
-			  regs[ss_reg | 1] <= e32_result & 16'hffff;
+			  $display(" r%d <- %0o (e32)",
+				   ss_reg, e32_result[31:16]);
+			  $display(" r%d <- %0o (e32)",
+				   ss_reg|1, e32_result[15:0]);
+			  regs[ss_reg    ] <= e32_result[31:16];
+			  regs[ss_reg | 1] <= e32_result[15:0];
 		       end
 	    end // case: w1
 	  
 
 	  o1:
 	    begin
-	       $display("o1:");
-	       pc_mem_data <= mem_out;
 	    end
 
 	  o2:
 	    begin
-	       $display("o2:");
-	       psw_mem_data <= mem_out;
 	    end
 
 	  o3:
 	    begin
-	       $display("o3:");
-	       pop_mem_data <= mem_out;
 	    end
 
 
 	  p1:
 	    begin
-	       $display("p1:");
 	    end
 
 	  t1:
 	    begin
-	       $display("t1: sp %o", sp);
 	    end
 
 	  t2:
 	    begin
-	       $display("t2:");
 	    end
 
 	  t3:
 	    begin
-	       $display("t3: ss_ea %o, ss_ea_mux %o", ss_ea, ss_ea_mux);
-	       psw_mem_data <= mem_out;
 	    end
 
 	  t4:
 	    begin
-	       $display("t4: ss_ea %o, ss_ea_mux %o", ss_ea, ss_ea_mux);
-	       psw_mem_data <= mem_out;
 	    end
 
 	  i1:
 	    begin
 	    end
 	endcase // case(istate)
-     end // always @ (istate)
+       end // else: !if(reset_n == 0)
    
    
    //
@@ -1067,76 +1039,8 @@ module pdp11(clk, reset_n, switches);
    
 
    //
+   // calculate next state
    //
-   //
-`ifdef xxx
-   always @(istate)
-     begin
-	new_istate = 0;
-	case (istate)
-
-	  f1: new_istate = (trap || interrupt) ? t1 :
-        		   c1;
-
-	  c1: new_istate = is_illegal ? f1 :
-        	           no_operand ? e1 :
-        		   need_s1 ? s1 :
-        		   need_d1 ? d1 :
-                           e1;
-
-	  s1: new_istate = need_s2 ? s2 :
-			   need_s4 ? s4 :
-			   d1;
-
-	  s2: new_istate = ss_ea_ind ? s3 :
-        		   need_s4 ? s4 :
-                           d1;
-
-	  s3: new_istate = s4;
-
-	  s4: new_istate = d1;
-
-	  d1: new_istate = need_d2 ? d2 : 
-        		   need_d4 ? d4 :
-        		   need_push_state ? p1 :
-        		   e1;
-
-	  d2: new_istate = dd_ea_ind ? d3 :
-        		   need_d4 ? d4 :
-        		   need_push_state ? p1 :
-        		   e1;
-
-	  d3: new_istate = need_d4 ? d4 :
-        		   need_push_state ? p1 :
-        		   e1;
-
-	  d4: new_istate = need_push_state ? p1 :
-        		   e1;
-
-	  e1: new_istate = need_pop_reg ? o3 :
-			   need_pop_pc_psw ? o1 :
-        		   w1;
-
-	  w1: new_istate = halted ? h1 :
-			   waited ? i1 :
-			   f1;
-
-	  o1: new_istate = o2;
-	  o2: new_istate = f1;
-	  o3: new_istate = w1;
-
-	  p1: new_istate = e1;
-
-	  t1: new_istate = t2;
-	  t2: new_istate = t3;
-	  t3: new_istate = t4;
-	  t4: new_istate = f1;
-
-	  i1: new_istate = interrupt ? f1 : i1;
-	endcase
-     end
-`endif
-   
    assign new_istate = istate == f1 ? ((trap || interrupt) ? t1 :
         			       c1) :
 
@@ -1206,51 +1110,230 @@ module pdp11(clk, reset_n, switches);
    always @(posedge clk)
      if (reset_n == 0)
        begin
-	  regs[6] <= 0;
-	  regs[7] <= 0;
 	  ss_data <= 0;
 	  dd_data <= 0;
 	  ss_ea <= 0;
 	  dd_ea <= 0;
+	  e1_data <= 0;
        end
-   else
-     begin
+     else
+       begin
 
-	regs[7] /*pc*/ <= reset_n ? pc_mux : 0;
-	regs[6] /*sp*/ <= reset_n ? sp_mux : 0;
+	  ss_ea <= (istate == c1 ||
+		    istate == s1 ||
+		    istate == s2 ||
+		    istate == s3 ||
+		    istate == d1 ||
+		    istate == d2 ||
+		    istate == d3 ||
+		    istate == t1 ||
+		    istate == t3) ?
+		   ss_ea_mux : ss_ea;
 
-	ss_ea <= (istate == c1 ||
-		  istate == s1 ||
-		  istate == s2 ||
-		  istate == s3 ||
-		  istate == d1 ||
-		  istate == d2 ||
-		  istate == d3 ||
-		  istate == t1 ||
-		  istate == t3) ?
-		 ss_ea_mux : ss_ea;
+	  dd_ea <= (istate == c1 ||
+		    istate == s1 ||
+		    istate == s2 ||
+		    istate == s3 ||
+		    istate == d1 ||
+		    istate == d2 ||
+		    istate == d3) ?
+		   dd_ea_mux : dd_ea;
 
-	dd_ea <= (istate == c1 ||
-		  istate == s1 ||
-		  istate == s2 ||
-		  istate == s3 ||
-		  istate == d1 ||
-		  istate == d2 ||
-		  istate == d3) ?
-		 dd_ea_mux : dd_ea;
+	  if (istate == c1 ||
+	      istate == s4 || istate == d4)
+	    begin
+	       ss_data <= ss_data_mux;
+	       dd_data <= dd_data_mux;
+	    end
 
-	if (istate == c1 ||
-	    istate == s4 || istate == d4)
-	  begin
-	     ss_data <= ss_data_mux;
-	     dd_data <= dd_data_mux;
-	  end
+	  e1_data <= (istate == e1 || istate == w1) ? e1_data_mux :
+		     (istate == o3) ? mem_out :
+		     e1_data;
+       end
 
-	e1_data <= (istate == e1) ? e1_data_mux :
-		   (istate == o3) ? pop_mem_data :
-		   e1_data;
+   //
+   //debug
+   //
+   
+//`ifdef xx
+   always @(posedge clk)
+     #2 begin
+   	case (istate)
+	  f1:
+	    begin
+	       $display("f1: pc=%o, sp=%o, psw=%o ipl%d n%d z%d v%d c%d",
+			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
+	       $display("    trap=%d, interrupt=%d", trap, interrupt);
+	    end // case: f1
+
+	  c1:
+	    begin
+	       $display("c1: isn %0o ss %d, dd %d, no_op %d, ill %d, push %d, pop %d",
+			isn, need_srcspec_dd, need_destspec_dd,
+			no_operand, is_illegal, need_push_state, need_pop_reg);
+
+	       $display("    need_src_data %d, need_dest_data %d",
+			need_src_data, need_dest_data);
+
+	       $display(" ss: mode%d reg%d ind%d post %d pre %d",
+			ss_mode, ss_reg, ss_ea_ind,
+			ss_post_incr, ss_pre_dec);
+
+
+	       $display(" dd: mode%d reg%d ea %0o ind%d post %d pre %d",
+			dd_mode, dd_reg, dd_ea, dd_ea_ind,
+			dd_post_incr, dd_pre_dec);
+
+	       $display(" need: dest_data %d; s1 %d, s2 %d, s4 %d; d1 %d, d2 %d, d4 %d", 
+			need_dest_data,
+			need_s1, need_s2, need_s4, need_d1, need_d2, need_d4);
+
+
+	    end
+
+	  s1:
+	    begin
+	       $display("s1:");
+	    end
+	  
+	  s2:
+	    begin
+	       $display("s2: ss_ea_mux %0o, [ea]=%0o", ss_ea_mux, mem_out);
+	    end
+
+	  s3:
+	    begin
+	       $display("s3: ss_ea_mux %0o", ss_ea_mux);
+	    end
+
+	  s4:
+	    begin
+	       $display("s4: ss_ea_mux %0o, ss_data_mux %o, mem_out %o",
+			ss_ea_mux, ss_data_mux, mem_out);
+	    end
+
+	  d1:
+	    begin
+	       $display("d1: dd_ea %0o, dd_ea_mux %0o", dd_ea, dd_ea_mux);
+	       $display("    ss_data %0o, ss_data_mux %0o",
+			ss_data, ss_data_mux);
+	       
+               if (dd_post_incr)
+		 begin
+		    $display(" R%d <- %o (dd r++)", dd_reg, regs[dd_reg]);
+		 end
+               else
+		 if (dd_pre_dec)
+		   begin
+		      $display(" R%d <- %o (dd r--)", dd_reg, regs[dd_reg]);
+		   end
+	    end // case: d1
+	  
+	  d2:
+	    begin
+	       $display("d2: dd_ea %0o, dd_ea_mux %0o", dd_ea, dd_ea_mux);
+	    end
+
+	  d3:
+	    begin
+	       $display("d3:");
+	    end
+
+	  d4:
+	    begin
+	       $display("d4:");
+	    end
+
+	  e1:
+	    begin
+	       $display("e1: isn %o, ss_data %o, dd_data %o",
+			isn, ss_data, dd_data);
+	       $display("    e1_data_mux %o, e1_data %o", e1_data_mux, e1_data);
+
+	       $display("    ss_data %0o, dd_data %0o, e1_result %0o",
+			ss_data, dd_data, e1_result);
+	       $display("    latch_pc %d, latch_cc %d", latch_pc, latch_cc);
+	       $display("    psw %o", psw);
+
+	       $display("    e1_result %o, e1_data %o, e1_data_mux %o",
+			e1_result, e1_data, e1_data_mux);
+
+	    end
+
+	  w1:
+	    begin
+	       $display("w1: dd%d %d, dd_data %o, ss%d %d, ss_data %o, e1_data %o",
+		      dd_mode, dd_reg, dd_data, ss_mode, ss_reg, ss_data, e1_data);
+	       $display("    store_result %d, store_ss_reg %d, store_32 %d",
+			store_result, store_ss_reg, store_result32);
+	       $display("    e1_data_mux %o, e1_data %o, e1_result %o",
+			e1_data_mux, e1_data, e1_result);
+
+	    end
+
+	  o1:
+	    begin
+	       $display("o1:");
+	    end
+
+	  o2:
+	    begin
+	       $display("o2:");
+	    end
+
+	  o3:
+	    begin
+	       $display("o3:");
+	    end
+
+
+	  p1:
+	    begin
+	       $display("p1:");
+	    end
+
+	  t1:
+	    begin
+	       $display("t1: sp %o", sp);
+	    end
+
+	  t2:
+	    begin
+	       $display("t2:");
+	    end
+
+	  t3:
+	    begin
+	       $display("t3: ss_ea %o, ss_ea_mux %o", ss_ea, ss_ea_mux);
+	    end
+
+	  t4:
+	    begin
+	       $display("t4: ss_ea %o, ss_ea_mux %o", ss_ea, ss_ea_mux);
+	    end
+
+	  i1:
+	    begin
+	    end
+
+	endcase // case(istate)
+
+	$display("    mem_rd=%d, mem_wr=%d", mem_rd, mem_wr);
+	$display("    regs %0o %0o %0o %0o ",
+		 regs[0], regs[1], regs[2], regs[3]);
+	$display("         %0o %0o %0o %0o ",
+		 regs[4], regs[5], regs[6], regs[7]);
+
+	$display("    mem_out %o", mem_out);
+	$display("    ss_ea_mux %0o, ss_ea %0o, dd_ea_mux %0o, dd_ea %0o",
+		 ss_ea_mux, ss_ea, dd_ea_mux, dd_ea);
+	$display("    ss_data %0o, dd_data %0o",
+		 ss_data, dd_data);
+	  
      end
 
+//`endif
+	    
 endmodule
 
 
