@@ -8,6 +8,7 @@
 `include "psw_regs.v"
 `include "rk_regs.v"
 `include "tt_regs.v"
+`include "bootrom.v"
 
 module iopage(clk, reset, address, data_in, data_out,
 	      iopage_rd, iopage_wr, iopage_byte_op,
@@ -64,7 +65,8 @@ module iopage(clk, reset, address, data_in, data_out,
  	
    assign 	iopage_addr = address[12:0];
 
-   assign data_out = mmu_decode ? mmu_data_out :
+   assign data_out = bootrom_decode ? bootrom_data_out :
+		     mmu_decode ? mmu_data_out :
 		     tt_decode ? tt_data_out :
 		     clk_decode ? clk_data_out :
 		     sr_decode ? sr_data_out :
@@ -72,7 +74,7 @@ module iopage(clk, reset, address, data_in, data_out,
 		     rk_decode ? rk_data_out :
 		     data_out;
 
-   assign good_decode = mmu_decode | tt_decode | clk_decode |
+   assign good_decode = bootrom_decode | mmu_decode | tt_decode | clk_decode |
 			sr_decode | psw_decode | rk_decode;
 
    assign no_decode = (iopage_rd | iopage_wr) & ~good_decode;
@@ -86,6 +88,16 @@ module iopage(clk, reset, address, data_in, data_out,
 		     0;
 
    
+   bootrom bootrom1(.clk(clk),
+		    .reset(reset),
+		    .iopage_addr(iopage_addr),
+		    .data_in(data_in),
+		    .data_out(bootrom_data_out),
+		    .decode(bootrom_decode),
+		    .iopage_rd(iopage_rd),
+		    .iopage_wr(iopage_wr),
+		    .iopage_byte_op(iopage_byte_op));
+
    mmu_regs mmu_regs1(.clk(clk),
 		      .reset(reset),
 		      .iopage_addr(iopage_addr),

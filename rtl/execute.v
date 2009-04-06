@@ -76,10 +76,13 @@ module execute(clk, reset, enable,
 
    assign e1_result_sign = e1_result[15];
    assign e1_result_byte_sign = e1_result[7];
+
    assign e1_result_zero = e1_result == 16'b0;
    assign e1_result_byte_zero = e1_result[7:0] == 8'b0;
+
    assign dd_data_sign = dd_data[15];
    assign dd_data_zero = dd_data == 16'b0;
+
    assign ss_data_sign = ss_data[15];
 
    //
@@ -92,7 +95,12 @@ module execute(clk, reset, enable,
    assign new_pc_b = pc + { 8'hff, pc_offset };
 
    //
-   always @(isn or pc or psw or ss_data or dd_data or clk)
+   always @(isn or pc or psw or ss_data or dd_data or clk or
+	    e32_result or e32_result_sign or e32_result_zero or
+	    e1_result or e1_result_sign or e1_result_zero or
+	    e1_result_byte_sign or e1_result_byte_zero or
+	    dd_data_sign or dd_data_zero or ss_data_sign or
+	    pc_offset or new_pc_w or new_pc_b)
      if (enable) begin
 	assert_halt = 0;
 	assert_wait = 0;
@@ -181,7 +189,7 @@ module execute(clk, reset, enable,
 			       latch_pc = 1;
 			    end
 
-			6'o30:				    /* spl */
+			6'o30:				    	    /* spl */
 			  begin
 			     new_psw_prio = isn & 7;
 			     latch_psw_prio = 1;
@@ -223,7 +231,7 @@ module execute(clk, reset, enable,
 			    end
 		      endcase // case(isn_5_0)
 
-		    6'o03:					    // swab
+		    6'o03:					    /* swab */
 		      begin
 			 $display("e: SWAB");
 			 e1_result = {dd_data[7:0],dd_data[15:8]};
@@ -276,12 +284,16 @@ module execute(clk, reset, enable,
 		      begin
 			 new_pc = new_pc_w;
 			 latch_pc = (cc_n ^ cc_v) ? 0 : 1;
+			 $display("e: bge; isn %o, latch_pc %o, pc %o, new_pc %o",
+				  isn, latch_pc, pc, new_pc);
 		      end
 
 		    6'o22, 6'o23:				    /* bge */
 		      begin
 			 new_pc = new_pc_b;
 			 latch_pc = (cc_n ^ cc_v) ? 0 : 1;
+			 $display("e: bge; isn %o, latch_pc %o, pc %o, new_pc %o",
+				  isn, latch_pc, pc, new_pc);
 		      end
 
 		    6'o24, 6'o25:				    /* blt */
@@ -523,6 +535,7 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 			       (ss_data[15] ^ e1_result[15]);
 		    new_cc_c = (e1_result < ss_data);
 		    latch_cc = 1;
+		    $display("e1: add, new_cc_z %o", new_cc_z);
 		 end
 
 	       04'o7:
@@ -678,7 +691,8 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 		 endcase // case(isn_11_9)
 
 	       4'o10:
-		 //if (1) $display(" e: 010 isn_11_6 %o", isn_11_6);
+		 begin
+		 $display(" e: 010 isn_11_6 %o", isn_11_6);
 		 case (isn_11_6)
 		   6'o00, 6'o01:				/* bpl */
 		     begin
@@ -963,7 +977,7 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 		     end
 		   
 		 endcase // case(isn_11_6)
-	       
+		 end
 
 	       4'o11:					    /* movb */
 		 begin

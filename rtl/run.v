@@ -8,7 +8,16 @@ module test;
   reg clk, reset_n;
   reg[15:0] switches;
 
-  pdp11 cpu(clk, reset_n, switches);
+   wire [15:0] ide_data_bus;
+   wire        ide_dior, ide_diow;
+   wire [1:0]  ide_cs;
+   wire [2:0]  ide_da;
+
+
+  pdp11 cpu(.clk(clk), .reset_n(reset_n), .switches(switches),
+	    .ide_data_bus(ide_data_bus),
+	    .ide_dior(ide_dior), .ide_diow(ide_diow),
+	    .ide_cs(ide_cs), .ide_da(ide_da));
 
   initial
     begin
@@ -31,9 +40,14 @@ module test;
           reset_n = 1;
        end
   
-       #2000 $finish;
+       #100000 $finish;
 //       #1500000 $finish;
     end
+
+   always @(posedge clk)
+     begin
+	$pli_ide(ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da);
+     end
 
   always
     begin

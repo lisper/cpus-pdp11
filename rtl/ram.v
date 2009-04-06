@@ -16,6 +16,9 @@ module ram_4kx16(A, DI, DO, CE_N, WE_N, BYTE_OP);
 
    reg [15:0] 	 v;
    wire [12:0] 	 BA;
+
+   integer 	 file;
+
    
    initial
      begin
@@ -25,10 +28,16 @@ module ram_4kx16(A, DI, DO, CE_N, WE_N, BYTE_OP);
 	     ram_l[i] = 7'b0;
 	  end
 
+`ifdef CANNED
 	for (i = 0; i < 20; i=i+ 1)
 	  begin
 	     case (i)
-	       //`ifdef xx
+`ifdef TEST0
+	       0: v = 16'o0010101;
+	       1: v = 16'o0010101;
+	       2: v = 16'o0000000;
+`endif
+`ifdef TEST2
 	       0: v = 16'o0012706;
 	       1: v = 16'o0000500;
 	       2: v = 16'o0012701;
@@ -47,16 +56,25 @@ module ram_4kx16(A, DI, DO, CE_N, WE_N, BYTE_OP);
 	       15: v = 16'o0005271;
 	       16: v = 16'o0000004;
 	       17: v = 16'o0000000;
-	       //`endif
-	       //	      0: v = 16'o0010101;
-	       //	      1: v = 16'o0010101;
-	       //	      2: v = 16'o0000000;
+`endif
 	       default:  v = 16'o0000000;
 	       
 	     endcase // case(i)
 	     ram_h[14'o0500/2 + i] = v[15:8];
 	     ram_l[14'o0500/2 + i] = v[7:0];
 	  end
+`endif
+
+	file = $fopen("test1.mem", "r");
+
+	while ($fscanf(file, "%o %o", i, v) > 0)
+	  begin
+	     $display("ram[%o] <- %o", i, v);
+	     ram_h[i/2] = v[15:8];
+	     ram_l[i/2] = v[7:0];
+	  end
+
+	$fclose(file);
      end
 
    assign BA = A[13:1];

@@ -8,10 +8,17 @@
 `include "bus.v"
 `include "execute.v"
 
-module pdp11(clk, reset_n, switches);
+module pdp11(clk, reset_n, switches,
+	     ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da);
 
    input clk, reset_n;
    input [15:0] switches;
+
+   inout [15:0] ide_data_bus;
+   output 	ide_dior, ide_diow;
+   output [1:0] ide_cs;
+   output [2:0] ide_da;
+
 
    // state
    reg 		halted;
@@ -728,7 +735,8 @@ module pdp11(clk, reset_n, switches);
 	  regs[4] <= 0;
 	  regs[5] <= 0;
 	  regs[6] <= 0;
-	  regs[7] <= 16'o0500;
+//	  regs[7] <= 16'o0500;
+  	  regs[7] <= 16'o173000;
 
 	  isn <= 0;
        end
@@ -1320,13 +1328,13 @@ module pdp11(clk, reset_n, switches);
 
 	endcase // case(istate)
 
-	$display("    bus_rd=%d, bus_wr=%d", bus_rd, bus_wr);
+	$display("    bus_rd=%d, bus_wr=%d, bus_out %o",
+		 bus_rd, bus_wr, bus_out);
 	$display("    regs %0o %0o %0o %0o ",
 		 regs[0], regs[1], regs[2], regs[3]);
 	$display("         %0o %0o %0o %0o ",
 		 regs[4], regs[5], regs[6], regs[7]);
 
-	$display("    bus_out %o", bus_out);
 	$display("    ss_ea_mux %0o, ss_ea %0o, dd_ea_mux %0o, dd_ea %0o",
 		 ss_ea_mux, ss_ea, dd_ea_mux, dd_ea);
 	$display("    ss_data %0o, dd_data %0o",

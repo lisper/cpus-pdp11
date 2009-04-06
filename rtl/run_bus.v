@@ -23,7 +23,12 @@ module test;
    wire        bus_error;
    wire        interrupt;
    wire [7:0]  vector;
-   
+
+   wire [15:0] ide_data_bus;
+   wire        ide_dior, ide_diow;
+   wire [1:0]  ide_cs;
+   wire [2:0]  ide_da;
+
    bus bus1(.clk(clk), .reset(reset),
 	    .bus_addr(bus_addr),
 	    .data_in(bus_in),
@@ -160,6 +165,11 @@ module test;
        
        #5000 $finish;
     end
+
+   always @(posedge clk)
+     begin
+	$pli_ide(ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da);
+     end
 
   always
     begin

@@ -48,17 +48,15 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
      else
        ata_state <= ata_state_next;
 
-   assign ide_data_bus =
-			(ata_wr && (ata_state == s0 ||
-				    ata_state == s1 ||
-				    ata_state == s2 ||
-   				    ata_state == s3)) ? ata_in : 16'bz;
+   assign ide_data_bus = (ata_wr && (ata_state == s0 ||
+				     ata_state == s1 ||
+				     ata_state == s2 ||
+   				     ata_state == s3)) ? ata_in : 16'bz;
 			
-   always @(clk or ata_state or ata_rd or ata_wr or ata_addr)
+   always @(clk or ata_state or ata_rd or ata_wr or ata_addr or ide_data_bus)
      begin
 	ata_state_next = ata_state;
 	ata_done = 0;
-	ata_out = 0;
 
 	case (ata_state)
 	  idle:
@@ -96,9 +94,8 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
 	    begin
 	       ide_dior = 1;
 	       ide_diow = 1;
-	       if (ata_rd)
-		 ata_out = ide_data_bus;
-//	       ata_done = 1;
+
+	       ata_done = 1;
 	       ata_state_next = s4;
 	    end
 
@@ -106,7 +103,6 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
 	    begin
 	       ide_cs = 2'b11;
 	       ide_da = 3'b111;
-	       ata_done = 1;
 	       ata_state_next = idle;
 	    end
 
@@ -116,5 +112,12 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
 	    end
 	endcase
      end
-   
+
+   always @(posedge clk)
+     if (reset)
+       ata_out <= 0;
+     else
+       if (ata_state == s2 && ata_rd)
+	 ata_out <= ide_data_bus;
+
 endmodule // ide

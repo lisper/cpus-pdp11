@@ -312,7 +312,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	    begin
 	       ata_wr = 1;
 	       ata_addr = ATA_DEVCTRL;
-	       ata_in = 16'h0002;	// nIEN
+	       ata_in = 16'h0002;		// nIEN
 	       if (ata_done)
 		 rk_state_next = init4;
 	    end
@@ -393,11 +393,10 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	       ata_rd = 1;
 	       ata_addr = ATA_STATUS;
 
-	       if (ata_done
-//		   &&
-//		   ~ata_out[IDE_STATUS_BSY] &&
-//		   ata_out[IDE_STATUS_DRQ]
-		   )
+if (ata_done) $display("rk: ata_out %x", ata_out);
+	       if (ata_done &&
+		   ~ata_out[IDE_STATUS_BSY] &&
+		   ata_out[IDE_STATUS_DRQ])
 		 begin
 		    if (rkcs_cmd[3:1] == 3'b001)
 		      rk_state_next = write0;
@@ -430,6 +429,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	       dma_req = 1;
 	       dma_addr = { rkcs_mex, rkba };
 	       dma_data_in = ata_out;
+$display("read1: ata_out %o", ata_out);
 			    
 	       if (dma_ack)
 		 begin
