@@ -18,7 +18,9 @@ module ram_4kx16(A, DI, DO, CE_N, WE_N, BYTE_OP);
    wire [12:0] 	 BA;
 
    integer 	 file;
-
+   reg [1023:0]  str;
+   reg [1023:0]  testfilename;
+   integer 	 n;
    
    initial
      begin
@@ -65,7 +67,12 @@ module ram_4kx16(A, DI, DO, CE_N, WE_N, BYTE_OP);
 	  end
 `endif
 
-	file = $fopen("test1.mem", "r");
+ 	n = $scan$plusargs("test=", testfilename);
+
+	$display("ram: code filename: %s", testfilename);
+
+//	file = $fopen("test2.mem", "r");
+	file = $fopen(testfilename, "r");
 
 	while ($fscanf(file, "%o %o", i, v) > 0)
 	  begin
@@ -99,7 +106,7 @@ module ram_4kx16(A, DI, DO, CE_N, WE_N, BYTE_OP);
           end
      end
 
-   assign DO = { BYTE_OP ? 0 : ram_h[BA],
+   assign DO = { BYTE_OP ? 8'b0 : ram_h[BA],
 		 BYTE_OP ? (A[0] ? ram_l[BA] : ram_h[BA]) : ram_l[BA] };
 
    always @(A or CE_N or WE_N or DO)
