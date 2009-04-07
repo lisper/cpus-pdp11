@@ -101,7 +101,27 @@ module execute(clk, reset, enable,
 	    e1_result_byte_sign or e1_result_byte_zero or
 	    dd_data_sign or dd_data_zero or ss_data_sign or
 	    pc_offset or new_pc_w or new_pc_b)
-     if (enable) begin
+//     if (enable) begin
+//	assert_halt = 0;
+//	assert_wait = 0;
+//	assert_trap_priv = 0;
+//	assert_trap_emt = 0;
+//	assert_trap_trap = 0;
+//	assert_bpt = 0;
+//	assert_iot = 0;
+//	assert_reset = 0;
+     if (~enable) begin
+	assert_halt = 0;
+	assert_wait = 0;
+	assert_trap_priv = 0;
+	assert_trap_emt = 0;
+	assert_trap_trap = 0;
+	assert_bpt = 0;
+	assert_iot = 0;
+	assert_reset = 0;
+     end
+     else
+       begin
 	assert_halt = 0;
 	assert_wait = 0;
 	assert_trap_priv = 0;
@@ -112,7 +132,8 @@ module execute(clk, reset, enable,
 	assert_reset = 0;
 
 	e1_result = 0;
-
+	e32_result = 0;
+	  
 	new_pc = 0;
 	latch_pc = 0;
 
@@ -168,7 +189,7 @@ module execute(clk, reset, enable,
 	       end // if (isn_11_6 == 000 && isn_5_0 < 010)
 	     else
 	       begin
-		  $display("e: pc & cc %o", isn_11_6);
+		  if (0) $display("e: pc & cc %o", isn_11_6);
 
 		  case (isn_11_6)
 
@@ -475,7 +496,7 @@ module execute(clk, reset, enable,
 	  end // if (isn_15_12 == 0)
 	else
 	  begin
-	     if (1) $display("e: isn_15_12 != 0 (%o)", isn_15_12);
+	     if (0) $display("e: isn_15_12 != 0 (%o)", isn_15_12);
 	     case (isn_15_12)
 	       4'o01:					    /* mov */
 		 begin
@@ -692,7 +713,7 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 
 	       4'o10:
 		 begin
-		 $display(" e: 010 isn_11_6 %o", isn_11_6);
+		    if (0) $display(" e: 010 isn_11_6 %o", isn_11_6);
 		 case (isn_11_6)
 		   6'o00, 6'o01:				/* bpl */
 		     begin
@@ -703,7 +724,7 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 
 		   6'o02, 6'o03:				/* bpl */
 		     begin
-			$display("e: BPLB");
+			if (0) $display("e: BPLB");
 			new_pc = new_pc_b;
 			latch_pc = cc_n == 0;
 		     end
@@ -827,7 +848,7 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 
 		   6'o52:				/* incb */
 		     begin
-			e1_result = {dd_data[15:8], (dd_data[7:0] + 1)};
+			e1_result = {dd_data[15:8], (dd_data[7:0] + 8'd1)};
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
 			new_cc_v = 0;
@@ -837,7 +858,7 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 
 		   6'o53:				/* decb */
 		     begin
-			e1_result = {dd_data[15:8], (dd_data[7:0] - 1)};
+			e1_result = {dd_data[15:8], (dd_data[7:0] - 8'd1)};
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
 			new_cc_v = e1_result[7:0] == 8'o177;
@@ -880,9 +901,9 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 
 		   6'o57:				/* tstb */
 		     begin
-			$display(" TSTB %o", dd_data[7:0]);
+			//$display(" TSTB %o", dd_data[7:0]);
 			e1_result = {8'b0, dd_data[7:0]};
-			$display(" TSTB %o, e1_result 0x%x", dd_data[7:0], e1_result);
+			//$display(" TSTB %o, e1_result 0x%x", dd_data[7:0], e1_result);
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
 			new_cc_v = 0;

@@ -53,11 +53,11 @@ module iopage(clk, reset, address, data_in, data_out,
    //
    wire [12:0] 	iopage_addr;
 
-   wire [15:0] mmu_data_out, tt_data_out, clk_data_out,
+   wire [15:0] bootrom_data_out, mmu_data_out, tt_data_out, clk_data_out,
 	       sr_data_out, psw_data_out,
 	       rk_data_out;
 
-   wire 	mmu_decode, tt_decode, clk_decode,
+   wire 	bootrom_decode, mmu_decode, tt_decode, clk_decode,
 		sr_decode, psw_decode,
 		rk_decode;
 
@@ -79,6 +79,9 @@ module iopage(clk, reset, address, data_in, data_out,
 
    assign no_decode = (iopage_rd | iopage_wr) & ~good_decode;
 
+
+   wire tt_interrupt, clk_interrupt, rk_interrupt;
+   wire [7:0] tt_vector, clk_vector, rk_vector;
 
    assign interrupt = tt_interrupt | clk_interrupt | rk_interrupt;
 
@@ -181,7 +184,7 @@ module iopage(clk, reset, address, data_in, data_out,
 		    .dma_req(dma_req), .dma_ack(dma_ack),
 		    .dma_addr(dma_addr),
 		    .dma_data_in(dma_data_in),
-		    .dma_data_out(ram_bus_out),
+		    .dma_data_out(dma_data_out),
 		    .dma_rd(dma_rd), .dma_wr(dma_wr)
 		    );
 

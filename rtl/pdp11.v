@@ -687,7 +687,8 @@ module pdp11(clk, reset_n, switches,
 		  istate == f1 ||
 		  (istate == s2 || istate == s3 || istate == s4) ||
 		  (istate == d2 || istate == d3 || istate == d4) ||
-		  (istate == o1 || istate == o2 || istate == o3);
+		  (istate == o1 || istate == o2 || istate == o3) ||
+		  (istate == t3 || istate == t4);
 	   
    assign bus_wr =
 	   (istate == w1 && store_result && dd_dest_mem) ||
@@ -715,8 +716,8 @@ module pdp11(clk, reset_n, switches,
 		    istate == o3 ? sp :
 		    istate == t1 ? sp - 2 :
 		    istate == t2 ? sp - 2 :
-		    istate == t3 ? ss_ea_mux :
-		    istate == t4 ? ss_ea_mux : bus_addr;
+		    istate == t3 ? ss_ea/*_mux*/ :
+		    istate == t4 ? ss_ea/*_mux*/ : bus_addr;
    
 
    assign bus_byte_op = (istate == w1 || istate == s4 || istate == d4) ?
@@ -735,8 +736,8 @@ module pdp11(clk, reset_n, switches,
 	  regs[4] <= 0;
 	  regs[5] <= 0;
 	  regs[6] <= 0;
-//	  regs[7] <= 16'o0500;
-  	  regs[7] <= 16'o173000;
+	  regs[7] <= 16'o0500;
+//  	  regs[7] <= 16'o173000;
 
 	  isn <= 0;
        end
@@ -908,7 +909,7 @@ module pdp11(clk, reset_n, switches,
 			     istate == f1 || istate == c1 || istate == e1 ||
 			     istate == s4 || istate == d4 || istate == w1;
    
-   assign ok_to_reset_trap = istate == t4;
+   assign ok_to_reset_trap = istate == t1;
 
    always @(posedge clk)
      if (reset_n == 0)
@@ -977,6 +978,10 @@ module pdp11(clk, reset_n, switches,
         if (trap)
 	  begin
             $display("trap: asserts ");
+	     $display(" %o %o %o %o %o %o %o %o",
+		      trap_bpt, trap_iot, trap_emt, trap_trap,
+		      trap_ill, trap_odd, trap_priv, trap_bus);
+
             if (assert_trap_priv) $display("PRIV ");
             if (assert_trap_odd) $display("ODD ");
             if (assert_trap_ill) $display("ILL ");
@@ -1164,14 +1169,28 @@ module pdp11(clk, reset_n, switches,
    //
    //debug
    //
-   
-//`ifdef xx
+
+`ifdef minimal_debug
    always @(posedge clk)
      #2 begin
    	case (istate)
 	  f1:
 	    begin
-	       $display("f1: pc=%o, sp=%o, psw=%o ipl%d n%d z%d v%d c%d",
+	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d",
+			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
+	       $display("    trap=%d, interrupt=%d", trap, interrupt);
+	    end // case: f1
+	endcase
+     end
+`endif
+   
+//`ifdef debug
+   always @(posedge clk)
+     #2 begin
+   	case (istate)
+	  f1:
+	    begin
+	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d",
 			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
 	       $display("    trap=%d, interrupt=%d", trap, interrupt);
 	    end // case: f1
@@ -1328,8 +1347,8 @@ module pdp11(clk, reset_n, switches,
 
 	endcase // case(istate)
 
-	$display("    bus_rd=%d, bus_wr=%d, bus_out %o",
-		 bus_rd, bus_wr, bus_out);
+	$display("    bus_rd=%d, bus_wr=%d, bus_addr %o, bus_out %o",
+		 bus_rd, bus_wr, bus_addr, bus_out);
 	$display("    regs %0o %0o %0o %0o ",
 		 regs[0], regs[1], regs[2], regs[3]);
 	$display("         %0o %0o %0o %0o ",

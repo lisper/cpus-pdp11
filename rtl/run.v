@@ -40,7 +40,7 @@ module test;
           reset_n = 1;
        end
   
-       #100000 $finish;
+       #1000000 $finish;
 //       #1500000 $finish;
     end
 
@@ -69,7 +69,10 @@ module test;
 	   $display("------------------------------");
 	 $display("cycle %d, pc %o, psw %o, istate %d",
 		  cycle, cpu.pc, cpu.psw, cpu.istate);
-	 end
+      end
+
+       if (cpu.istate == 0)
+	 $finish;
     end
 
 endmodule

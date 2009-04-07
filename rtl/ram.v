@@ -2,8 +2,10 @@
 // 4kx16 static ram
 // with byte read/write capability
 //
-module ram_4kx16(A, DI, DO, CE_N, WE_N, BYTE_OP);
+module ram_4kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 
+   input CLK;
+   input RESET;
    input[15:0] A;
    input [15:0] DI;
    input 	CE_N, WE_N;
@@ -85,10 +87,11 @@ module ram_4kx16(A, DI, DO, CE_N, WE_N, BYTE_OP);
      end
 
    assign BA = A[13:1];
-   
-   always @(negedge WE_N)
+
+   // synchronous write
+   always @(posedge CLK)
      begin
-	if (CE_N == 0)
+	if (WE_N == 0 && CE_N == 0)
           begin
 	     $display("ram: write [%o] <- %o", A, DI);
 	     if (BYTE_OP)

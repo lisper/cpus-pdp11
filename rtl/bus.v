@@ -47,6 +47,10 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    
    assign 	ram_access = ~&bus_addr[15:13];
    assign 	iopage_access = &bus_addr[15:13];
+
+   wire 	iopage_rd, iopage_wr;
+   wire 	dma_rd, dma_wr, dma_req, dma_ack;
+   wire [17:0] 	dma_addr;
    
    assign 	iopage_rd = bus_rd & iopage_access;
    assign 	iopage_wr = bus_wr & iopage_access;
@@ -59,11 +63,19 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    
    assign ram_we_n = ~( (bus_wr & ram_access) || dma_wr );
 
-   assign ram_addr = ram_access ? bus_addr[15:0] : dma_addr[15:0];
-   assign ram_data_in = ram_access ? data_in : dma_data_in;
-   assign ram_byte_op = ram_access ? bus_byte_op : 1'b0;
+   wire [15:0] ram_data_in, dma_data_in;
+   wire        ram_byte_op;
    
-   ram_4kx16 ram(.A(ram_addr[15:0]),
+//   assign ram_addr = ram_access ? bus_addr[15:0] : dma_addr[15:0];
+//   assign ram_data_in = ram_access ? data_in : dma_data_in;
+//   assign ram_byte_op = ram_access ? bus_byte_op : 1'b0;
+   assign ram_addr = grant_cpu ? bus_addr[15:0] : dma_addr[15:0];
+   assign ram_data_in = grant_cpu ? data_in : dma_data_in;
+   assign ram_byte_op = grant_cpu ? bus_byte_op : 1'b0;
+   
+   ram_4kx16 ram(.CLK(clk),
+		 .RESET(reset),
+		 .A(ram_addr[15:0]),
 		 .DI(ram_data_in),
 		 .DO(ram_bus_out),
 		 .CE_N(ram_ce_n),

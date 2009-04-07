@@ -196,8 +196,18 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		   $display("rk: write rkwc %o", data_in);
 		end
 	      
-	      13'o17410: rkba[15:0] <= data_in;
-	      13'o17412: rkda <= data_in;
+	      13'o17410:
+		begin
+		   rkba[15:0] <= data_in;
+		   $display("rk: write rkba %o", data_in);
+		end
+	      
+	      13'o17412:
+		begin
+		   rkda <= data_in;
+		   $display("rk: write rkda %o", data_in);
+		end
+
 	    endcase
 	  else
 	    begin
@@ -220,6 +230,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		 begin
 		    rkba <= rkba + 2;
 		    rkcs_mex <= rkba[17:16];
+		    $display("rk: inc ba %o", rkba);
 		 end
 	       
 	       if (inc_wc)
@@ -321,7 +332,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	    begin
 	       ata_wr = 1;
 	       ata_addr = ATA_SECCNT;
-	       ata_in = { 8'b0, rkwc[15:8] + 1 };
+	       ata_in = { 8'b0, ~rkwc[15:8] + 8'd1 };
 	       if (ata_done)
 		 rk_state_next = init5;
 	    end
@@ -429,7 +440,7 @@ if (ata_done) $display("rk: ata_out %x", ata_out);
 	       dma_req = 1;
 	       dma_addr = { rkcs_mex, rkba };
 	       dma_data_in = ata_out;
-$display("read1: ata_out %o", ata_out);
+$display("read1: ata_out %o, dma_addr %o", ata_out, dma_addr);
 			    
 	       if (dma_ack)
 		 begin
