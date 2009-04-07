@@ -260,6 +260,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	vector = 0;
 	
 	clear_err = 0;
+	set_err = 0;
 	clear_cmd = 0;
 	set_done = 0;
 	clear_done = 0;
