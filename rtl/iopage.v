@@ -19,6 +19,8 @@ module iopage(clk, reset, address, data_in, data_out,
 
 	      psw, psw_io_wr,
 
+	      switches,
+
    	      dma_req, dma_ack, dma_addr, dma_data_in, dma_data_out,
 	      dma_rd, dma_wr
 	      );
@@ -41,6 +43,8 @@ module iopage(clk, reset, address, data_in, data_out,
 
    input [15:0] psw;
    output 	psw_io_wr;
+
+   input [15:0] switches;
 
    output 	dma_req;
    input 	dma_ack;
@@ -139,14 +143,15 @@ module iopage(clk, reset, address, data_in, data_out,
 		      .vector(clk_vector));
 
    sr_regs sr_regs1(.clk(clk),
-		      .reset(reset),
-		      .iopage_addr(iopage_addr),
-		      .data_in(data_in),
-		      .data_out(sr_data_out),
-		      .decode(sr_decode),
-		      .iopage_rd(iopage_rd),
-		      .iopage_wr(iopage_wr),
-		      .iopage_byte_op(iopage_byte_op));
+		    .reset(reset),
+		    .iopage_addr(iopage_addr),
+		    .data_in(data_in),
+		    .data_out(sr_data_out),
+		    .decode(sr_decode),
+		    .iopage_rd(iopage_rd),
+		    .iopage_wr(iopage_wr),
+		    .iopage_byte_op(iopage_byte_op),
+		    .switches(switches));
 
    psw_regs psw_regs1(.clk(clk),
 		      .reset(reset),

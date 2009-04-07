@@ -11,7 +11,8 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 
 	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 
-	   psw, psw_io_wr);
+	   psw, psw_io_wr,
+	   switches);
 
    input clk;
    input reset;
@@ -32,6 +33,8 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 
    input [15:0] psw;
    output 	psw_io_wr;
+
+   input [15:0] switches;
    
    //
    wire 	ram_ce_n;
@@ -68,9 +71,6 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 
    reg 	  grant_cpu, grant_dma;
 
-//   assign ram_addr = ram_access ? bus_addr[15:0] : dma_addr[15:0];
-//   assign ram_data_in = ram_access ? data_in : dma_data_in;
-//   assign ram_byte_op = ram_access ? bus_byte_op : 1'b0;
    assign ram_addr = grant_cpu ? bus_addr[15:0] : dma_addr[15:0];
    assign ram_data_in = grant_cpu ? data_in : dma_data_in;
    assign ram_byte_op = grant_cpu ? bus_byte_op : 1'b0;
@@ -127,6 +127,9 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 		  // psw i/o
 		  .psw(psw), .psw_io_wr(psw_io_wr),
 
+		  // switches
+		  .switches(switches),
+		  
 		  // dma from device to memory
 		  .dma_req(dma_req),
 		  .dma_ack(dma_ack),

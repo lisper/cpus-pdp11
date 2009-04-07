@@ -1,7 +1,7 @@
 // sr_regs.v
 
 module sr_regs(clk, reset, iopage_addr, data_in, data_out, decode,
-	       iopage_rd, iopage_wr, iopage_byte_op);
+	       iopage_rd, iopage_wr, iopage_byte_op, switches);
 
    input clk;
    input reset;
@@ -11,6 +11,7 @@ module sr_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    output [15:0] data_out;
    reg [15:0] 	 data_out;
    output 	 decode;
+   input [15:0]  switches;
 
    assign 	 decode = (iopage_addr == 13'o17570);
    
@@ -18,7 +19,7 @@ module sr_regs(clk, reset, iopage_addr, data_in, data_out, decode,
      begin
 	if (decode)
 	  case (iopage_addr)
-	    13'o17570: data_out = 0;
+	    13'o17570: data_out = switches;
 	  endcase
      end
    

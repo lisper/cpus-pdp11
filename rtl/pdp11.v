@@ -322,7 +322,8 @@ module pdp11(clk, reset_n, switches,
 	    .ide_dior(ide_dior), .ide_diow(ide_diow),
 	    .ide_cs(ide_cs), .ide_da(ide_da),
 
-	    .psw(psw), .psw_io_wr(psw_io_wr)
+	    .psw(psw), .psw_io_wr(psw_io_wr),
+	    .switches(switches)
 	    );
    
   
