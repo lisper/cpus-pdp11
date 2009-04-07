@@ -1,16 +1,15 @@
+`include "pdp11.v"
 
-module top;
+module top(clk, reset_n, switches, 
+	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da);
 
-   wire clk, reset_n;
-   wire [15:0] switches;
+   input clk, reset_n;
+   input [15:0] switches;
 
-   wire [15:0] ide_data_bus;
-   wire        ide_dior, ide_diow;
-   wire [1:0]  ide_cs;
-   wire [2:0]  ide_da;
-
-   assign      switches = 16'b0;
-   
+   inout [15:0] ide_data_bus;
+   output        ide_dior, ide_diow;
+   output [1:0]  ide_cs;
+   output [2:0]  ide_da;
 
    pdp11 cpu(.clk(clk), .reset_n(reset_n),
 	     .switches(switches),

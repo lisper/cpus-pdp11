@@ -154,10 +154,10 @@ module pdp11(clk, reset_n, switches,
    wire [31:0] 	e32_result;
 
    // cpu modes
-   parameter 	mode_kernel = 0;
-   parameter 	mode_super = 1;
-   parameter 	mode_undef = 2;
-   parameter 	mode_user = 3;
+   parameter 	mode_kernel = 3'd0;
+   parameter 	mode_super = 3'd1;
+   parameter 	mode_undef = 3'd2;
+   parameter 	mode_user = 3'd3;
 
    reg [2:0] 	current_mode;
 

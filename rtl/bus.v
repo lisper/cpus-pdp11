@@ -65,7 +65,9 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 
    wire [15:0] ram_data_in, dma_data_in;
    wire        ram_byte_op;
-   
+
+   reg 	  grant_cpu, grant_dma;
+
 //   assign ram_addr = ram_access ? bus_addr[15:0] : dma_addr[15:0];
 //   assign ram_data_in = ram_access ? data_in : dma_data_in;
 //   assign ram_byte_op = ram_access ? bus_byte_op : 1'b0;
@@ -73,7 +75,7 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    assign ram_data_in = grant_cpu ? data_in : dma_data_in;
    assign ram_byte_op = grant_cpu ? bus_byte_op : 1'b0;
    
-   ram_4kx16 ram(.CLK(clk),
+   ram_16kx16 ram(.CLK(clk),
 		 .RESET(reset),
 		 .A(ram_addr[15:0]),
 		 .DI(ram_data_in),
@@ -83,9 +85,7 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 		 .BYTE_OP(ram_byte_op));
 
    // simple arbiter
-   reg 	  grant_cpu, grant_dma;
-
-   always @ (posedge clk or reset)
+   always @ (posedge clk)
      if (reset)
        begin
 	  grant_cpu <= 1;

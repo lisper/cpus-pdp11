@@ -32,12 +32,12 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
    
    reg [2:0] ata_state;
 
-   parameter idle = 0;
-   parameter s0 = 1;
-   parameter s1 = 2;
-   parameter s2 = 3;
-   parameter s3 = 4;
-   parameter s4 = 5;
+   parameter idle = 3'd0;
+   parameter s0 = 3'd1;
+   parameter s1 = 3'd2;
+   parameter s2 = 3'd3;
+   parameter s3 = 3'd4;
+   parameter s4 = 3'd5;
 
    reg [2:0] ata_state_next;
    

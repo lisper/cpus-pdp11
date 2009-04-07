@@ -26,7 +26,7 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    output 	 rs232_tx;
    input 	 rs232_rx;
    
-   reg [15:0] 	 tti_csr, tto_csr, tti_data, tto_data;
+   reg [15:0] 	 tti_data, tto_data;
    wire 	 tto_empty;
    wire 	 tto_data_wr;
    wire 	 tti_empty;
@@ -71,7 +71,8 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 
 
    // iopage reads
-   always @(clk or iopage_addr or iopage_rd or iopage_byte_op)
+   always @(clk or decode or iopage_addr or tti_empty or tto_empty or
+	    tti_data or tto_data or rx_int_enable or tx_int_enable)
      begin
 	if (decode)
 	  case (iopage_addr)
@@ -86,8 +87,6 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    always @(posedge clk)
      if (reset)
        begin
-	  tti_csr <= 0;
-	  tto_csr <= 0;
 	  tto_data <= 0;
 
 	  rx_int_enable <= 0;
@@ -116,7 +115,7 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    
    assign tto_data_wr = iopage_wr && (iopage_addr == 13'o17566);
    
-   always @(posedge clk or reset)
+   always @(posedge clk)
      if (reset)
        tto_state <= 0;
      else
@@ -140,7 +139,7 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 
    assign tti_data_rd = iopage_rd && (iopage_addr == 13'o17562);
    
-   always @(posedge clk or reset)
+   always @(posedge clk)
      if (reset)
        tti_state <= 0;
      else
@@ -154,7 +153,7 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    assign uld_rx_data = tti_state == 1;
    assign tti_empty = tti_state == 0;
    
-   always @(posedge clk or reset)
+   always @(posedge clk)
      if (reset)
        tti_data <= 0;
      else

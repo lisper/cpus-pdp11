@@ -2,7 +2,7 @@
 // 4kx16 static ram
 // with byte read/write capability
 //
-module ram_4kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
+module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 
    input CLK;
    input RESET;
@@ -12,21 +12,22 @@ module ram_4kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
    input 	BYTE_OP;
    output [15:0] DO;
 
-   reg [7:0] 	 ram_h [0:16383];
-   reg [7:0] 	 ram_l [0:16383];
-   integer 	 i;
+   reg [7:0] 	 ram_h [0:8191];
+   reg [7:0] 	 ram_l [0:8191];
 
-   reg [15:0] 	 v;
    wire [12:0] 	 BA;
 
+   // synthesis translate_off
+   integer 	 i;
+   reg [15:0] 	 v;
    integer 	 file;
    reg [1023:0]  str;
    reg [1023:0]  testfilename;
    integer 	 n;
-   
+
    initial
      begin
-	for (i = 0; i < 16384; i=i+1)
+	for (i = 0; i < 8192; i=i+1)
 	  begin
              ram_h[i] = 7'b0;
 	     ram_l[i] = 7'b0;
@@ -70,10 +71,7 @@ module ram_4kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 `endif
 
  	n = $scan$plusargs("test=", testfilename);
-
 	$display("ram: code filename: %s", testfilename);
-
-//	file = $fopen("test2.mem", "r");
 	file = $fopen(testfilename, "r");
 
 	while ($fscanf(file, "%o %o", i, v) > 0)
@@ -85,6 +83,7 @@ module ram_4kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 
 	$fclose(file);
      end
+   // synthesis translate_on
 
    assign BA = A[13:1];
 
@@ -112,11 +111,13 @@ module ram_4kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
    assign DO = { BYTE_OP ? 8'b0 : ram_h[BA],
 		 BYTE_OP ? (A[0] ? ram_l[BA] : ram_h[BA]) : ram_l[BA] };
 
+   // synthesis translate_off
    always @(A or CE_N or WE_N or DO)
      begin
 	if (WE_N)
 	$display("ram: ce %b, we %b [%o] -> %o", CE_N, WE_N, A, DO);
      end
+   // synthesis translate_on
 
 endmodule
 

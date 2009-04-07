@@ -20,7 +20,7 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
    assign 	 offset = iopage_addr[7:0];
    
 //   always @(posedge clk)
-   always @(offset or iopage_rd)
+   always @(offset or iopage_addr or iopage_rd or data_out)
      if (iopage_rd)
        begin
        case (offset)

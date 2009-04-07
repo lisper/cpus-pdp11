@@ -51,6 +51,9 @@ module execute(clk, reset, enable,
    output 	 latch_cc, latch_psw_prio;
    output [2:0]  new_psw_prio;
 
+   wire [31:0] div_result;
+   wire [31:0] mul_result;
+
    reg 		assert_halt, assert_wait, assert_trap_priv, assert_trap_emt, 
 		assert_trap_trap, assert_bpt, assert_iot, assert_reset;
 
@@ -242,7 +245,7 @@ module execute(clk, reset, enable,
 			6'o60, 6'o61, 6'o62, 6'o63,
 			  6'o64, 6'o65, 6'o66, 6'o67,
 			  6'o70, 6'o71, 6'o72, 6'o73,
-			  6'o074, 6'o75, 6'o76, 6'o77:
+			  6'o74, 6'o75, 6'o76, 6'o77:
 			    begin
 			       if (isn_3_0 & 4'b1000) new_cc_n = 1;
 			       if (isn_3_0 & 4'b0100) new_cc_z = 1;
@@ -565,7 +568,10 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 		   0:					    /* mul */
 		     begin
 			$display(" MUL %o %o", ss_data, dd_data);
+`ifdef xxx
 			e32_result = ss_data * dd_data;
+`endif
+			e32_result = mul_result;
 			new_cc_n = e32_result[31];
 			new_cc_z = e32_result == 0;
 			new_cc_v = 0;
@@ -595,7 +601,10 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 			     latch_cc = 1;
 			  end
 			else begin
+`ifdef xxx
 			   e32_result = {ss_reg_value, ss_rego1_value} / dd_data;
+`endif
+			   e32_result = div_result;
 			   if ((e32_result > 16'o77777) ||
 			       (e32_result < -16'o100000))
 			     begin

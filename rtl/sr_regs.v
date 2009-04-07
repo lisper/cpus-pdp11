@@ -14,7 +14,7 @@ module sr_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 
    assign 	 decode = (iopage_addr == 13'o17570);
    
-   always @(clk or iopage_addr or iopage_rd or iopage_byte_op)
+   always @(clk or decode or iopage_addr or iopage_rd or iopage_byte_op)
      begin
 	if (decode)
 	  case (iopage_addr)
