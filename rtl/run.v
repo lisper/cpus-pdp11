@@ -40,8 +40,7 @@ module test;
           reset_n = 1;
        end
   
-       #1000000 $finish;
-//       #1500000 $finish;
+       #5000000 $finish;
     end
 
    always @(posedge clk)

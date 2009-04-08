@@ -11,7 +11,15 @@ module test;
    reg 	      iopage_wr;
    reg [15:0] data_in;
    
-   
+   wire [15:0] ide_data_bus;
+   wire        ide_dior, ide_diow;
+   wire [1:0]  ide_cs;
+   wire [2:0]  ide_da;
+
+   wire        dma_rd, dma_wr, dma_req;
+   reg dma_ack;
+   wire [17:0] 	dma_addr;
+
    rk_regs rk(.clk(clk),
 	      .reset(reset),
 	      .iopage_addr(iopage_addr),
@@ -20,8 +28,22 @@ module test;
 	      .decode(decode),
 	      .iopage_rd(iopage_rd),
 	      .iopage_wr(iopage_wr),
-	      .iopage_byte_op(iopage_byte_op));
+	      .iopage_byte_op(iopage_byte_op),
 
+	      // connection to ide drive
+	      .ide_data_bus(ide_data_bus),
+	      .ide_dior(ide_dior), .ide_diow(ide_diow),
+	      .ide_cs(ide_cs), .ide_da(ide_da),
+
+	      // dma upward to memory
+	      .dma_req(dma_req), .dma_ack(dma_ack),
+	      .dma_addr(dma_addr),
+	      .dma_data_in(dma_data_in),
+	      .dma_data_out(dma_data_out),
+	      .dma_rd(dma_rd), .dma_wr(dma_wr)
+	      );
+
+   //
    task write_rk_reg;
       input [12:0] addr;
       input [15:0] data;
@@ -43,7 +65,7 @@ module test;
     begin
       $timeformat(-9, 0, "ns", 7);
 
-      $dumpfile("disk.vcd");
+      $dumpfile("rk.vcd");
        $dumpvars(0, test.rk);
     end
 
@@ -55,6 +77,8 @@ module test;
        #1 reset = 1;
        #20 reset = 0;
 
+       dma_ack = 1;
+       
        write_rk_reg(13'o17400, 0); // rkda
        write_rk_reg(13'o17402, 0); // rker
        write_rk_reg(13'o17406, 16'hfffc); // rkwc;
@@ -72,11 +96,29 @@ module test;
     end
 
    always @(posedge clk)
+     begin
+	$pli_ide(ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da);
+     end
+
+   always @(posedge clk)
      #2 begin
-	$display("rk_state %d (->%d); ata_state %d ata_done %o; rkcs %o %o rkba %o rkwc %o",
+	if (rk.ide1.ata_state == 0 ||
+	    rk.ide1.ata_state == 5)
+	  begin
+	$display("rk_state %d (->%d); rkcs %o %o rkba %o rkwc %o",
 		 rk.rk_state, rk.rk_state_next,
-		 rk.ide1.ata_state, rk.ata_done,
 		 rk.rkcs_done, rk.rkcs_cmd, rk.rkba, rk.rkwc);
+
+	$display("            dma_req %b, dma_ack %b",
+		   rk.rk_state, rk.dma_req, rk.dma_ack);
+	  end
+	
+	$display("            ata_state %d ata_rd %d ata_done %o ide_data_bus %o ata_out %o",
+		 rk.ide1.ata_state, rk.ide1.ata_rd, rk.ide1.ata_done,
+		 rk.ide1.ide_data_bus, rk.ide1.ata_out);
+//		 rk.ide1.ata_in, rk.ide1.ata_out);
+
+
      end
    
 endmodule

@@ -79,7 +79,7 @@ module uart (clk, reset,
 	       // start of frame detected
 	       if (rx_busy)
 		 begin
-		    rx_sample_cnt <= rx_sample_cnt + 1;
+		    rx_sample_cnt <= rx_sample_cnt + 4'd1;
 		    
 		    // sample at middle of data
 		    if (rx_sample_cnt == 7)
@@ -88,13 +88,13 @@ module uart (clk, reset,
 			   rx_busy <= 0;
 			 else
 			   begin
-			      rx_cnt <= rx_cnt + 1; 
+			      rx_cnt <= rx_cnt + 4'd1; 
 
 			      // start storing the rx data
 			      if (rx_cnt > 0 && rx_cnt < 9)
 				   rx_reg[rx_cnt - 1] <= rx_d2;
 
-			      if (rx_cnt == 9)
+			      if (rx_cnt == 4'd9)
 				begin
 				   //$display("rx_cnt %d, rx_reg %o",
 				   //  rx_cnt, rx_reg);

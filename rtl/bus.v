@@ -59,7 +59,7 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    assign 	iopage_wr = bus_wr & iopage_access;
 
    assign data_out = ram_access ? ram_bus_out :
-		     iopage_access ? iopage_out : data_out;
+		     iopage_access ? iopage_out : 16'b0/*data_out*/;
 
    assign ram_ce_n = ~( ((bus_rd | bus_wr) & ram_access) ||
 			(dma_rd | dma_wr) );

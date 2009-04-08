@@ -145,7 +145,9 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    		      (iopage_addr == 13'o17412);
 
    // register read
-   always @(clk or iopage_addr or iopage_rd or iopage_byte_op)
+   always @(clk or decode or iopage_addr or iopage_rd or iopage_byte_op or
+	    rkda or rker or rkwc or rkba or
+	    rkcs_err or rkcs_done or rkcs_ie or rkcs_mex or rkcs_cmd)
      begin
 	if (decode)
 	  case (iopage_addr)
@@ -157,6 +159,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	    13'o17406: data_out = rkwc;
 	    13'o17410: data_out = rkba[15:0];
 	    13'o17412: data_out = rkda;
+	    default: data_out = 16'b0;
 	  endcase
      end
 
@@ -228,13 +231,16 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 
 	       if (inc_ba)
 		 begin
-		    rkba <= rkba + 2;
+		    rkba <= rkba + 18'd2;
 		    rkcs_mex <= rkba[17:16];
 		    $display("rk: inc ba %o", rkba);
 		 end
 	       
 	       if (inc_wc)
-		 rkwc <= rkwc + 1;
+		 begin
+		    rkwc <= rkwc + 16'd1;
+		    $display("rk: inc wc %o", rkwc);
+		 end
 	       
 	    end
        end
@@ -248,8 +254,6 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
      else
        begin
 	  rk_state <= rk_state_next;
-	  $display("rk_state %d, dma_req %b, dma_ack %b, rkwc %o",
-		   rk_state, dma_req, dma_ack, rkwc);
        end
 
    always @(rk_state or rkcs_cmd or rkcs_ie or ata_done or ata_out or dma_ack)
@@ -270,13 +274,15 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 
 	ata_rd = 0;
 	ata_wr = 0;
-
+	ata_addr = 0;
+	ata_in = 0;
+	
 	dma_req = 0;
 	dma_rd = 0;
 	dma_wr = 0;
 	dma_addr = 0;
 	dma_data_in = 0;
-	
+
 	case (rk_state)
 	  ready:
 	    begin
@@ -288,6 +294,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	    begin
 	       ata_addr = ATA_STATUS;
 	       ata_rd = 1;
+$display("init0: ata_done %o, ata_out %o", ata_done, ata_out);
 	       if (ata_done &&
 		   ~ata_out[IDE_STATUS_BSY] &&
 		   ~ata_out[IDE_STATUS_DRQ])

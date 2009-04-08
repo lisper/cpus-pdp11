@@ -4,6 +4,9 @@
 // execute state for pdp-11
 //
 
+`include "mul1616.v"
+`include "div3216.v"
+
 module execute(clk, reset, enable,
 	       pc, psw,
 	       ss_data, dd_data,
@@ -13,12 +16,12 @@ module execute(clk, reset, enable,
 	       dd_ea, ss_reg, ss_reg_value, ss_rego1_value,
 
 	       isn,
-	       isn_15_12, isn_11_9, isn_11_6, isn_5_0, isn_3_0,
+	       isn_15_12, isn_15_9, isn_11_9, isn_11_6, isn_5_0, isn_3_0,
 
 	       assert_halt, assert_wait, assert_trap_priv, assert_trap_emt, 
 	       assert_trap_trap, assert_bpt, assert_iot, assert_reset, 
 
-	       e1_result, e32_result,
+	       e1_result, e32_result, e1_advance,
 
 	       new_pc, latch_pc, 
 	       new_cc_n, new_cc_z, new_cc_v, new_cc_c,
@@ -34,6 +37,7 @@ module execute(clk, reset, enable,
    input [15:0] dd_ea;
    input [15:0] isn;
    input [3:0] 	isn_15_12;
+   input [6:0] 	isn_15_9;
    input [5:0] 	isn_11_6, isn_5_0;
    input [2:0] 	isn_11_9;
    input [3:0]  isn_3_0;
@@ -45,14 +49,15 @@ module execute(clk, reset, enable,
 
    output [15:0] e1_result, new_pc;
    output [31:0] e32_result;
-
+   output 	 e1_advance;
+ 	 
    output 	 latch_pc;
    output 	 new_cc_n, new_cc_z, new_cc_v, new_cc_c;
    output 	 latch_cc, latch_psw_prio;
    output [2:0]  new_psw_prio;
 
-   wire [31:0] div_result;
-   wire [31:0] mul_result;
+   wire [31:0] 	 div_result;
+   wire [31:0] 	 mul_result;
 
    reg 		assert_halt, assert_wait, assert_trap_priv, assert_trap_emt, 
 		assert_trap_trap, assert_bpt, assert_iot, assert_reset;
@@ -65,7 +70,6 @@ module execute(clk, reset, enable,
    reg 	      latch_cc, latch_psw_prio;
    reg [2:0]  new_psw_prio;
 
-   
    reg [15:0] temp, sign, shift;
 
    //
@@ -98,7 +102,40 @@ module execute(clk, reset, enable,
    assign new_pc_b = pc + { 8'hff, pc_offset };
 
    //
-   always @(isn or pc or psw or ss_data or dd_data or clk or
+   wire   mul_done;
+   wire   div_done;
+   reg 	  mul_ready;
+   reg 	  div_ready;
+   
+   wire   e1_advance;
+   wire   is_isn_muldiv;
+   
+   mul1616 mul1616_box(.clk(clk), .reset(reset),
+			.ready(mul_ready),
+			.done(mul_done),
+			.multiplier(ss_data),
+			.multiplicand(dd_data),
+			.product(mul_result));
+   
+   div3216 div3216_box(.clk(clk), .reset(reset),
+			.ready(div_ready),
+			.done(div_done),
+			.dividend({ss_reg_value, ss_rego1_value}),
+			.divider(dd_data),
+			.quotient(div_result));
+
+   assign is_isn_muldiv =
+			 (isn_15_9 == 070) ||			/* mul */
+			 (isn_15_9 == 071);			/* div */
+
+   assign e1_advance = is_isn_muldiv ? (mul_done || div_done) : 1'b1;
+   
+   //
+   always @(clk or isn or pc or psw or ss_data or dd_data or
+	    ss_reg_value or ss_rego1_value or
+	    dd_ea or
+	    cc_n or cc_z or cc_v or cc_c or
+	    isn_15_12 or isn_11_9 or isn_11_6 or isn_5_0 or isn_3_0 or
 	    e32_result or e32_result_sign or e32_result_zero or
 	    e1_result or e1_result_sign or e1_result_zero or
 	    e1_result_byte_sign or e1_result_byte_zero or
@@ -122,6 +159,20 @@ module execute(clk, reset, enable,
 	assert_bpt = 0;
 	assert_iot = 0;
 	assert_reset = 0;
+
+	e1_result = 0;
+	e32_result = 0;
+	new_pc = 0;
+	latch_pc = 0;
+	new_cc_n = 0;
+	new_cc_z = 0;
+	new_cc_v = 0;
+	new_cc_c = 0;
+	latch_cc = 0;
+	latch_psw_prio = 0;
+	new_psw_prio = 0;
+	mul_ready = 0;
+	div_ready = 0;
      end
      else
        begin
@@ -146,6 +197,9 @@ module execute(clk, reset, enable,
 	new_cc_c = cc_c;
 	latch_cc = 0;
 	latch_psw_prio = 0;
+
+	mul_ready = 0;
+	div_ready = 0;
 
 	
 	if (isn_15_12 == 0)
@@ -253,6 +307,11 @@ module execute(clk, reset, enable,
 			       if (isn_3_0 & 4'b0001) new_cc_c = 1;
 			       latch_cc = 1;
 			    end
+
+			default:
+			  begin
+			  end
+			
 		      endcase // case(isn_5_0)
 
 		    6'o03:					    /* swab */
@@ -388,7 +447,7 @@ module execute(clk, reset, enable,
 
 		    6'o52:					    /* inc */
 		      begin
-			 e1_result = dd_data + 1;
+			 e1_result = dd_data + 16'd1;
 			 new_cc_n = e1_result_sign;
 			 new_cc_z = e1_result_zero;
 			 new_cc_v = (e1_result == 16'o100000);
@@ -397,7 +456,7 @@ module execute(clk, reset, enable,
 
 		    6'o53:					    /* dec */
 		      begin
-			 e1_result = dd_data - 1;
+			 e1_result = dd_data - 16'd1;
 			 new_cc_n = e1_result_sign;
 			 new_cc_z = e1_result_zero;
 			 new_cc_v = (e1_result == 16'o77777);
@@ -410,7 +469,7 @@ module execute(clk, reset, enable,
 			 new_cc_n = e1_result_sign;
 			 new_cc_z = e1_result_zero;
 			 new_cc_v = (e1_result == 16'o100000);
-			 new_cc_c = new_cc_z ^ 1;
+			 new_cc_c = new_cc_z ^ 1'b1;
 			 latch_cc = 1;
 		      end
 
@@ -570,8 +629,10 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 			$display(" MUL %o %o", ss_data, dd_data);
 `ifdef xxx
 			e32_result = ss_data * dd_data;
-`endif
+`else
+			mul_ready = 1;
 			e32_result = mul_result;
+`endif
 			new_cc_n = e32_result[31];
 			new_cc_z = e32_result == 0;
 			new_cc_v = 0;
@@ -603,8 +664,10 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 			else begin
 `ifdef xxx
 			   e32_result = {ss_reg_value, ss_rego1_value} / dd_data;
-`endif
+`else
+			   div_ready = 1;
 			   e32_result = div_result;
+`endif
 			   if ((e32_result > 16'o77777) ||
 			       (e32_result < -16'o100000))
 			     begin
@@ -1058,7 +1121,7 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 
 	       4'o16:					    /* sub */
 		 begin
-		    if (0) $display(" SUB %6o %6o", ss_data, dd_data);
+		    if (1) $display(" SUB %o %o", ss_data, dd_data);
 		    e1_result = dd_data - ss_data;
 		    new_cc_n = e1_result_sign;
 		    new_cc_z = e1_result_zero;

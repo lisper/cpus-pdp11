@@ -20,11 +20,12 @@ module psw_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    assign decode = (iopage_addr == 13'o17776);
    assign psw_io_wr = iopage_wr && decode;
    
-   always @(clk or iopage_addr or iopage_rd or iopage_byte_op)
+   always @(clk or iopage_addr or iopage_rd or psw)
      begin
 	if (decode)
 	  case (iopage_addr)
 	    13'o17776: data_out = psw;
+	    default: data_out = 16'b0;
 	  endcase
      end
 

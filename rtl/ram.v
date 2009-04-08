@@ -53,15 +53,15 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 	     for (i = 0; i < 20; i=i+ 1)
 	       begin
 		  case (i)
-		    0: v = 16'o0012706;
-		    1: v = 16'o0000500;
-		    2: v = 16'o0012701;
-		    3: v = 16'o0000700;
-		    4: v = 16'o0012702;
-		    5: v = 16'o0000712;
-		    6: v = 16'o0005201;
-		    7: v = 16'o0005211;
-		    default:  v = 16'o0000000;
+		    0: v = 16'o012706;
+		    1: v = 16'o000500;
+		    2: v = 16'o012701;
+		    3: v = 16'o000700;
+		    4: v = 16'o012702;
+		    5: v = 16'o000712;
+		    6: v = 16'o005201;
+		    7: v = 16'o005211;
+		    default:  v = 16'o000000;
 		  endcase
 
 		  ram_h[14'o0500/2 + i] = v[15:8];
@@ -100,8 +100,8 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
    // synthesis translate_off
    always @(A or CE_N or WE_N or DO)
      begin
-	if (WE_N)
-	$display("ram: ce %b, we %b [%o] -> %o", CE_N, WE_N, A, DO);
+	if (CE_N == 0 && WE_N == 1)
+	$display("ram: ce_n %b, we_n %b [%o] -> %o", CE_N, WE_N, A, DO);
      end
    // synthesis translate_on
 

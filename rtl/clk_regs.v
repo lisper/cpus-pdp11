@@ -23,11 +23,12 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 
    assign 	 decode = (iopage_addr == 13'o17546);
    
-   always @(clk or iopage_addr or iopage_rd or iopage_byte_op)
+   always @(clk or decode or iopage_addr or iopage_rd or iopage_byte_op)
      begin
 	if (decode)
 	  case (iopage_addr)
 	    13'o17546: data_out = clk_csr;
+	    default: data_out = 16'b0;
 	  endcase
      end
 

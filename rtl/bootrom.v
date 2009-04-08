@@ -20,8 +20,8 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
    assign 	 offset = iopage_addr[7:0];
    
 //   always @(posedge clk)
-   always @(offset or iopage_addr or iopage_rd or data_out)
-     if (iopage_rd)
+   always @(decode or offset or iopage_addr or iopage_rd or data_out)
+     if (iopage_rd && decode)
        begin
        case (offset)
 	 0: data_out = 16'o010000;	/* nop */
@@ -53,6 +53,7 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
 	 52: data_out = 16'o100376;	/* BPL .-2 */
 	 54: data_out = 16'o105011;	/* CLRB (R1) */
 	 56: data_out = 16'o005007;	/* CLR PC */
+	 default: data_out = 16'o0;
        endcase // case(offset)
 	  #2 $display("rom fetch %o %o", iopage_addr, data_out);
 	  

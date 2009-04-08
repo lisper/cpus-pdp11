@@ -3,6 +3,9 @@
 // copyright Brad Parker <brad@heeltoe.com> 2009
 //
 
+//`define minimal_debug 1
+`define debug 1
+
 `include "ipl_below.v"
 `include "add8.v"
 `include "bus.v"
@@ -137,9 +140,7 @@ module pdp11(clk, reset_n, switches,
    reg [15:0] 	dd_data;	// result of d states
    reg [15:0] 	e1_data;	// result of e states
 
-   wire 	ss_dest_mem,
-		ss_dest_reg,
-		ss_ea_ind,
+   wire 	ss_ea_ind,
 		ss_post_incr,
 		ss_pre_dec;
 
@@ -152,7 +153,8 @@ module pdp11(clk, reset_n, switches,
 
    wire [15:0] 	e1_result;
    wire [31:0] 	e32_result;
-
+   wire 	e1_advance;
+   
    // cpu modes
    parameter 	mode_kernel = 3'd0;
    parameter 	mode_super = 3'd1;
@@ -344,8 +346,9 @@ module pdp11(clk, reset_n, switches,
 		 .ss_rego1_value(regs[ss_reg | 1]),
 		 
 		 .isn(isn), 
-		 .isn_15_12(isn_15_12), .isn_11_9(isn_11_9),
-		 .isn_11_6(isn_11_6), .isn_5_0(isn_5_0), .isn_3_0(isn_3_0), 
+		 .isn_15_12(isn_15_12), .isn_15_9(isn_15_9),
+		 .isn_11_9(isn_11_9), .isn_11_6(isn_11_6),
+		 .isn_5_0(isn_5_0), .isn_3_0(isn_3_0), 
 
 		 .assert_halt(assert_halt),
 		 .assert_wait(assert_wait),
@@ -357,6 +360,7 @@ module pdp11(clk, reset_n, switches,
 		 .assert_reset(assert_reset),
 		 
 		 .e1_result(e1_result), .e32_result(e32_result),
+		 .e1_advance(e1_advance),
 
 		 .new_pc(new_pc), .latch_pc(latch_pc), 
 		 .new_cc_n(new_cc_n), .new_cc_z(new_cc_z), 
@@ -392,7 +396,7 @@ module pdp11(clk, reset_n, switches,
 				      (regs[ss_reg]-2)) :
 		      ss_mode == 6 ? pc :
 		      ss_mode == 7 ? pc :
-		      0) :
+		      16'b0) :
 
      istate == s2 ?
 		     (ss_mode == 3 ? bus_out :
@@ -411,12 +415,12 @@ module pdp11(clk, reset_n, switches,
 		     trap_emt ? 16'o30 :
 		     trap_trap ? 16'o34 :
 		     interrupt ? { 8'b0, interrupt_vector } :
-		     0) :
+		     16'd0) :
 
      istate == t2 ? ss_ea :
-     istate == t3 ? ss_ea + 2 :
-     istate == t4 ? ss_ea + 2 :
-		     0;
+     istate == t3 ? ss_ea + 16'd2 :
+     istate == t4 ? ss_ea + 16'd2 :
+		     16'd0;
 
    //
    // dest ea calculation:
@@ -429,11 +433,11 @@ module pdp11(clk, reset_n, switches,
 		       dd_mode == 1 ? regs[dd_reg] :
 		       dd_mode == 2 ? regs[dd_reg] :
 		       dd_mode == 3 ? regs[dd_reg] :
-		       dd_mode == 4 ? regs[dd_reg] - (is_isn_byte ? 1 : 2) :
-		       dd_mode == 5 ? regs[dd_reg] - (is_isn_byte ? 1 : 2) :
+		       dd_mode == 4 ? regs[dd_reg] - (is_isn_byte ? 16'd1 : 16'd2) :
+		       dd_mode == 5 ? regs[dd_reg] - (is_isn_byte ? 16'd1 : 16'd2) :
 		       dd_mode == 6 ? pc :
 		       dd_mode == 7 ? pc :
-		       0) :
+		       16'b0) :
 
 		      istate == d2 ?
 		      (dd_mode == 3 ? bus_out :
@@ -452,17 +456,17 @@ module pdp11(clk, reset_n, switches,
    assign ss_data_mux =
 	       (istate == c1 && (ss_mode == 0 || is_isn_rxx)) ? regs[ss_reg] :
 	       (istate == s4) ? bus_out :
-	       ss_data_mux;
+	       16'b0/*ss_data_mux*/;
 
    assign dd_data_mux =
 	       (istate == c1 && dd_mode == 0) ? regs[dd_reg] :
 	       (istate == c1 && (isn_15_6 == 10'o1067)) ? psw[7:0] : // mfps 
 	       (istate == d4) ? bus_out :
-	       dd_data_mux;
+	       16'b0/*dd_data_mux*/;
 
    assign e1_data_mux =
 	       (istate == e1) ? e1_result :
-	       e1_data_mux;
+	       16'b0/*e1_data_mux*/;
 
 
    //
@@ -471,9 +475,9 @@ module pdp11(clk, reset_n, switches,
    wire trap_or_int = trap || interrupt;
 
    assign pc_mux =
-	  (istate == f1 && !trap_or_int                  ) ? pc + 2 :
-	  (istate == s1 && (ss_mode == 6 || ss_mode == 7)) ? pc + 2 :
-	  (istate == d1 && (dd_mode == 6 || dd_mode == 7)) ? pc + 2 :
+	  (istate == f1 && !trap_or_int                  ) ? pc + 16'd2 :
+	  (istate == s1 && (ss_mode == 6 || ss_mode == 7)) ? pc + 16'd2 :
+	  (istate == d1 && (dd_mode == 6 || dd_mode == 7)) ? pc + 16'd2 :
 	  (istate == e1 && latch_pc                      ) ? new_pc :
 	  (istate == o1 || istate == t3                  ) ? bus_out :
 	  pc;
@@ -482,10 +486,10 @@ module pdp11(clk, reset_n, switches,
    // mux source of sp changes
    //
    assign sp_mux =
-		  (istate == o1 || istate == o2 || istate == o3) ? sp + 2 :
-		  (istate == p1 ) ? sp - 2 :
-		  (istate == t1 ) ? sp - 2 :
-		  (istate == t2 ) ? sp - 2 :
+		  (istate == o1 || istate == o2 || istate == o3) ? sp + 16'd2 :
+		  (istate == p1 ) ? sp - 16'd2 :
+		  (istate == t1 ) ? sp - 16'd2 :
+		  (istate == t2 ) ? sp - 16'd2 :
 		  sp;
 
 
@@ -545,8 +549,8 @@ module pdp11(clk, reset_n, switches,
 	(isn_15_12 == 4'o10 && (isn_11_6 >= 6'o65 && isn_11_6 <= 6'o66))||// mtpx
 	(isn_15_12 == 4'o16);					      // sub
 
-   assign need_destspec_dd_byte =
-	(isn_15_12 == 4'o10 && (isn_11_6 >= 6'o50 && isn_11_6 <= 6'o64))||// xxxb
+   assign need_destspec_dd_byte =				      // xxxb
+	(isn_15_12 == 4'o10 && (isn_11_6 >= 6'o50 && isn_11_6 <= 6'o64))||
 	(isn_15_12 == 4'o10 && (isn_11_6 == 6'o67)) ||		      // mfps
 	(isn_15_12 >= 4'o11 && isn_15_12 < 10'o0016);		      // xxxb
 
@@ -646,8 +650,6 @@ module pdp11(clk, reset_n, switches,
    assign ss_mode = isn[11:9];
    assign ss_reg = isn[8:6];
 
-   assign ss_dest_mem = ss_mode != 0;
-   assign ss_dest_reg = ss_mode == 0;
    assign ss_ea_ind = ss_mode == 7;
 
    assign store_ss_reg = (isn_15_9 == 004 && ss_reg != 7);	// jsr
@@ -701,7 +703,8 @@ module pdp11(clk, reset_n, switches,
 		  istate == w1 ? e1_data :
 		  istate == p1 ? regs[ss_reg] :
 		  istate == t1 ? psw :
-   		  istate == t2 ? pc : bus_in;
+   		  istate == t2 ? pc :
+		  16'b0/*bus_in*/;
    
    assign bus_addr =
 		    istate == f1 ? pc :
@@ -715,10 +718,12 @@ module pdp11(clk, reset_n, switches,
 		    istate == o1 ? sp :
 		    istate == o2 ? sp :
 		    istate == o3 ? sp :
-		    istate == t1 ? sp - 2 :
-		    istate == t2 ? sp - 2 :
-		    istate == t3 ? ss_ea/*_mux*/ :
-		    istate == t4 ? ss_ea/*_mux*/ : bus_addr;
+		    istate == p1 ? sp - 16'd2 :
+		    istate == t1 ? sp - 16'd2 :
+		    istate == t2 ? sp - 16'd2 :
+		    istate == t3 ? ss_ea :
+		    istate == t4 ? ss_ea :
+		    16'b0/*bus_addr*/;
    
 
    assign bus_byte_op = (istate == w1 || istate == s4 || istate == d4) ?
@@ -767,7 +772,9 @@ module pdp11(clk, reset_n, switches,
 		 begin
 		    regs[ss_reg] <= regs[ss_reg] +
 				    ((need_srcspec_dd_byte &&
-				      ss_reg < 6 && ss_mode == 2) ? 1 : 2);
+				      ss_reg < 6 && ss_mode == 2) ?
+				     16'd1 : 16'd2);
+		    
 		    $display(" R%d <- (ss r++)", ss_reg);
 		 end
 	       else
@@ -775,7 +782,8 @@ module pdp11(clk, reset_n, switches,
 		   begin
 		      regs[ss_reg] <= regs[ss_reg] -
 				      ((need_srcspec_dd_byte &&
-					ss_reg < 6 && ss_mode == 4) ? 1 : 2);
+					ss_reg < 6 && ss_mode == 4) ?
+				       16'd1 : 16'd2);
 		      $display(" R%d <- (ss r--)", ss_reg);
 		   end
 	    end // case: s1
@@ -798,7 +806,8 @@ module pdp11(clk, reset_n, switches,
 		 begin
 		    regs[dd_reg] <= regs[dd_reg] +
 				    ((need_destspec_dd_byte &&
-				      dd_reg < 6 && dd_mode == 2) ? 1 : 2);
+				      dd_reg < 6 && dd_mode == 2) ?
+				     16'd1 : 16'd2);
 		    $display(" R%d <- (dd r++)", dd_reg);
 		 end
                else
@@ -806,7 +815,8 @@ module pdp11(clk, reset_n, switches,
 		   begin
 		      regs[dd_reg] <= regs[dd_reg] - 
 				      ((need_destspec_dd_byte &&
-					dd_reg < 6 && dd_mode == 4) ? 1 : 2);
+					dd_reg < 6 && dd_mode == 4) ?
+				       16'd1 : 16'd2);
 		      $display(" R%d <- (dd r--)", dd_reg);
 		   end
 	    end
@@ -1009,15 +1019,21 @@ module pdp11(clk, reset_n, switches,
      else
        if (istate == e1)
 	 begin
-	    if (assert_halt) begin
-	       $display("assert_halt");
-	       halted <= 1;
-	    end
+	    if (assert_halt)
+	      begin
+`ifdef debug
+		 $display("assert_halt");
+`endif
+		 halted <= 1;
+	      end
 
-	    if (assert_wait) begin
-	       $display("assert_wait");
-	       waited <= 1;
-	    end
+	    if (assert_wait)
+	      begin
+`ifdef debug
+		 $display("assert_wait");
+`endif
+		 waited <= 1;
+	      end
 	 end
 
    //
@@ -1044,7 +1060,9 @@ module pdp11(clk, reset_n, switches,
 	    begin
                interrupt <= 1;
                interrupt_vector <= assert_int_vec;
+`ifdef debug
                $display("interrupt: asserts; vector %o", interrupt_vector);
+`endif
             end
 	  else
             interrupt <= 0;
@@ -1089,7 +1107,8 @@ module pdp11(clk, reset_n, switches,
 		       istate == d4 ? (need_push_state ? p1 :
         			       e1) :
 
-		       istate == e1 ? (need_pop_reg ? o3 :
+		       istate == e1 ? (~e1_advance ? e1 :
+				       need_pop_reg ? o3 :
 				       need_pop_pc_psw ? o1 :
         			       w1) :
 
@@ -1155,12 +1174,13 @@ module pdp11(clk, reset_n, switches,
 		    istate == d3) ?
 		   dd_ea_mux : dd_ea;
 
-	  if (istate == c1 ||
-	      istate == s4 || istate == d4)
-	    begin
+	  // clock data at c1 for register and s4 for M[] 
+	  if (istate == c1 || istate == s4)
 	       ss_data <= ss_data_mux;
+
+	  // clock data at c1 for register and d4 for M[] 
+	  if (istate == c1 || istate == d4)
 	       dd_data <= dd_data_mux;
-	    end
 
 	  e1_data <= (istate == e1 || istate == w1) ? e1_data_mux :
 		     (istate == o3) ? bus_out :
@@ -1184,8 +1204,8 @@ module pdp11(clk, reset_n, switches,
 	endcase
      end
 `endif
-   
-//`ifdef debug
+
+`ifdef debug
    always @(posedge clk)
      #2 begin
    	case (istate)
@@ -1362,7 +1382,7 @@ module pdp11(clk, reset_n, switches,
 	  
      end
 
-//`endif
+`endif
 	    
 endmodule
 

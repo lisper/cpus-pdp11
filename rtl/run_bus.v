@@ -152,9 +152,19 @@ module test;
        
        write_io_reg(13'o17400, 0); // rkda
        write_io_reg(13'o17402, 0); // rker
-       write_io_reg(13'o17406, 16'hfffc); // rkwc;
+       write_io_reg(13'o17406, 16'o177400); // rkwc;
+       
        write_io_reg(13'o17410, 0); // rkba;
        write_io_reg(13'o17412, 0); // rkda;
+       write_io_reg(13'o17404, 5); // rkcs
+
+       wait_for_rk;
+
+       write_io_reg(13'o17400, 0); // rkda
+       write_io_reg(13'o17402, 0); // rker
+       write_io_reg(13'o17406, 16'o177400); // rkwc;
+       write_io_reg(13'o17410, 16'o1000); // rkba;
+       write_io_reg(13'o17412, 2); // rkda;
        write_io_reg(13'o17404, 5); // rkcs
 
        wait_for_rk;
@@ -163,7 +173,7 @@ module test;
        read_mem(16'h0002);
        read_mem(16'h0004);
        
-       #5000 $finish;
+       #6000 $finish;
     end
 
    always @(posedge clk)

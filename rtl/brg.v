@@ -36,7 +36,7 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
 	 end
        else
 	 begin
-	    rx_clk_div  <= rx_clk_div + 1;
+	    rx_clk_div  <= rx_clk_div + 8'd1;
 	    rx_baud_clk <= rx_baud_clk;
 	 end
 
@@ -54,7 +54,7 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
 	 end
        else
 	 begin
-	    tx_clk_div  <= tx_clk_div + 1;
+	    tx_clk_div  <= tx_clk_div + 8'd1;
 	    tx_baud_clk <= tx_baud_clk;
 	 end
 endmodule

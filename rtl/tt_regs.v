@@ -80,6 +80,7 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	    13'o17562: data_out = tti_data;
 	    13'o17564: data_out = {8'b0, tto_empty, tx_int_enable, 6'b0};
 	    13'o17566: data_out = tto_data;
+	    default: data_out = 16'b0;
 	  endcase
      end
 
