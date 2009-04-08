@@ -12,7 +12,9 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 
 	   psw, psw_io_wr,
-	   switches);
+	   switches,
+	   rs232_tx, rs232_rx
+	  );
 
    input clk;
    input reset;
@@ -35,6 +37,9 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    output 	psw_io_wr;
 
    input [15:0] switches;
+
+   output	rs232_tx;
+   input	rs232_rx;
    
    //
    wire 	ram_ce_n;
@@ -129,6 +134,9 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 
 		  // switches
 		  .switches(switches),
+
+		  // rs-232
+		  .rs232_tx(rs232_tx), .rs232_rx(rs232_rx),
 		  
 		  // dma from device to memory
 		  .dma_req(dma_req),

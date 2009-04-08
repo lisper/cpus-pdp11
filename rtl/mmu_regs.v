@@ -7,7 +7,7 @@ module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    input [15:0] data_in;
    input 	iopage_rd, iopage_wr, iopage_byte_op;
    output [15:0] data_out;
-   reg [15:0] 	 data_out;
+//   reg [15:0] 	 data_out;
    output 	 decode;
 
    reg [15:0] 	 mmr0, mmr1, mmr2, mmr3;
@@ -16,7 +16,9 @@ module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 			  (iopage_addr == 13'o17572) |
 			  (iopage_addr == 13'o17574) |
 			  (iopage_addr == 13'o17576);
-   
+
+   assign data_out = 16'b0;
+
    always @(posedge clk)
      if (reset)
        begin

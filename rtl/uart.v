@@ -110,7 +110,8 @@ module uart (clk, reset,
 					rx_frame_err <= 0;
 
 					// check for overrun
-					rx_over_run <= (rx_empty) ? 0 : 1;
+					rx_over_run <= (rx_empty) ?
+							 1'b0 : 1'b1;
 				     end
 				end
 			   end
@@ -126,9 +127,9 @@ module uart (clk, reset,
     always @ (posedge txclk or posedge reset)
       if (reset)
 	begin
-	   tx_empty <= 1;
-	   tx_out <= 1;
-	   tx_cnt <= 0;
+	   tx_empty <= 1'b1;
+	   tx_out <= 1'b1;
+	   tx_cnt <= 4'b0;
 
 	   tx_reg <= 0;
 	   tx_over_run <= 0;
@@ -148,11 +149,11 @@ module uart (clk, reset,
 
 	  if (tx_enable && !tx_empty)
 	    begin
-	       tx_cnt <= tx_cnt + 1;
+	       tx_cnt <= tx_cnt + 1'b1;
 	       if (tx_cnt == 0)
 		    tx_out <= 0;
 
-	       if (tx_cnt > 0 && tx_cnt < 9)
+	       if (tx_cnt > 4'd0 && tx_cnt < 4'd9)
 		    tx_out <= tx_reg[tx_cnt -1];
 
 	       if (tx_cnt == 9) begin

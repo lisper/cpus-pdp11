@@ -50,7 +50,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    reg [3:0] 	 rkcs_cmd;
    reg 		 rkcs_done;
    reg 		 rkcs_ie;
-   reg [1:0] 	 rkcs_mex;
+   wire [1:0] 	 rkcs_mex;
    
    reg 	 assert_int;
    reg 	 clear_err, set_err;
@@ -144,6 +144,8 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		      (iopage_addr == 13'o17410) |
    		      (iopage_addr == 13'o17412);
 
+   assign rkcs_mex = rkba[17:16];
+
    // register read
    always @(clk or decode or iopage_addr or iopage_rd or iopage_byte_op or
 	    rkda or rker or rkwc or rkba or
@@ -161,6 +163,8 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	    13'o17412: data_out = rkda;
 	    default: data_out = 16'b0;
 	  endcase
+	else
+	  data_out = 16'b0;
      end
 
    // register write
@@ -175,7 +179,6 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	  rkcs_err <= 0;
 	  rkcs_done <= 0;
 	  rkcs_ie <= 0;
-	  rkcs_mex <= 0;
 	  rkcs_cmd <= 0;
        end
      else
@@ -188,7 +191,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		begin
 		   rkcs_done <= data_in[7];
 		   rkcs_ie <= data_in[6];
-		   rkcs_mex <= data_in[5:4];
+		   rkba[17:16] <= data_in[5:4];
 		   rkcs_cmd <= data_in[3:0];
 		   $display("rk: write rkcs %o", data_in);
 		end
@@ -232,7 +235,6 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	       if (inc_ba)
 		 begin
 		    rkba <= rkba + 18'd2;
-		    rkcs_mex <= rkba[17:16];
 		    $display("rk: inc ba %o", rkba);
 		 end
 	       
@@ -256,12 +258,15 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	  rk_state <= rk_state_next;
        end
 
-   always @(rk_state or rkcs_cmd or rkcs_ie or ata_done or ata_out or dma_ack)
+   always @(rk_state or rkcs_cmd or rkcs_ie or 
+	    rkwc or rkda or rkba or
+            ata_done or ata_out or
+	    dma_data_out or dma_ack)
      begin
 	rk_state_next = rk_state;
 
 	assert_int = 0;
-	vector = 0;
+	vector = 8'b0;
 	
 	clear_err = 0;
 	set_err = 0;
@@ -387,7 +392,7 @@ $display("init0: ata_done %o, ata_out %o", ata_done, ata_out);
 	       ata_wr = 1;
 	       ata_addr = ATA_COMMAND;
 	       ata_in = rkcs_cmd[3:1] == 3'b001 ? ATA_CMD_WRITE :
-			rkcs_cmd[3:1] == 3'b010 ? ATA_CMD_READ : 0;
+			rkcs_cmd[3:1] == 3'b010 ? ATA_CMD_READ : 16'b0;
 	       if (ata_done)
 		 rk_state_next = wait1;
 	    end
@@ -446,7 +451,7 @@ if (ata_done) $display("rk: ata_out %x", ata_out);
 	       // mem write
 	       // after mem-ack, inc18 {mex,ba}, set mex bits
 	       dma_req = 1;
-	       dma_addr = { rkcs_mex, rkba };
+	       dma_addr = rkba;
 	       dma_data_in = ata_out;
 $display("read1: ata_out %o, dma_addr %o", ata_out, dma_addr);
 			    
@@ -469,7 +474,7 @@ $display("read1: ata_out %o, dma_addr %o", ata_out, dma_addr);
 	       //mem read
 	       //after mem-ack, inc wc
 	       dma_req = 1;
-	       dma_addr = { rkcs_mex, rkba };
+	       dma_addr = rkba;
 	       
 	       if (dma_ack)
 		 begin
@@ -514,7 +519,7 @@ $display("read1: ata_out %o, dma_addr %o", ata_out, dma_addr);
 	       if (rkcs_ie)
 		 begin
 		    assert_int = 1;
-		    vector = 16'o220;
+		    vector = 8'o220;
 		 end
 	       
 	       clear_err = 1;
@@ -530,7 +535,7 @@ $display("read1: ata_out %o, dma_addr %o", ata_out, dma_addr);
 	       if (rkcs_ie)
 		 begin
 		    assert_int = 1;
-		    vector = 16'o220;
+		    vector = 8'o220;
 		 end
 	       
 	       rk_state_next = ready;

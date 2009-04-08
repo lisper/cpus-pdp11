@@ -21,6 +21,8 @@ module iopage(clk, reset, address, data_in, data_out,
 
 	      switches,
 
+	      rs232_tx, rs232_rx,
+
    	      dma_req, dma_ack, dma_addr, dma_data_in, dma_data_out,
 	      dma_rd, dma_wr
 	      );
@@ -45,6 +47,9 @@ module iopage(clk, reset, address, data_in, data_out,
    output 	psw_io_wr;
 
    input [15:0] switches;
+
+   input	rs232_rx;
+   output	rs232_tx;
 
    output 	dma_req;
    input 	dma_ack;
@@ -92,7 +97,7 @@ module iopage(clk, reset, address, data_in, data_out,
    assign vector = tt_interrupt ? tt_vector :
 		     clk_interrupt ? clk_vector :
 		     rk_interrupt ? rk_vector :
-		     0;
+		     8'b0;
 
    
    bootrom bootrom1(.clk(clk),

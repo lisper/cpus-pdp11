@@ -22,7 +22,7 @@ module div3216(clk, reset, ready, done,
 
    wire [63:0] 	 diff;
    
-   reg [5:0]     bit; 
+   reg [5:0]     bitnum; 
 
    reg [1:0] 	 state;
    wire [1:0] 	 next_state;
@@ -40,7 +40,7 @@ module div3216(clk, reset, ready, done,
        state <= next_state;
 
    assign next_state = (state == idle && ready) ? running :
-		       (state == running) ? (bit == 5'd1 ? last : running) :
+		       (state == running) ? (bitnum == 5'd1 ? last : running) :
 		       (state == last) ? idle : idle;
 
    assign diff = dividend_copy - divider_copy;
@@ -51,7 +51,7 @@ module div3216(clk, reset, ready, done,
    always @(posedge clk) 
      if (reset)
        begin
-	  bit <= 0;
+	  bitnum <= 0;
 	  negative_output <= 0;
 	  quotient_temp <= 0;
 	  dividend_copy <= 0;
@@ -60,7 +60,7 @@ module div3216(clk, reset, ready, done,
      else
        if (state == idle)
 	 begin
-            bit <= 6'd32;
+            bitnum <= 6'd32;
             quotient_temp <= 0;
             dividend_copy <= !dividend[31] ? 
                              {32'd0, dividend} : 
@@ -73,7 +73,7 @@ module div3216(clk, reset, ready, done,
 			       (!divider[15] && dividend[31]);
 	 end 
        else
-	 if (bit != 0)
+	 if (bitnum != 0)
 	   begin
               quotient_temp <= { quotient_temp[30:0], diff[63] ? 1'b0 : 1'b1 };
 
@@ -81,7 +81,7 @@ module div3216(clk, reset, ready, done,
 		dividend_copy <= diff;
 
               divider_copy <= { 1'b0, divider_copy[63:1] };
-              bit <= bit - 1'b1;
+              bitnum <= bitnum - 1'b1;
 	   end
    
 endmodule

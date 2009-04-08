@@ -12,6 +12,7 @@
 `include "execute.v"
 
 module pdp11(clk, reset_n, switches,
+	     rs232_tx, rs232_rx,
 	     ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da);
 
    input clk, reset_n;
@@ -22,6 +23,8 @@ module pdp11(clk, reset_n, switches,
    output [1:0] ide_cs;
    output [2:0] ide_da;
 
+   output	rs232_tx;
+   input	rs232_rx;
 
    // state
    reg 		halted;
@@ -325,7 +328,8 @@ module pdp11(clk, reset_n, switches,
 	    .ide_cs(ide_cs), .ide_da(ide_da),
 
 	    .psw(psw), .psw_io_wr(psw_io_wr),
-	    .switches(switches)
+	    .switches(switches),
+	    .rs232_tx(rs232_tx), .rs232_rx(rs232_rx)
 	    );
    
   
@@ -390,10 +394,10 @@ module pdp11(clk, reset_n, switches,
 		      ss_mode == 1 ? regs[ss_reg] :
 		      ss_mode == 2 ? regs[ss_reg] :
 		      ss_mode == 3 ? regs[ss_reg] :
-		      ss_mode == 4 ? (is_isn_byte ? (regs[ss_reg]-1) :
-				      (regs[ss_reg]-2)) :
-		      ss_mode == 5 ? (is_isn_byte ? (regs[ss_reg]-1) :
-				      (regs[ss_reg]-2)) :
+		      ss_mode == 4 ? (regs[ss_reg] -
+					(is_isn_byte ? 16'd1 : 16'd2)) :
+		      ss_mode == 5 ? (regs[ss_reg] -
+					(is_isn_byte ? 16'd1 : 16'd2)) :
 		      ss_mode == 6 ? pc :
 		      ss_mode == 7 ? pc :
 		      16'b0) :
@@ -401,8 +405,8 @@ module pdp11(clk, reset_n, switches,
      istate == s2 ?
 		     (ss_mode == 3 ? bus_out :
 		      ss_mode == 5 ? bus_out :
-		      ss_mode == 6 ? (bus_out + regs[ss_reg]) & 16'hffff :
-		      ss_mode == 7 ? (bus_out + regs[ss_reg]) & 16'hffff :
+		      ss_mode == 6 ? (bus_out + regs[ss_reg]) :
+		      ss_mode == 7 ? (bus_out + regs[ss_reg]) :
 		      ss_ea) :
 		     
      istate == s3 ? bus_out :
@@ -727,7 +731,7 @@ module pdp11(clk, reset_n, switches,
    
 
    assign bus_byte_op = (istate == w1 || istate == s4 || istate == d4) ?
-			is_isn_byte: 0;
+			is_isn_byte: 1'b0;
 
    //
    // clock data

@@ -8,6 +8,9 @@ module test;
   reg clk, reset_n;
   reg[15:0] switches;
 
+   wire     rs232_tx;
+   reg	    rs232_rx;
+
    wire [15:0] ide_data_bus;
    wire        ide_dior, ide_diow;
    wire [1:0]  ide_cs;
@@ -15,6 +18,7 @@ module test;
 
 
   pdp11 cpu(.clk(clk), .reset_n(reset_n), .switches(switches),
+	    .rs232_tx(rs232_tx), .rs232_rx(rs232_rx),
 	    .ide_data_bus(ide_data_bus),
 	    .ide_dior(ide_dior), .ide_diow(ide_diow),
 	    .ide_cs(ide_cs), .ide_da(ide_da));

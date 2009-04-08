@@ -82,6 +82,8 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	    13'o17566: data_out = tto_data;
 	    default: data_out = 16'b0;
 	  endcase
+	else
+	  data_out = 16'b0;
      end
 
    // iopage writes   
@@ -166,9 +168,9 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    assign tx_int = tx_int_enable && tto_empty;
 
    assign interrupt = rx_int || tx_int;
-   assign vector = rx_int ? 16'o0060 :
-		   tx_int ? 16'o0064 :
-		   0;
+   assign vector = rx_int ? 8'o60 :
+		   tx_int ? 8'o64 :
+		   8'b0;
    
 endmodule
 

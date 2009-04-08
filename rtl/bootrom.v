@@ -58,6 +58,8 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
 	  #2 $display("rom fetch %o %o", iopage_addr, data_out);
 	  
        end // if (iopage_rd)
+     else
+       data_out = 16'b0;
    
 endmodule
 

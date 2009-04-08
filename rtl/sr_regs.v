@@ -22,6 +22,8 @@ module sr_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	    13'o17570: data_out = switches;
 	    default: data_out = 16'b0;
 	  endcase
+        else
+	  data_out = 16'b0;
      end
    
    

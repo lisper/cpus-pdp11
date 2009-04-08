@@ -12,8 +12,8 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
    input 	BYTE_OP;
    output [15:0] DO;
 
-   reg [7:0] 	 ram_h [0:8191];
-   reg [7:0] 	 ram_l [0:8191];
+   reg [7:0] 	 ram_h [0:8/*8191*/];
+   reg [7:0] 	 ram_l [0:8/*8191*/];
 
    wire [12:0] 	 BA;
 

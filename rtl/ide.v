@@ -43,7 +43,7 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
    assign ide_data_bus = (ata_wr && (ata_state == s0 ||
 				     ata_state == s1 ||
 				     ata_state == s2 ||
-   				     ata_state == s3)) ? ata_in : 16'bz;
+   				     ata_state == s3)) ? ata_in : 16'b0;
 
 
    // assert cs & da during r/w cycle
@@ -57,8 +57,8 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
 		      ata_state == s1 ||
 		      ata_state == s2;
 
-   assign ide_dior = (assert_rw && ata_rd) ? 0 : 1;
-   assign ide_diow = (assert_rw && ata_wr) ? 0 : 1;
+   assign ide_dior = (assert_rw && ata_rd) ? 1'b0 : 1'b1;
+   assign ide_diow = (assert_rw && ata_wr) ? 1'b0 : 1'b1;
 
    // send back done pulse at end
    assign ata_done = ata_state == s3;
@@ -76,6 +76,8 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
 	    begin
 	       if (ata_rd || ata_wr)
 		    ata_state_next = s0;
+	       else
+		    ata_state_next = idle;
 	    end
 	  
 	  s0: ata_state_next = s1;

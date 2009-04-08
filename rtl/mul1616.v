@@ -21,7 +21,7 @@ module mul1616(clk, reset, ready, done, multiplier, multiplicand, product);
    reg [31:0]    multiplicand_copy;
    reg           negative_output;
    
-   reg [4:0]     bit; 
+   reg [4:0]     bitnum; 
 
    reg [1:0] 	 state;
    wire [1:0] 	 next_state;
@@ -39,13 +39,13 @@ module mul1616(clk, reset, ready, done, multiplier, multiplicand, product);
        state <= next_state;
 
    assign next_state = (state == idle && ready) ? running :
-		       (state == running) ? (bit == 5'd1 ? last : running) :
+		       (state == running) ? (bitnum == 5'd1 ? last : running) :
 		       (state == last) ? idle : idle;
    
    always @(posedge clk)
      if (reset)
        begin
-	  bit <= 0;
+	  bitnum <= 0;
 	  negative_output <= 0;
 	  product <= 0;
 	  product_temp <= 0;
@@ -55,7 +55,7 @@ module mul1616(clk, reset, ready, done, multiplier, multiplicand, product);
    else
      if (state == idle)
        begin
-          bit               <= 6'd16;
+          bitnum            <= 5'd16;
           product           <= 0;
           product_temp      <= 0;
           multiplicand_copy <= !multiplicand[15] ? 
@@ -67,7 +67,7 @@ module mul1616(clk, reset, ready, done, multiplier, multiplicand, product);
 	  negative_output <= multiplier[15] ^ multiplicand[15];
        end 
      else
-       if (bit != 0)
+       if (bitnum != 0)
 	 begin
             if (multiplier_copy[0] == 1'b1)
 	      product_temp <= product_temp + multiplicand_copy;
@@ -77,9 +77,7 @@ module mul1616(clk, reset, ready, done, multiplier, multiplicand, product);
 
             multiplier_copy <= multiplier_copy >> 1;
             multiplicand_copy <= multiplicand_copy << 1;
-            bit <= bit - 1'b1;
+            bitnum <= bitnum - 1'b1;
 	 end
    
 endmodule
-
-
