@@ -1,0 +1,8 @@
+
+Contents:
+
+infodmp.inc   Some routines that you can include in your PLI source
+              using the 1.0 tf_ routines to help with tf_ routine debugging.
+              A good way to use this code is to modify it to your taste
+              and copy it into your source for viewing t_tfexprinfo
+              t_tfnodeinfo structures. 

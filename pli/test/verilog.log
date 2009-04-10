@@ -1,0 +1,20 @@
+GPLCVER_2.12a of 05/16/07 (Linux-elf).
+Copyright (c) 1991-2007 Pragmatic C Software Corp.
+  All Rights reserved.  Licensed under the GNU General Public License (GPL).
+  See the 'COPYING' file for details.  NO WARRANTY provided.
+Today is Sun Apr  5 09:37:43 2009.
+Compiling source file "vhello2.v"
+Highest level modules:
+xx
+
+--------------------------------------------------------------
+vpi_ system task $hello registered.
+vpi_ system function $realfhello (ret. type 2) registered.
+--------------------------------------------------------------
+hello world
+hello world
+done with PLI 2.0 calls returned i=0 and r=19
+0 simulation events and 0 declarative immediate assigns processed.
+4 behavioral statements executed (1 procedural suspends).
+  Times (in sec.):  Translate 0.0, load/optimize 0.1, simulation 0.1.
+End of GPLCVER_2.12a at Sun Apr  5 09:37:43 2009 (elapsed 0.0 seconds).
