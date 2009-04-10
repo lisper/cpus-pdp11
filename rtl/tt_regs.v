@@ -74,7 +74,7 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    always @(clk or decode or iopage_addr or tti_empty or tto_empty or
 	    tti_data or tto_data or rx_int_enable or tx_int_enable)
      begin
-	if (decode)
+	if (iopage_rd && decode)
 	  case (iopage_addr)
 	    13'o17560: data_out = {8'b0, tti_empty, rx_int_enable, 6'b0};
 	    13'o17562: data_out = tti_data;
@@ -101,7 +101,13 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	   13'o17560: rx_int_enable <= data_in[6];	// tti csr
    	   //13'o17562: tti_data <= data_in;
 	   13'o17564: tx_int_enable <= data_in[6];	// tto csr
-	   13'o17566: tto_data <= data_in;		// tto data
+	   13'o17566:
+	     begin
+		tto_data <= data_in;		// tto data
+`ifdef debug
+		$display("tto_data %o", tto_data);
+`endif
+	     end
 	 endcase
 
    assign tx_enable = 1'b1;

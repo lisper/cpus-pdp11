@@ -6,6 +6,7 @@
 
 `include "mul1616.v"
 `include "div3216.v"
+`include "shift32.v"
 
 module execute(clk, reset, enable,
 	       pc, psw,
@@ -15,15 +16,14 @@ module execute(clk, reset, enable,
 
 	       dd_ea, ss_reg, ss_reg_value, ss_rego1_value,
 
-	       isn,
-	       isn_15_12, isn_15_9, isn_11_9, isn_11_6, isn_5_0, isn_3_0,
+	       isn, r5,
 
 	       assert_halt, assert_wait, assert_trap_priv, assert_trap_emt, 
 	       assert_trap_trap, assert_bpt, assert_iot, assert_reset, 
 
 	       e1_result, e32_result, e1_advance,
 
-	       new_pc, latch_pc, 
+	       new_pc, latch_pc, latch_sp,
 	       new_cc_n, new_cc_z, new_cc_v, new_cc_c,
 	       latch_cc, latch_psw_prio, new_psw_prio);
 
@@ -33,14 +33,10 @@ module execute(clk, reset, enable,
    input [15:0] pc, psw;
    input [15:0] ss_data, dd_data;
    input 	cc_n, cc_z, cc_v, cc_c;
-   input [2:0] 	current_mode;
+   input [1:0] 	current_mode;
    input [15:0] dd_ea;
    input [15:0] isn;
-   input [3:0] 	isn_15_12;
-   input [6:0] 	isn_15_9;
-   input [5:0] 	isn_11_6, isn_5_0;
-   input [2:0] 	isn_11_9;
-   input [3:0]  isn_3_0;
+   input [15:0] r5;
    input [2:0] 	ss_reg;
    input [15:0]	ss_reg_value, ss_rego1_value;
 
@@ -48,29 +44,32 @@ module execute(clk, reset, enable,
 		assert_trap_trap, assert_bpt, assert_iot, assert_reset;
 
    output [15:0] e1_result, new_pc;
-   output [31:0] e32_result;
+   output [15:0] e32_result;
    output 	 e1_advance;
  	 
    output 	 latch_pc;
+   output 	 latch_sp;
    output 	 new_cc_n, new_cc_z, new_cc_v, new_cc_c;
    output 	 latch_cc, latch_psw_prio;
    output [2:0]  new_psw_prio;
 
+   //
    wire [31:0] 	 div_result;
    wire [31:0] 	 mul_result;
+   wire [31:0] 	 shift_result;
 
    reg 		assert_halt, assert_wait, assert_trap_priv, assert_trap_emt, 
 		assert_trap_trap, assert_bpt, assert_iot, assert_reset;
 
    reg [15:0] e1_result, new_pc;
-   reg [31:0] e32_result;
+   reg [15:0] e32_result;
 
    reg 	      latch_pc;
+   reg 	      latch_sp;
    reg 	      new_cc_n, new_cc_z, new_cc_v, new_cc_c;
    reg 	      latch_cc, latch_psw_prio;
    reg [2:0]  new_psw_prio;
 
-   reg [15:0] temp, sign;
    reg [5:0]  shift;
 
    //
@@ -79,8 +78,8 @@ module execute(clk, reset, enable,
    wire       e1_result_zero, e1_result_byte_zero;
    wire       dd_data_sign, dd_data_zero, ss_data_sign;
    
-   assign e32_result_sign = e32_result[31];
-   assign e32_result_zero = e32_result == 32'b0;
+   assign e32_result_sign = e32_result[15];
+   assign e32_result_zero = e1_result == 16'b0 && e32_result == 16'b0;
 
    assign e1_result_sign = e1_result[15];
    assign e1_result_byte_sign = e1_result[7];
@@ -95,48 +94,78 @@ module execute(clk, reset, enable,
 
    //
    wire [7:0] pc_offset;
-   wire [15:0] new_pc_w, new_pc_b;
+   wire [15:0] new_pc_w, new_pc_b, new_pc_sob;
 
    add8 add8_pc(pc_offset, isn[7:0], isn[7:0]);
    
    assign new_pc_w = pc + pc_offset;
    assign new_pc_b = pc + { 8'hff, pc_offset };
+   assign new_pc_sob = pc - {isn[5:0], 1'b0};
+   
+   // cpu modes
+   parameter 	mode_kernel = 2'b00;
+   parameter 	mode_super  = 2'b01;
+   parameter 	mode_undef  = 2'b10;
+   parameter 	mode_user   = 2'b11;
 
    //
    wire   mul_done;
    wire   div_done;
+   wire   shift_done;
    reg 	  mul_ready;
    reg 	  div_ready;
+   reg 	  shift_ready;
+
+   wire   shift_out;
    
    wire   e1_advance;
    wire   is_isn_muldiv;
    
    mul1616 mul1616_box(.clk(clk), .reset(reset),
-			.ready(mul_ready),
-			.done(mul_done),
-			.multiplier(ss_data),
-			.multiplicand(dd_data),
-			.product(mul_result));
+		       .ready(mul_ready),
+		       .done(mul_done),
+		       .multiplier(ss_data),
+		       .multiplicand(dd_data),
+		       .product(mul_result));
    
    div3216 div3216_box(.clk(clk), .reset(reset),
-			.ready(div_ready),
-			.done(div_done),
-			.dividend({ss_reg_value, ss_rego1_value}),
-			.divider(dd_data),
-			.quotient(div_result));
+		       .ready(div_ready),
+		       .done(div_done),
+		       .dividend({ss_reg_value, ss_rego1_value}),
+		       .divider(dd_data),
+		       .quotient(div_result));
 
+   shift32 shift32_box(.clk(clk), .reset(reset),
+		       .ready(shift_ready),
+		       .done(shift_done),
+		       .in(shift_in),
+		       .out(shift_result),
+		       .last_bit(shift_out),
+		       .shift(shift));
+
+   wire   is_ash, is_ashc, is_ashx;
+   
+   assign is_ash =	 (isn[15:9] == 7'o072);			/* ash */
+   assign is_ashc =      (isn[15:9] == 7'o073);			/* ashc */
+
+   assign is_ashx = is_ash || is_ashc;
+   
+   assign shift_in = is_ash ?
+		     {ss_data[15],15'b0,ss_data} :		/* ash */
+		     {ss_reg_value, ss_rego1_value};		/* ashc */
+   
    assign is_isn_muldiv =
-			 (isn_15_9 == 070) ||			/* mul */
-			 (isn_15_9 == 071);			/* div */
+			 (isn[15:9] == 7'o070) ||		/* mul */
+			 (isn[15:9] == 7'o071);			/* div */
 
-   assign e1_advance = is_isn_muldiv ? (mul_done || div_done) : 1'b1;
+   assign e1_advance = is_isn_muldiv ? (mul_done || div_done) :
+		       is_ashx ? (shift_done) : 1'b1;
    
    //
    always @(clk or enable or isn or pc or psw or ss_data or dd_data or
 	    ss_reg_value or ss_rego1_value or
 	    dd_ea or
-	    cc_n or cc_z or cc_v or cc_c or
-	    isn_15_12 or isn_11_9 or isn_11_6 or isn_5_0 or isn_3_0 or
+	    cc_n or cc_z or cc_v or cc_c or isn or
 	    e32_result or e32_result_sign or e32_result_zero or
 	    e1_result or e1_result_sign or e1_result_zero or
 	    e1_result_byte_sign or e1_result_byte_zero or
@@ -157,6 +186,7 @@ module execute(clk, reset, enable,
 	e32_result = 0;
 	new_pc = 0;
 	latch_pc = 0;
+	latch_sp = 0;
 	new_cc_n = 0;
 	new_cc_z = 0;
 	new_cc_v = 0;
@@ -167,7 +197,6 @@ module execute(clk, reset, enable,
 	mul_ready = 0;
 	div_ready = 0;
 	shift = 0;
-	temp = 0;
      end
      else
        begin
@@ -185,6 +214,7 @@ module execute(clk, reset, enable,
 	  
 	new_pc = 0;
 	latch_pc = 0;
+	latch_sp = 0;
 
 	new_cc_n = cc_n;
 	new_cc_z = cc_z;
@@ -198,20 +228,17 @@ module execute(clk, reset, enable,
 	div_ready = 0;
 
 	shift = 0;
-	temp = 0;
 	
-	if (isn_15_12 == 0)
+	if (isn[15:12] == 0)
 	  begin
-	     if (isn_11_6 == 000 && isn_5_0 < 010)
+	     if (isn[11:6] == 000 && isn[5:0] < 010)
 	       begin
 		  $display("e: MS");
 		  case (isn[2:0])
 		    0:					    /* halt */
 		      begin
 			 $display("e: HALT");
-//xxx
-//		    if (current_mode == mode_kernel)
-			 if (1)
+			 if (current_mode == mode_kernel)
 			   assert_halt = 1;
 			 else
 			   assert_trap_priv = 1;
@@ -230,8 +257,8 @@ module execute(clk, reset, enable,
 		      assert_iot = 1;
 
 		    5:					    /* reset */
-		      //		 if (current_mode == mode_kernel)
-		      assert_reset = 1;
+		      if (current_mode == mode_kernel)
+			assert_reset = 1;
 
 		    2:					    /* rti */
 		      $display("e: RTI");
@@ -242,12 +269,12 @@ module execute(clk, reset, enable,
 		    7:					    /* mfpt */
 		      e1_result = 16'h1234;
 		  endcase // case(isn[2:0])
-	       end // if (isn_11_6 == 000 && isn_5_0 < 010)
+	       end // if (isn[11:6] == 000 && isn[5:0] < 010)
 	     else
 	       begin
-		  if (0) $display("e: pc & cc %o", isn_11_6);
+		  if (0) $display("e: pc & cc %o", isn[11:6]);
 
-		  case (isn_11_6)
+		  case (isn[11:6])
 
 		    6'o01:					    /* jmp */
 		      begin
@@ -257,7 +284,7 @@ module execute(clk, reset, enable,
 		      end
 
 		    6'o02:					    /* rts */
-		      case (isn_5_0)
+		      case (isn[5:0])
 			6'o00, 6'o01, 6'o02, 6'o03,
 			  6'o04, 6'o05, 6'o06, 6'o07:
 			    begin
@@ -283,10 +310,10 @@ module execute(clk, reset, enable,
 			  6'o50, 6'o51, 6'o52, 6'o53,
 			  6'o54, 6'o55, 6'o56, 6'o57:
 			    begin
-			       if (isn_3_0[3]) new_cc_n = 0;
-			       if (isn_3_0[2]) new_cc_z = 0;
-			       if (isn_3_0[1]) new_cc_v = 0;
-			       if (isn_3_0[0]) new_cc_c = 0;
+			       if (isn[3]) new_cc_n = 0;
+			       if (isn[2]) new_cc_z = 0;
+			       if (isn[1]) new_cc_v = 0;
+			       if (isn[0]) new_cc_c = 0;
 			       latch_cc = 1;
 			    end
 
@@ -300,10 +327,10 @@ module execute(clk, reset, enable,
 			  6'o70, 6'o71, 6'o72, 6'o73,
 			  6'o74, 6'o75, 6'o76, 6'o77:
 			    begin
-			       if (isn_3_0[3]) new_cc_n = 1;
-			       if (isn_3_0[2]) new_cc_z = 1;
-			       if (isn_3_0[1]) new_cc_v = 1;
-			       if (isn_3_0[0]) new_cc_c = 1;
+			       if (isn[3]) new_cc_n = 1;
+			       if (isn[2]) new_cc_z = 1;
+			       if (isn[1]) new_cc_v = 1;
+			       if (isn[0]) new_cc_c = 1;
 			       latch_cc = 1;
 			    end
 
@@ -311,7 +338,7 @@ module execute(clk, reset, enable,
 			  begin
 			  end
 			
-		      endcase // case(isn_5_0)
+		      endcase // case(isn[5:0])
 
 		    6'o03:					    /* swab */
 		      begin
@@ -366,7 +393,7 @@ module execute(clk, reset, enable,
 		      begin
 			 new_pc = new_pc_w;
 			 latch_pc = (cc_n ^ cc_v) ? 1'b0 : 1'b1;
-			 $display("e: bge; isn %o, latch_pc %o, pc %o, new_pc %o",
+			 $display("e: bge; isn %o, latch_pc %o pc %o new_pc %o",
 				  isn, latch_pc, pc, new_pc);
 		      end
 
@@ -374,7 +401,7 @@ module execute(clk, reset, enable,
 		      begin
 			 new_pc = new_pc_b;
 			 latch_pc = (cc_n ^ cc_v) ? 1'b0 : 1'b1;
-			 $display("e: bge; isn %o, latch_pc %o, pc %o, new_pc %o",
+			 $display("e: bge; isn %o, latch_pc %o pc %o new_pc %o",
 				  isn, latch_pc, pc, new_pc);
 		      end
 
@@ -436,7 +463,7 @@ module execute(clk, reset, enable,
 
 		    6'o51:					    /* com */
 		      begin
-			 e1_result = dd_data ^ 16'o177777;
+			 e1_result = ~dd_data;
 			 new_cc_n = e1_result_sign;
 			 new_cc_z = e1_result_zero;
 			 new_cc_v = 0;
@@ -502,9 +529,9 @@ module execute(clk, reset, enable,
 			 latch_cc = 1;
 		      end
 
-		    16'o60:					    /* ror */
+		    6'o60:					    /* ror */
 		      begin
-			 e1_result = (dd_data >> 1) | (cc_c << 15);
+			 e1_result = {cc_c, dd_data[15:1]};
 			 new_cc_n = e1_result_sign;
 			 new_cc_z = e1_result_zero;
 			 new_cc_c = dd_data[0];
@@ -512,7 +539,7 @@ module execute(clk, reset, enable,
 			 latch_cc = 1;
 		      end
 
-		    16'o61:					    /* rol */
+		    6'o61:					    /* rol */
 		      begin
 			 e1_result = {dd_data[14:0], cc_c};
 			 new_cc_n = e1_result_sign;
@@ -522,9 +549,9 @@ module execute(clk, reset, enable,
 			 latch_cc = 1;
 		      end
 
-		    16'o62:					    /* asr */
+		    6'o62:					    /* asr */
 		      begin
-			 e1_result = (dd_data >> 1) | (dd_data[15]);
+			 e1_result = {dd_data[15], dd_data[15:1]};
 			 new_cc_n = e1_result_sign;
 			 new_cc_z = e1_result_zero;
 			 new_cc_c = dd_data[0];
@@ -532,33 +559,64 @@ module execute(clk, reset, enable,
 			 latch_cc = 1;
 		      end
 
-		    16'o63:					    /* asl */
+		    6'o63:					    /* asl */
 		      begin
 			 e1_result = {dd_data[14:0], 1'b0};
 			 new_cc_n = e1_result_sign;
 			 new_cc_z = e1_result_zero;
-			 new_cc_c = dd_data_sign;
+			 new_cc_c = dd_data[15];
 			 new_cc_v = new_cc_n ^ new_cc_c;
 			 latch_cc = 1;
 		      end
 
-		    16'o64,					    /* mark */
-		      16'o65,					    /* mfpi */
-		      16'o66,					    /* mtpi */
-		      16'o67,					    /* sxt */
-		      16'o70,					    /* csm */
-		      16'o72,					    /* tstset */
-		      16'o73:					    /* wrtlck */
+		    6'o64:					    /* mark */
+		      begin
+			 e1_result = new_pc_w;
+			 latch_sp = 1;
+			 
+			 new_pc = r5;
+			 latch_pc = 1;
+		      end
+		    
+		    6'o65:					    /* mfpi */
+		      begin
+			 $display(" MFPI %o", dd_data);
+			 new_cc_n = dd_data_sign;
+			 new_cc_z = dd_data_zero;
+			 new_cc_v = 0;
+			 latch_cc = 1;
+		      end
+		    
+		    6'o66:					    /* mtpi */
+		      begin
+			 new_cc_n = dd_data_sign;
+			 new_cc_z = dd_data_zero;
+			 new_cc_v = 0;
+			 latch_cc = 1;
+		      end
+		    
+		    6'o70,					    /* csm */
+		      6'o72,					    /* tstset */
+		      6'o73:					    /* wrtlck */
 			begin
 			end
 
-		  endcase // case(isn_11_6)
-	       end // else: !if(isn_11_6 == 16'o00 && isn_5_0 < 010)
-	  end // if (isn_15_12 == 0)
+		    6'o67:					    /* sxt */
+		      begin
+			 e1_result = cc_n ? 16'hffff : 0;
+			 new_cc_z = cc_n ^ 1;
+			 new_cc_v = 0;
+			 latch_cc = 1;
+		      end
+		    
+
+		  endcase // case(isn[11:6])
+	       end // else: !if(isn[11:6] == 6'o00 && isn[5:0] < 010)
+	  end // if (isn[15:12] == 0)
 	else
 	  begin
-	     if (0) $display("e: isn_15_12 != 0 (%o)", isn_15_12);
-	     case (isn_15_12)
+	     if (0) $display("e: isn[15:12] != 0 (%o)", isn[15:12]);
+	     case (isn[15:12])
 	       4'o01:					    /* mov */
 		 begin
 		    e1_result = ss_data;
@@ -566,7 +624,8 @@ module execute(clk, reset, enable,
 		    new_cc_z = e1_result_zero;
 		    new_cc_v = 0;
 		    latch_cc = 1;
-$display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
+		    if (0) $display(" mov ss_data %o, e1_result %o",
+				    ss_data, e1_result);
 		 end
 
 	       4'o02:					    /* cmp */
@@ -621,22 +680,21 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 		 end
 
 	       04'o7:
-		 case (isn_11_9) 
+		 case (isn[11:9]) 
 
 		   0:					    /* mul */
 		     begin
-			$display(" MUL %o %o", ss_data, dd_data);
-`ifdef xxx
-			e32_result = ss_data * dd_data;
-`else
+			$display(" MUL %o %o %o", ss_data, dd_data, mul_result);
+
 			mul_ready = 1;
-			e32_result = mul_result;
-`endif
-			new_cc_n = e32_result[31];
-			new_cc_z = e32_result == 0;
+			e32_result = mul_result[31:16];
+			e1_result = mul_result[15:0];
+
+			new_cc_n = e32_result_sign;
+			new_cc_z = e32_result_zero;
 			new_cc_v = 0;
-			new_cc_c = ((e32_result > 16'o77777) ||
-				    (e32_result < -16'o100000));
+			new_cc_c = (({e32_result,e1_result} > 16'h7fff) ||
+				    ({e32_result,e1_result} < 32'hffff8000));
 			latch_cc = 1;
 		     end
 
@@ -648,7 +706,6 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 			     new_cc_z = 1;
 			     new_cc_v = 1;
 			     new_cc_c = 1;
-			     latch_cc = 1;
 			  end
 			else if ((ss_reg_value == 16'h8000 &&
 				  ss_rego1_value == 0) &&
@@ -658,107 +715,66 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 			     new_cc_z = 1;
 			     new_cc_n = 1;
 			     new_cc_c = 1;
-			     latch_cc = 1;
 			  end
 			else begin
-`ifdef xxx
-			   e32_result = {ss_reg_value, ss_rego1_value} / dd_data;
-`else
 			   div_ready = 1;
-			   e32_result = div_result;
-`endif
-			   if ((e32_result > 16'o77777) ||
-			       (e32_result < -16'o100000))
+			   e32_result = mul_result[31:16];
+			   e1_result = mul_result[15:0];
+
+			   if (({e32_result,e1_result} > 16'h7fff) ||
+			       ({e32_result,e1_result} < 32'hffff8000))
 			     begin
 				new_cc_n = e32_result_sign;
-				new_cc_v = 1;
 				new_cc_z = 0;
+				new_cc_v = 1;
 				new_cc_c = 0;
-				latch_cc = 1;
 			     end else begin
 				new_cc_n = e32_result_sign;
 				new_cc_z = e32_result_zero;
 				new_cc_v = 0;
 				new_cc_c = 0;
-				latch_cc = 1;
 			     end
+
+			   latch_cc = 1;
 			end
 		     end // case: 1
 		   
 
 		   2:					    /* ash */
 		     begin
-			sign = ss_data_sign;
 			shift = dd_data[5:0];
-// xxx barrel shifter
-`ifdef xx
-			if (shift == 0) begin			/* [0] */
-			   e1_result = ss_data;
-			   new_cc_v = 0;
-			   new_cc_c = 0;
-			   latch_cc = 1;
-			end
-			else if (shift <= 15) begin			/* [1,15] */
-			   e1_result = ss_data << shift;
-			   temp = ss_data >> (16 - shift);
-			   new_cc_v = (temp!=(e1_result[15]?16'o177777:16'b0));
-			   new_cc_c = temp[0];
-			end
-			else if (shift <= 31) begin			/* [16,31] */
-			   e1_result = 16'b0;
-			   new_cc_v = (ss_data != 16'b0) ? 1'b1 : 1'b0;
-			   new_cc_c = (ss_data << (shift - 16)) & 1'b1;
-			end
-			else if (shift == 32) begin			/* [32] = -32 */
-			   e1_result = -sign;
-			   new_cc_v = 0;
-			   new_cc_c = 0;
-			end
-			else begin					/* [33,63] = -31,-1 */
-			   e1_result =
-				      (ss_data >> (64 - shift)) |
-				      (-sign << (shift - 32));
-			   new_cc_v = 0;
-			   new_cc_c = (ss_data >> (63 - shift)) & 1'b1;
-			end
-`endif
+
+			shift_ready = 1;
+			e1_result = shift_result[15:0];
 
 			new_cc_n = e1_result_sign;
 			new_cc_z = e1_result_zero;
+
+			new_cc_v = shift == 0 ? 0 :
+				   (ss_data[15] ^ shift_result[15]);
+
+			new_cc_c = shift[5] ? shift_out : shift_result[16];
+			latch_cc = 1;
 		     end // case: 2
 		   
 		   
 		   3:					    /* ashc */
 		     begin
-//xxx ugg.  clean this up
-			sign = ss_data_sign;
 			shift = dd_data[5:0];
 
-			if (dd_data == 0) begin			/* [0] */
-			   e32_result = ss_data;
-			   new_cc_v = 0;
-			   new_cc_c = 0;
-			end
-			else if (shift <= 31) begin		/* [1,31] */
-			   e32_result = ss_data << shift;
-			   temp = (ss_data >> (32 - shift)) | (-sign << shift);
-			   new_cc_v = (temp != (e32_result[31] ? -1 : 0));
-			   new_cc_c = temp[0];
-			end
-			else if (shift == 32) begin		/* [32] = -32 */
-			   e32_result = -sign;
-			   new_cc_v = 0;
-			   new_cc_c = 0;
-			end
-			else begin				/* [33,63] = -31,-1 */
-			   e32_result = (ss_data >> (64 - shift)) | (-sign << (shift - 32));
-			   new_cc_v = 0;
-			   new_cc_c = ((ss_data >> (63 - shift)) & 1'b1);
-			end
-			
-			new_cc_n = e1_result_sign;
-			new_cc_z = e1_result_zero;
-		     end // case: 3
+			shift_ready = 1;
+			e32_result = shift_result;
+
+			new_cc_n = e32_result_sign;
+			new_cc_z = e32_result_zero;
+
+			new_cc_v = shift == 0 ? 0 :
+				   (ss_reg_value[15] ^ shift_result[31]);
+
+			new_cc_c = shift_out;
+			latch_cc = 1;
+
+		     end
 
 		   4:					    /* xor */
 		     begin
@@ -780,15 +796,16 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 		   7:					    /* sob */
 		     begin
 			e1_result = ss_data - 16'd1;
-			new_pc = pc - dd_data - dd_data;
+//			new_pc = pc - isn[5:0] - isn[5:0];
+			new_pc = new_pc_sob;
 			latch_pc = ~e1_result_zero;
 		     end
-		 endcase // case(isn_11_9)
+		 endcase // case(isn[11:9])
 
 	       4'o10:
 		 begin
-		    if (0) $display(" e: 010 isn_11_6 %o", isn_11_6);
-		 case (isn_11_6)
+		    if (0) $display(" e: 010 isn[11:6] %o", isn[11:6]);
+		 case (isn[11:6])
 		   6'o00, 6'o01:				/* bpl */
 		     begin
 			$display("e: BPL"); 
@@ -901,12 +918,12 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 
 		   6'o50:				/* clrb */
 		     begin
+			e1_result = {dd_data[15:8], 8'b0};
 			new_cc_n = 0;
 			new_cc_v = 0;
 			new_cc_c = 0;
 			new_cc_z = 1;
 			latch_cc = 1;
-			e1_result = {dd_data[15:8], 8'b0};
 		     end
 
 		   6'o51:				/* comb */
@@ -996,8 +1013,9 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 			//note: byte write of src - rmw to memory word
 		     end
 
-		   061:				/* rolb */
+		   6'o61:				/* rolb */
 		     begin
+			$display(" ROLB %o", dd_data);
 			e1_result = {dd_data[15:8], dd_data[6:0], cc_c};
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
@@ -1031,11 +1049,12 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 
 		   6'o64:				/* mtps */
 		     begin
-//		   if (current_mode == mode_kernel)
-			begin
-			   // ipl = (dd_data >> psw_v_ipl) & 07;
-			   // trap_req = calc_ints (ipl, trap_req);
-			end
+//			if (current_mode == mode_kernel)
+//			  begin
+//			  end
+
+			new_psw_prio = dd_data[7:5];
+			latch_psw_prio = 1;
 
 			new_cc_n = dd_data[3];
 			new_cc_z = dd_data[2];
@@ -1046,7 +1065,6 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 
 		   6'o65:				/* mfpd */
 		     begin
-
 			new_cc_n = dd_data_sign;
 			new_cc_z = dd_data_zero;
 			new_cc_v = 0;
@@ -1055,23 +1073,23 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 
 		   6'o66:				/* mtpd */
 		     begin
-
 			new_cc_n = dd_data_sign;
 			new_cc_z = dd_data_zero;
 			new_cc_v = 0;
+			latch_cc = 1;
 			// pop data
 		     end
 
 		   6'o67:				/* mfps */
 		     begin
-
-			new_cc_n = dd_data_sign;
-			new_cc_z = dd_data_zero;
+			new_cc_n = e1_result_sign;
+			new_cc_z = e1_result_zero;
 			new_cc_v = 0;
-			e1_result = dd_data[7] ? (16'o177400 | dd_data) : dd_data;
+			latch_cc = 1;
+			e1_result = psw[7] ? (16'o177400 | psw) : psw;
 		     end
 		   
-		 endcase // case(isn_11_6)
+		 endcase // case(isn[11:6])
 		 end
 
 	       4'o11:					    /* movb */
@@ -1132,8 +1150,8 @@ $display(" mov ss_data %o, e1_result %o", ss_data, e1_result);
 		    new_cc_c = dd_data < ss_data;
 		    latch_cc = 1;
 		 end // case: 016
-	     endcase // case(isn_15_12)
-	  end // else: !if(isn_15_12 == 0)
+	     endcase // case(isn[15:12])
+	  end // else: !if(isn[15:12] == 0)
 
      end // always @*
 

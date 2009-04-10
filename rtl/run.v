@@ -27,8 +27,8 @@ module test;
     begin
       $timeformat(-9, 0, "ns", 7);
 
-      $dumpfile("pdp11.vcd");
-      $dumpvars(0, test.cpu);
+//      $dumpfile("pdp11.vcd");
+//      $dumpvars(0, test.cpu);
     end
 
   initial
@@ -44,7 +44,7 @@ module test;
           reset_n = 1;
        end
   
-       #5000000 $finish;
+//       #5000000 $finish;
     end
 
    always @(posedge clk)

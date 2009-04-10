@@ -89,6 +89,19 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 		 .WE_N(ram_we_n),
 		 .BYTE_OP(ram_byte_op));
 
+`ifdef debug_bus
+   always @(posedge clk)
+     if (ram_access)
+       begin
+	  if (bus_wr) $display("bus: ram write %o <- %o", bus_addr, data_in);
+	  if (bus_rd) $display("bus: ram read %o -> %o", bus_addr, data_out);
+
+	  if (bus_wr || bus_rd)
+	    $display("     ram_ce_n %o, ram_we_n %o ram_byte_op %o",
+		     ram_ce_n, ram_we_n, ram_byte_op);
+       end
+`endif
+   
    // simple arbiter
    always @ (posedge clk)
      if (reset)

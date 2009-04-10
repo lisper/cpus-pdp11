@@ -5,6 +5,7 @@
 
 //`define minimal_debug 1
 `define debug 1
+//`define minimal_bus 1
 
 `include "ipl_below.v"
 `include "add8.v"
@@ -48,12 +49,14 @@ module pdp11(clk, reset_n, switches,
    wire 	cc_n, cc_z, cc_v, cc_c;
    wire [2:0] 	ipl;
 
-   reg [15:0] 	regs[0:7];
+   reg [15:0] 	r0, r1, r2, r3, r4, r5;
+   reg [15:0] 	r6[0:3];
 
-   wire [15:0] 	pc;
+   reg [15:0] 	pc;
+
+   // wires 
    wire [15:0] 	sp;
    
-   // wires 
    wire 	assert_wait;
    wire 	assert_halt;
    wire 	assert_reset;
@@ -84,6 +87,8 @@ module pdp11(clk, reset_n, switches,
    wire 	is_isn_r32;
    wire 	is_isn_lowbyte;
    wire 	is_isn_byte;
+   wire 	is_isn_mfpx;
+   wire 	is_isn_mtpx;
    wire 	is_illegal;
    wire 	no_operand;
    wire 	store_result;
@@ -116,6 +121,8 @@ module pdp11(clk, reset_n, switches,
    wire [15/*21*/:0] 	new_pc;
    wire 	latch_pc;
 
+   wire 	latch_sp;
+
    wire 	new_cc_n, new_cc_z, new_cc_v, new_cc_c;
    wire 	latch_cc;
 
@@ -136,12 +143,25 @@ module pdp11(clk, reset_n, switches,
 		dd_post_incr,
 		dd_pre_dec;
 
+   wire [15:0] 	new_dd_reg_post_incr;
+   wire [15:0] 	new_dd_reg_pre_decr;
+   wire [15:0] 	new_dd_reg_incdec;
+   
+   wire [15:0] 	new_ss_reg_post_incr;
+   wire [15:0] 	new_ss_reg_pre_decr;
+   wire [15:0] 	new_ss_reg_incdec;
+   
    wire [2:0] 	ss_mode, ss_reg;
+
+   wire [15:0] 	ss_reg_value;	// regs[ss_reg]
+   wire [15:0] 	ss_rego1_value;	// regs[ss_reg|1]
+   wire [15:0] 	dd_reg_value;	// regs[dd_reg]
 
    // regs
    reg [15:0] 	ss_data;	// result of s states
    reg [15:0] 	dd_data;	// result of d states
    reg [15:0] 	e1_data;	// result of e states
+   reg [15:0] 	e32_data;	// result of e states (high order bits)
 
    wire 	ss_ea_ind,
 		ss_post_incr,
@@ -155,16 +175,17 @@ module pdp11(clk, reset_n, switches,
    wire [15:0] 	e1_data_mux;
 
    wire [15:0] 	e1_result;
-   wire [31:0] 	e32_result;
+   wire [15:0] 	e32_result;
    wire 	e1_advance;
    
    // cpu modes
-   parameter 	mode_kernel = 3'd0;
-   parameter 	mode_super = 3'd1;
-   parameter 	mode_undef = 3'd2;
-   parameter 	mode_user = 3'd3;
+   parameter 	mode_kernel = 2'b00;
+   parameter 	mode_super  = 2'b01;
+   parameter 	mode_undef  = 2'b10;
+   parameter 	mode_user   = 2'b11;
 
-   reg [2:0] 	current_mode;
+   wire [1:0] 	current_mode;
+   wire [1:0] 	previous_mode;
 
    //
    // main cpu states
@@ -172,34 +193,34 @@ module pdp11(clk, reset_n, switches,
    // f1 fetch;	   clock isn
    // c1 decode;
    //
-   // s1 source1;	   clock ss_data
-   // s2 source2;	   clock ss_data
-   // s3 source3;	   clock ss_data
-   // s4 source4;	   clock ss_data
+   // s1 source1;	clock ss_data
+   // s2 source2;	clock ss_data
+   // s3 source3;	clock ss_data
+   // s4 source4;	clock ss_data
    //
-   // d1 dest1;	   clock dd_data
-   // d2 dest2;	   clock dd_data
-   // d3 dest3;	   clock dd_data
-   // d4 dest4;	   clock dd_data
+   // d1 dest1;	   	clock dd_data
+   // d2 dest2;	   	clock dd_data
+   // d3 dest3;	   	clock dd_data
+   // d4 dest4;	   	clock dd_data
    //
-   // e1 execute;	   clock pc, sp & reg+-
-   // w1 writeback1;  clock e1_result
+   // e1 execute;	clock pc, sp & reg+-
+   // w1 writeback;	clock e1_result
    //
-   // o1 pop pc	   mem read
-   // o2 pop psw	   mem read
-   // o3 pop reg	   mem read
+   // o1 pop pc	   	mem read
+   // o2 pop psw	mem read
+   // o3 pop reg	mem read
    //
-   // p1 push sp	   mem write
+   // p1 push sp	mem write
    //
-   // t1 push psw	   mem write
-   // t2 push pc	   mem write
-   // t3 read pc	   mem read
-   // t4 read psw	   mem read
+   // t1 push psw	mem write
+   // t2 push pc	mem write
+   // t3 read pc	mem read
+   // t4 read psw	mem read
    //
    // i1 interrupt wait
    //
    // minimum states/instructions = 3
-   // maximum states/instructions = 10
+   // maximum states/instructions = 12
    //
    // mode,symbol,ea1	ea2		ea3		data		side-eff
    // 
@@ -346,13 +367,10 @@ module pdp11(clk, reset_n, switches,
 		 .dd_ea(dd_ea),
 		 .ss_reg(ss_reg),
 		 
-		 .ss_reg_value(regs[ss_reg]),
-		 .ss_rego1_value(regs[ss_reg | 1]),
+		 .ss_reg_value(ss_reg_value),
+		 .ss_rego1_value(ss_reg01_value),
 		 
-		 .isn(isn), 
-		 .isn_15_12(isn_15_12), .isn_15_9(isn_15_9),
-		 .isn_11_9(isn_11_9), .isn_11_6(isn_11_6),
-		 .isn_5_0(isn_5_0), .isn_3_0(isn_3_0), 
+		 .isn(isn),  .r5(r5),
 
 		 .assert_halt(assert_halt),
 		 .assert_wait(assert_wait),
@@ -366,7 +384,8 @@ module pdp11(clk, reset_n, switches,
 		 .e1_result(e1_result), .e32_result(e32_result),
 		 .e1_advance(e1_advance),
 
-		 .new_pc(new_pc), .latch_pc(latch_pc), 
+		 .new_pc(new_pc), .latch_pc(latch_pc), .latch_sp(latch_sp),
+		 
 		 .new_cc_n(new_cc_n), .new_cc_z(new_cc_z), 
 		 .new_cc_v(new_cc_v), .new_cc_c(new_cc_c),
 
@@ -390,13 +409,13 @@ module pdp11(clk, reset_n, switches,
    
    assign ss_ea_mux =
      (istate == c1 || istate == s1) ?
-		     (ss_mode == 0 ? regs[ss_reg] :
-		      ss_mode == 1 ? regs[ss_reg] :
-		      ss_mode == 2 ? regs[ss_reg] :
-		      ss_mode == 3 ? regs[ss_reg] :
-		      ss_mode == 4 ? (regs[ss_reg] -
+		     (ss_mode == 0 ? ss_reg_value :
+		      ss_mode == 1 ? ss_reg_value :
+		      ss_mode == 2 ? ss_reg_value :
+		      ss_mode == 3 ? ss_reg_value :
+		      ss_mode == 4 ? (ss_reg_value -
 					(is_isn_byte ? 16'd1 : 16'd2)) :
-		      ss_mode == 5 ? (regs[ss_reg] -
+		      ss_mode == 5 ? (ss_reg_value -
 					(is_isn_byte ? 16'd1 : 16'd2)) :
 		      ss_mode == 6 ? pc :
 		      ss_mode == 7 ? pc :
@@ -405,8 +424,8 @@ module pdp11(clk, reset_n, switches,
      istate == s2 ?
 		     (ss_mode == 3 ? bus_out :
 		      ss_mode == 5 ? bus_out :
-		      ss_mode == 6 ? (bus_out + regs[ss_reg]) :
-		      ss_mode == 7 ? (bus_out + regs[ss_reg]) :
+		      ss_mode == 6 ? (bus_out + ss_reg_value) :
+		      ss_mode == 7 ? (bus_out + ss_reg_value) :
 		      ss_ea) :
 		     
      istate == s3 ? bus_out :
@@ -433,12 +452,12 @@ module pdp11(clk, reset_n, switches,
    // d2 - result of fetch
    //
    assign dd_ea_mux = (istate == c1 || istate == d1) ?
-		      (dd_mode == 0 ? regs[dd_reg] :
-		       dd_mode == 1 ? regs[dd_reg] :
-		       dd_mode == 2 ? regs[dd_reg] :
-		       dd_mode == 3 ? regs[dd_reg] :
-		       dd_mode == 4 ? regs[dd_reg] - (is_isn_byte ? 16'd1 : 16'd2) :
-		       dd_mode == 5 ? regs[dd_reg] - (is_isn_byte ? 16'd1 : 16'd2) :
+		      (dd_mode == 0 ? dd_reg_value :
+		       dd_mode == 1 ? dd_reg_value :
+		       dd_mode == 2 ? dd_reg_value :
+		       dd_mode == 3 ? dd_reg_value :
+		       dd_mode == 4 ? dd_reg_value - (is_isn_byte ? 16'd1 : 16'd2) :
+		       dd_mode == 5 ? dd_reg_value - (is_isn_byte ? 16'd1 : 16'd2) :
 		       dd_mode == 6 ? pc :
 		       dd_mode == 7 ? pc :
 		       16'b0) :
@@ -446,8 +465,8 @@ module pdp11(clk, reset_n, switches,
 		      istate == d2 ?
 		      (dd_mode == 3 ? bus_out :
 		       dd_mode == 5 ? bus_out :
-		       dd_mode == 6 ? (bus_out + regs[dd_reg]) :
-		       dd_mode == 7 ? (bus_out + regs[dd_reg]) :
+		       dd_mode == 6 ? (bus_out + dd_reg_value) :
+		       dd_mode == 7 ? (bus_out + dd_reg_value) :
 		       dd_ea) :
 
 		      istate == d3 ? bus_out :
@@ -458,19 +477,19 @@ module pdp11(clk, reset_n, switches,
    // mux various data sources into ss, dd & e1 data registers
    //
    assign ss_data_mux =
-	       (istate == c1 && (ss_mode == 0 || is_isn_rxx)) ? regs[ss_reg] :
+	       (istate == c1 && (ss_mode == 0 || is_isn_rxx)) ? ss_reg_value :
 	       (istate == s4) ? bus_out :
-	       16'b0/*ss_data_mux*/;
+	       16'b0;
 
    assign dd_data_mux =
-	       (istate == c1 && dd_mode == 0) ? regs[dd_reg] :
 	       (istate == c1 && (isn_15_6 == 10'o1067)) ? psw[7:0] : // mfps 
+	       (istate == c1 && dd_mode == 0) ? dd_reg_value :
 	       (istate == d4) ? bus_out :
-	       16'b0/*dd_data_mux*/;
+	       16'b0;
 
    assign e1_data_mux =
 	       (istate == e1) ? e1_result :
-	       16'b0/*e1_data_mux*/;
+	       16'b0;
 
 
    //
@@ -491,10 +510,11 @@ module pdp11(clk, reset_n, switches,
    //
    assign sp_mux =
 		  (istate == o1 || istate == o2 || istate == o3) ? sp + 16'd2 :
+		  (istate == e1 && latch_sp) ? e1_result :
 		  (istate == p1 ) ? sp - 16'd2 :
 		  (istate == t1 ) ? sp - 16'd2 :
 		  (istate == t2 ) ? sp - 16'd2 :
-		  sp;
+		  r6[current_mode];
 
 
    // shorthand
@@ -504,9 +524,10 @@ module pdp11(clk, reset_n, switches,
    assign cc_c = psw[0];
    assign ipl  = psw[7:5];
    
-   assign sp = regs[6];
-   assign pc = regs[7];
+   assign sp = r6[current_mode];
    
+   assign current_mode = psw[15:14];
+   assign previous_mode = psw[13:12];
 
    //
    // psw_mux
@@ -515,22 +536,32 @@ module pdp11(clk, reset_n, switches,
    // after o2|t4, latch new psw from memory read
    //
    assign new_psw_cc = {new_cc_n, new_cc_z, new_cc_v, new_cc_c};
-   
+
    always @(posedge clk)
      if (reset_n == 0)
 	  psw <= 16'o0340;
      else
-       if (istate == e1 && latch_cc)
-	 psw <= { psw[15:4], new_psw_cc};
-       else
-	 if (istate == e1 && latch_psw_prio)
-	   psw <= { psw[15:8], new_psw_prio, psw[3:0]};
-       else
-         if (istate == o2 || istate == t4)
-	   psw <= bus_out;
-	 else
-	   if (istate == w1 && psw_io_wr)
-	     psw <= bus_out;
+       begin
+	  if (istate == e1)
+	    psw <= { psw[15:8], 
+		     latch_psw_prio ? new_psw_prio : psw[7:5],
+		     psw[4],
+		     latch_cc ? new_psw_cc : psw[3:0]};
+	  else
+            if (istate == o2 || istate == t4)
+	      psw <= bus_out;
+	    else
+	      if (istate == w1 && psw_io_wr)
+		begin
+		   if (~bus_byte_op)
+		     psw <= {bus_in[15:5], psw[4], bus_in[3:0]};
+		   else
+		     if (bus_addr[0])
+		       psw <= {bus_in[15:8], psw[7:0]};
+		     else
+		       psw <= {psw[15:8], bus_in[7:5], psw[4], bus_in[3:0]};
+		end
+       end
 
    //
    // instruction decode
@@ -544,19 +575,20 @@ module pdp11(clk, reset_n, switches,
    assign isn_3_0   = isn[3:0];
 
    assign need_destspec_dd_word =
-	(isn_15_6 == 10'o0001) ||				      // jmp
-	(isn_15_6 == 10'o0003) ||				      // swab
+	(isn_15_6 == 10'o0001) ||				// jmp
+	(isn_15_6 == 10'o0003) ||				// swab
 	(isn_15_12 == 0 && (isn_11_6 >= 6'o40 && isn_11_6 <= 6'o63))||// jsr-asl
 	(isn_15_12 == 0 && (isn_11_6 >= 6'o65 && isn_11_6 <= 6'o67))||// m*,sxt
-	(isn_15_12 >= 4'o01 && isn_15_12 <= 4'o06) ||		      // mov-add
-	(isn_15_9 >= 7'o070 && isn_15_9 <= 7'o074) || 		      // mul-xor
-	(isn_15_12 == 4'o10 && (isn_11_6 >= 6'o65 && isn_11_6 <= 6'o66))||// mtpx
-	(isn_15_12 == 4'o16);					      // sub
+	(isn_15_12 >= 4'o01 && isn_15_12 <= 4'o06) ||		// mov-add
+	(isn_15_9 >= 7'o070 && isn_15_9 <= 7'o074) || 		// mul-xor
+	(isn_15_12 == 4'o10 &&
+	 (isn_11_6 >= 6'o65 && isn_11_6 <= 6'o66))||		// mtpx
+	(isn_15_12 == 4'o16);					// sub
 
-   assign need_destspec_dd_byte =				      // xxxb
+   assign need_destspec_dd_byte =				// xxxb
 	(isn_15_12 == 4'o10 && (isn_11_6 >= 6'o50 && isn_11_6 <= 6'o64))||
-	(isn_15_12 == 4'o10 && (isn_11_6 == 6'o67)) ||		      // mfps
-	(isn_15_12 >= 4'o11 && isn_15_12 < 10'o0016);		      // xxxb
+	(isn_15_12 == 4'o10 && (isn_11_6 == 6'o67)) ||		// mfps
+	(isn_15_12 >= 4'o11 && isn_15_12 < 10'o0016);		// xxxb
 
    assign need_destspec_dd = need_destspec_dd_word | need_destspec_dd_byte;
 
@@ -573,30 +605,28 @@ module pdp11(clk, reset_n, switches,
 	(isn_15_6 == 10'o0000 && isn_5_0 < 6'o10) ||
 	(isn_15_6 == 10'o0002 && (isn_5_0 >= 6'o30 && isn_5_0 <= 6'o77)) ||
 	(isn_15_12 == 0 && (isn_11_6 >= 6'o04 && isn_11_6 <= 6'o37)) ||
-//	(isn_15_12 == 4'o07 && (isn_11_9 == 7)) ||
 	(isn_15_9 == 7'o104) ||					// trap/emt
 	0;
-//	(isn_15_6 == 10'o0047);
 
    assign is_illegal =
 	(isn_15_6 == 10'o0000 && isn_5_0 > 6'o07) ||
-	(isn_15_6 == 10'o0001 && isn_5_0 < 6'o10) ||	// jmp rx
+	(isn_15_6 == 10'o0001 && isn_5_0 < 6'o10) ||		// jmp rx
 	(isn_15_6 == 10'o0002 && (isn_5_0 >= 6'o10 && isn_5_0 <= 6'o27)) ||
 	(isn_15_12 == 4'o07 && (isn_11_9 == 5 || isn_11_9 == 6)) ||
 	(isn_15_12 == 4'o17);
 
-   assign need_pop_reg =
-			(isn_15_6 == 10'o0002 && (isn_5_0 < 6'o10)) ||// rts
+   assign need_pop_reg =					// rts
+			(isn_15_6 == 10'o0002 && (isn_5_0 < 6'o10)) ||
 			(isn_15_6 == 10'o0064) ||		// mark
 			(isn_15_6 == 10'o0070) ||		// csm
-			(isn_15_6 == 10'o1065);			// mtpd
+			(isn[14:6] == 9'o066);			// mtpi/mtpd
    
    assign need_pop_pc_psw =					// rti, rtt
 	(isn_15_6 == 0 && (isn_5_0 == 6'o02 || isn_5_0 == 6'o06));
    
    assign need_push_state =
 			   (isn_15_9 == 7'o004) ||		// jsr
-			   (isn_15_6 == 10'o1065);		// mfpd
+			   (isn[14:6] == 9'o065);		// mfpi/mfpd
 
    assign assert_trap_ill = is_illegal;
 
@@ -611,12 +641,16 @@ module pdp11(clk, reset_n, switches,
    assign store_result =
 		!no_operand &&
 		!store_result32 &&
+		!(isn_15_9 == 7'o077) &&			// sob
 		!(isn_15_6 == 10'o0001) &&			// jmp
 		!(isn_15_6 == 10'o0057) &&
 		!(isn_15_6 == 10'o1057) &&			// tst/tstb
+		!(isn_15_6 == 10'o0064) &&			// mark
+		!(isn[14:6] == 9'o065) &&			// mfpi/mfpd
 		!(isn_15_12 == 4'o02) &&
 		!(isn_15_12 == 4'o12) &&			// cmp/cmpb
-		!(isn_15_12 == 4'o03) &&			// bit
+		!(isn_15_12 == 4'o03) &&
+		!(isn_15_12 == 4'o13) &&			// bit/bitb
 		!(isn_15_9 == 7'o004) &&			// jsr
 		!((isn_15_6 >= 10'o1000) && (isn_15_6 <= 10'o1037)) &&// bcs-blo
 		!((isn_15_6 >= 10'o0004) && (isn_15_6 <= 10'o0034));  // br-ble
@@ -646,17 +680,23 @@ module pdp11(clk, reset_n, switches,
 
    assign is_isn_r32 = (isn_15_9 == 7'o071);			// div
 
+   assign is_isn_mfpx = (isn[14:6] == 9'o065);			// mfpi/mfpd
+   assign is_isn_mtpx = (isn[14:6] == 9'o066);			// mtpi/mtpd
+   
    assign need_src_data =
 			 !((isn_15_6 == 10'o0050) ||
 			   (isn_15_6 == 10'o1050));		// clr/clrb
 
+			   
    // ea setup - ss
    assign ss_mode = isn[11:9];
-   assign ss_reg = isn[8:6];
+   assign ss_reg = (isn_15_6 == 10'o0064) ? 3'd5 : isn[8:6];
 
    assign ss_ea_ind = ss_mode == 7;
 
-   assign store_ss_reg = (isn_15_9 == 004 && ss_reg != 7);	// jsr
+   assign store_ss_reg = (isn_15_9 == 004 && ss_reg != 7) ||	// jsr
+			 (isn_15_9 == 7'o077) ||		// sob
+			 (isn_15_6 == 10'o0064);		// mark
 
    assign ss_post_incr = need_srcspec_dd &&
 			 (ss_mode == 2 || ss_mode == 3);
@@ -677,6 +717,59 @@ module pdp11(clk, reset_n, switches,
 
    assign dd_pre_dec = need_destspec_dd &&
 		       (dd_mode == 4 || dd_mode == 5);
+
+   // post-incr/pre-decr values
+   assign new_dd_reg_post_incr = dd_reg_value +
+				 ((need_destspec_dd_byte &&
+				   dd_reg < 6 && dd_mode == 2) ?
+				  16'd1 : 16'd2);
+
+   assign new_dd_reg_pre_decr = dd_reg_value - 
+				((need_destspec_dd_byte &&
+				  dd_reg < 6 && dd_mode == 4) ?
+				 16'd1 : 16'd2);
+
+   assign new_dd_reg_incdec = dd_post_incr ? new_dd_reg_post_incr :
+			      new_dd_reg_pre_decr;
+   
+   assign new_ss_reg_post_incr = ss_reg_value +
+				 ((need_destspec_dd_byte &&
+				   ss_reg < 6 && ss_mode == 2) ?
+				  16'd1 : 16'd2);
+
+   assign new_ss_reg_pre_decr = ss_reg_value - 
+				((need_destspec_dd_byte &&
+				  ss_reg < 6 && ss_mode == 4) ?
+				 16'd1 : 16'd2);
+
+   assign new_ss_reg_incdec = ss_post_incr ? new_ss_reg_post_incr :
+			      new_ss_reg_pre_decr;
+   
+
+   // reg values
+   assign ss_reg_value = ss_reg == 0 ? r0 :
+			 ss_reg == 1 ? r1 :
+			 ss_reg == 2 ? r2 :
+			 ss_reg == 3 ? r3 :
+			 ss_reg == 4 ? r4 :
+			 ss_reg == 5 ? r5 :
+			 ss_reg == 6 ? r6[current_mode] :
+			 pc;
+
+   assign ss_reg01_value = (ss_reg == 0 || ss_reg == 1) ? r1 :
+			   (ss_reg == 2 || ss_reg == 3) ? r3 :
+			   (ss_reg == 4 || ss_reg == 5) ? r5 :
+			   pc;
+
+   assign dd_reg_value = dd_reg == 0 ? r0 :
+			 dd_reg == 1 ? r1 :
+			 dd_reg == 2 ? r2 :
+			 dd_reg == 3 ? r3 :
+			 dd_reg == 4 ? r4 :
+			 dd_reg == 5 ? r5 :
+			 dd_reg == 6 ? (is_isn_mfpx ?		// mfpi/mfpd
+					r6[previous_mode] : r6[current_mode]) :
+			 pc;
 
    // decide on next state
    assign need_s1 = need_srcspec_dd;
@@ -705,10 +798,11 @@ module pdp11(clk, reset_n, switches,
 
    assign bus_in =
 		  istate == w1 ? e1_data :
-		  istate == p1 ? regs[ss_reg] :
+		  istate == p1 ? (is_isn_mfpx ?			// mfpi/mfpd
+				  dd_data : ss_reg_value) :
 		  istate == t1 ? psw :
    		  istate == t2 ? pc :
-		  16'b0/*bus_in*/;
+		  16'b0;
    
    assign bus_addr =
 		    istate == f1 ? pc :
@@ -739,15 +833,19 @@ module pdp11(clk, reset_n, switches,
    always @(posedge clk)
      if (reset_n == 0)
        begin
-	  regs[0] <= 0;
-	  regs[1] <= 0;
-	  regs[2] <= 0;
-	  regs[3] <= 0;
-	  regs[4] <= 0;
-	  regs[5] <= 0;
-	  regs[6] <= 0;
-	  regs[7] <= 16'o0500;
-//  	  regs[7] <= 16'o173000;
+	  r0 <= 0;
+	  r1 <= 0;
+	  r2 <= 0;
+	  r3 <= 0;
+	  r4 <= 0;
+	  r5 <= 0;
+	  r6[0] <= 0;
+	  r6[1] <= 0;
+	  r6[2] <= 0;
+	  r6[3] <= 0;
+//	  pc <= 16'o0200;
+	  pc <= 16'o0500;
+//  	  pc <= 16'o173000;
 
 	  isn <= 0;
        end
@@ -756,13 +854,18 @@ module pdp11(clk, reset_n, switches,
 
 	  if (istate != w1)
 	    begin
-	       regs[7] <= pc_mux; // pc
-	       regs[6] <= sp_mux; // sp
+	       pc <= pc_mux; 			// pc
+	       r6[current_mode] <= sp_mux;	// sp
+`ifdef debug
+	       if (r6[current_mode] != sp_mux)
+		 $display("sp <- %o", sp_mux);
+`endif
 	    end
 
 	  case (istate)
 	    f1:
 	    begin
+	       // bus_rd asserted
 	       isn <= bus_out;
 	    end
 
@@ -772,57 +875,59 @@ module pdp11(clk, reset_n, switches,
 
 	  s1:
 	    begin
-	       if (ss_post_incr)
-		 begin
-		    regs[ss_reg] <= regs[ss_reg] +
-				    ((need_srcspec_dd_byte &&
-				      ss_reg < 6 && ss_mode == 2) ?
-				     16'd1 : 16'd2);
-		    
-		    $display(" R%d <- (ss r++)", ss_reg);
-		 end
-	       else
-		 if (ss_pre_dec)
-		   begin
-		      regs[ss_reg] <= regs[ss_reg] -
-				      ((need_srcspec_dd_byte &&
-					ss_reg < 6 && ss_mode == 4) ?
-				       16'd1 : 16'd2);
-		      $display(" R%d <- (ss r--)", ss_reg);
-		   end
+               if (ss_post_incr)
+		 $display(" R%d <- %o (ss r++)", ss_reg, new_ss_reg_incdec);
+
+	       if (ss_pre_dec)
+		 $display(" R%d <- %o (ss r--)", ss_reg, new_ss_reg_incdec);
+
+	       if (ss_post_incr || ss_pre_dec)
+		 case (ss_reg)
+		   0: r0 <= new_ss_reg_incdec;
+		   1: r1 <= new_ss_reg_incdec;
+		   2: r2 <= new_ss_reg_incdec;
+		   3: r3 <= new_ss_reg_incdec;
+		   4: r4 <= new_ss_reg_incdec;
+		   5: r5 <= new_ss_reg_incdec;
+		   6: r6[current_mode] <= new_ss_reg_incdec;
+		   7: pc <= new_ss_reg_incdec;
+		 endcase
 	    end // case: s1
 	  
 	  s2:
 	    begin
+	       // bus_rd asserted
 	    end
 
 	  s3:
 	    begin
+	       // bus_rd asserted
 	    end
 
 	  s4:
 	    begin
+	       // bus_rd asserted
 	    end
 
 	  d1:
 	    begin
                if (dd_post_incr)
-		 begin
-		    regs[dd_reg] <= regs[dd_reg] +
-				    ((need_destspec_dd_byte &&
-				      dd_reg < 6 && dd_mode == 2) ?
-				     16'd1 : 16'd2);
-		    $display(" R%d <- (dd r++)", dd_reg);
-		 end
-               else
-		 if (dd_pre_dec)
-		   begin
-		      regs[dd_reg] <= regs[dd_reg] - 
-				      ((need_destspec_dd_byte &&
-					dd_reg < 6 && dd_mode == 4) ?
-				       16'd1 : 16'd2);
-		      $display(" R%d <- (dd r--)", dd_reg);
-		   end
+		 $display(" R%d <- %o (dd r++)", dd_reg, new_dd_reg_incdec);
+
+	       if (dd_pre_dec)
+		 $display(" R%d <- %o (dd r--)", dd_reg, new_dd_reg_incdec);
+
+	       if (dd_post_incr || dd_pre_dec)
+		 case (dd_reg)
+		   0: r0 <= new_dd_reg_incdec;
+		   1: r1 <= new_dd_reg_incdec;
+		   2: r2 <= new_dd_reg_incdec;
+		   3: r3 <= new_dd_reg_incdec;
+		   4: r4 <= new_dd_reg_incdec;
+		   5: r5 <= new_dd_reg_incdec;
+		   6: r6[current_mode] <= new_dd_reg_incdec;
+		   7: pc <= new_dd_reg_incdec;
+		 endcase
 	    end
 
 	  d2:
@@ -830,14 +935,18 @@ module pdp11(clk, reset_n, switches,
 	       // note: cycle needs to be long enough for memory read and
 	       // addition to take place
 	       // (or, possibly move mode 6/7 +reg to ea for d3)
+
+	       // bus_rd asserted
 	    end
 
 	  d3:
 	    begin
+	       // bus_rd asserted
 	    end
 
 	  d4:
 	    begin
+	       // bus_rd asserted
 	    end
 
 	  e1:
@@ -846,6 +955,7 @@ module pdp11(clk, reset_n, switches,
 	  
 	  w1:
 	    begin
+	       // bus_wr asserted if (store_result && dd_dest_mem)
 	       if (store_result && dd_dest_mem)
 		 begin
 		 end
@@ -853,58 +963,115 @@ module pdp11(clk, reset_n, switches,
 		 if (store_result && dd_dest_reg)
 		   begin
 		      $display(" r%d <- %0o (dd)", dd_reg, e1_data);
-		      regs[dd_reg] <= e1_data;
+		      case (dd_reg)
+			0: r0 <= e1_data;
+			1: r1 <= e1_data;
+			2: r2 <= e1_data;
+			3: r3 <= e1_data;
+			4: r4 <= e1_data;
+			5: r5 <= e1_data;
+			6:
+			  begin
+			     if (is_isn_mtpx)			// mtpi/mtpd
+			       r6[previous_mode] <= e1_data;
+			     else
+			       r6[current_mode] <= e1_data;
+			  end
+			7: pc <= e1_data;
+		      endcase
 		   end
 		 else
 		   if (store_ss_reg)
 		     begin
 			$display(" r%d <- %0o (ss)", ss_reg, e1_data);
-			regs[ss_reg] <= e1_data;
+			case (ss_reg)
+			  0: r0 <= e1_data;
+			  1: r1 <= e1_data;
+			  2: r2 <= e1_data;
+			  3: r3 <= e1_data;
+			  4: r4 <= e1_data;
+			  5: r5 <= e1_data;
+			  6: r6[current_mode] <= e1_data;
+			  7: pc <= e1_data;
+			endcase
 		     end
 		   else
 		     if (store_result32)
 		       begin
 			  $display(" r%d <- %0o (e32)",
-				   ss_reg, e32_result[31:16]);
+				   ss_reg, e32_data);
 			  $display(" r%d <- %0o (e32)",
-				   ss_reg|1, e32_result[15:0]);
-			  regs[ss_reg    ] <= e32_result[31:16];
-			  regs[ss_reg | 1] <= e32_result[15:0];
+				   ss_reg|1, e1_data);
+
+			  //regs[ss_reg    ] <= e32_data;
+			  //regs[ss_reg | 1] <= e1_data;
+
+			  case (ss_reg)
+			    0: begin r0 <= e32_data; r1 <= e1_data; end
+			    1: r1 <= e1_data;
+			    2: begin r2 <= e32_data; r3 <= e1_data; end
+			    3: r3 <= e1_data;
+			    4: begin r4 <= e32_data; r5 <= e1_data; end
+			    5: r5 <= e1_data;
+			    6: begin
+			       r6[current_mode] <= e32_data;
+			       pc <= e1_data;
+			    end
+			    7: pc <= e1_data;
+			  endcase
 		       end
 	    end // case: w1
 	  
 
 	  o1:
 	    begin
+	       // pop: sp_mux <= sp + 2
+	       // bus_rd asserted
 	    end
 
 	  o2:
 	    begin
+	       // pop: sp_mux <= sp + 2
+	       // bus_rd asserted
 	    end
 
 	  o3:
 	    begin
+	       // pop: sp_mux <= sp + 2
+	       // bus_rd asserted
+	       // bus_addr <= sp
 	    end
 
 
 	  p1:
 	    begin
+	       // push: sp_mux <= sp - 2
+	       // bus_wr asserted
+	       // bus_in <= regs[ss_reg]
+	       // bus_addr <= sp - 2
 	    end
 
 	  t1:
 	    begin
+	       // push: sp_mux <= sp - 2
+	       // bus_wr asserted
 	    end
 
 	  t2:
 	    begin
+	       // push: sp_mux <= sp - 2
+	       // bus_wr asserted
 	    end
 
 	  t3:
 	    begin
+	       // push: sp_mux <= sp - 2
+	       // bus_rd asserted
 	    end
 
 	  t4:
 	    begin
+	       // bus_rd asserted
 	    end
 
 	  i1:
@@ -1154,6 +1321,7 @@ module pdp11(clk, reset_n, switches,
 	  ss_ea <= 0;
 	  dd_ea <= 0;
 	  e1_data <= 0;
+	  e32_data <= 0;
        end
      else
        begin
@@ -1189,6 +1357,8 @@ module pdp11(clk, reset_n, switches,
 	  e1_data <= (istate == e1 || istate == w1) ? e1_data_mux :
 		     (istate == o3) ? bus_out :
 		     e1_data;
+
+	  e32_data <= istate == e1  ? e32_result : e32_data;
        end
 
    //
@@ -1229,16 +1399,16 @@ module pdp11(clk, reset_n, switches,
 	       $display("    need_src_data %d, need_dest_data %d",
 			need_src_data, need_dest_data);
 
-	       $display(" ss: mode%d reg%d ind%d post %d pre %d",
+	       $display("   ss: mode%d reg%d ind%d post %d pre %d",
 			ss_mode, ss_reg, ss_ea_ind,
 			ss_post_incr, ss_pre_dec);
 
 
-	       $display(" dd: mode%d reg%d ea %0o ind%d post %d pre %d",
+	       $display("   dd: mode%d reg%d ea %0o ind%d post %d pre %d",
 			dd_mode, dd_reg, dd_ea, dd_ea_ind,
 			dd_post_incr, dd_pre_dec);
 
-	       $display(" need: dest_data %d; s1 %d, s2 %d, s4 %d; d1 %d, d2 %d, d4 %d", 
+	       $display("   need: dest_data %d; s1 %d, s2 %d, s4 %d; d1 %d, d2 %d, d4 %d", 
 			need_dest_data,
 			need_s1, need_s2, need_s4, need_d1, need_d2, need_d4);
 
@@ -1274,12 +1444,12 @@ module pdp11(clk, reset_n, switches,
 	       
                if (dd_post_incr)
 		 begin
-		    $display(" R%d <- %o (dd r++)", dd_reg, regs[dd_reg]);
+		    $display(" R%d <- %o (dd r++)", dd_reg, dd_reg_value);
 		 end
                else
 		 if (dd_pre_dec)
 		   begin
-		      $display(" R%d <- %o (dd r--)", dd_reg, regs[dd_reg]);
+		      $display(" R%d <- %o (dd r--)", dd_reg, dd_reg_value);
 		   end
 	    end // case: d1
 	  
@@ -1318,7 +1488,7 @@ module pdp11(clk, reset_n, switches,
 	    begin
 	       $display("w1: dd%d %d, dd_data %o, ss%d %d, ss_data %o, e1_data %o",
 		      dd_mode, dd_reg, dd_data, ss_mode, ss_reg, ss_data, e1_data);
-	       $display("    store_result %d, store_ss_reg %d, store_32 %d",
+	       $display("    store_result %d, store_ss_reg %d, store_result32 %d",
 			store_result, store_ss_reg, store_result32);
 	       $display("    e1_data_mux %o, e1_data %o, e1_result %o",
 			e1_data_mux, e1_data, e1_result);
@@ -1372,12 +1542,22 @@ module pdp11(clk, reset_n, switches,
 
 	endcase // case(istate)
 
-	$display("    bus_rd=%d, bus_wr=%d, bus_addr %o, bus_out %o",
-		 bus_rd, bus_wr, bus_addr, bus_out);
-	$display("    regs %0o %0o %0o %0o ",
-		 regs[0], regs[1], regs[2], regs[3]);
-	$display("         %0o %0o %0o %0o ",
-		 regs[4], regs[5], regs[6], regs[7]);
+	if (istate == f1)
+	  begin
+	     $display("    regs %0o %0o %0o %0o ",
+		      r0, r1, r2, r3);
+	     $display("         %0o %0o %0o %0o ",
+		      r4, r5, r6[current_mode], pc);
+	     $display("         (sp %0o %0o %0o cm %d pm %d)",
+		      r6[0], r6[1], r6[3], current_mode, previous_mode);
+
+	  end
+
+	if (istate == o1 || istate == o2 || istate == o3)
+	     $display("    sp %0o", r6[current_mode]);
+	
+	$display("    bus_rd=%d, bus_wr=%d, bus_addr %o, bus_in %o bus_out %o",
+		 bus_rd, bus_wr, bus_addr, bus_in, bus_out);
 
 	$display("    ss_ea_mux %0o, ss_ea %0o, dd_ea_mux %0o, dd_ea %0o",
 		 ss_ea_mux, ss_ea, dd_ea_mux, dd_ea);

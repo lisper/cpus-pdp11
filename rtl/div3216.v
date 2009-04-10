@@ -2,7 +2,8 @@
 // Divide 32 bit by 16 bit signed
 // based on Patterson and Hennessy's algorithm
 //
-// ready can be asserted for multiple cycles
+// ready can be asserted for all cycles;
+// state machine won't reset until ready deasserts
 // done will assert for only one cycle - valid to clock output
 
 module div3216(clk, reset, ready, done,
@@ -41,7 +42,7 @@ module div3216(clk, reset, ready, done,
 
    assign next_state = (state == idle && ready) ? running :
 		       (state == running) ? (bitnum == 5'd1 ? last : running) :
-		       (state == last) ? idle : idle;
+		       (state == last) ? (ready ? last : idle) : idle;
 
    assign diff = dividend_copy - divider_copy;
 

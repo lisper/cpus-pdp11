@@ -2,7 +2,8 @@
 // Multiply 16x16 bit signed
 // based on Patterson and Hennessy's algorithm
 //
-// ready can be asserted for multiple cycles
+// ready can be asserted for all cycles;
+// state machine won't reset until ready deasserts
 // done will assert for only one cycle - valid to clock output
 
 module mul1616(clk, reset, ready, done, multiplier, multiplicand, product); 
@@ -40,7 +41,7 @@ module mul1616(clk, reset, ready, done, multiplier, multiplicand, product);
 
    assign next_state = (state == idle && ready) ? running :
 		       (state == running) ? (bitnum == 5'd1 ? last : running) :
-		       (state == last) ? idle : idle;
+		       (state == last) ? (ready ? last : idle) : idle;
    
    always @(posedge clk)
      if (reset)

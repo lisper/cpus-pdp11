@@ -2,6 +2,30 @@
 // 4kx16 static ram
 // with byte read/write capability
 //
+
+module ram_16kx8(clk, reset, a, di, do, ce, we);
+
+   input clk;
+   input reset;
+   input[12:0] a;
+   input [7:0] di;
+   input ce, we;
+   output [7:0] do;
+
+   reg [7:0] ram[8191:0];
+
+   assign do = ram[a];
+
+   always @(posedge clk)
+     begin
+	if (we && ce)
+	  begin
+	     //$display("ram8 write %o %o", a, di);
+	     ram[a] = di;
+	  end
+     end
+endmodule
+
 module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 
    input CLK;
@@ -12,10 +36,14 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
    input 	BYTE_OP;
    output [15:0] DO;
 
-   reg [7:0] 	 ram_h [0:8/*8191*/];
-   reg [7:0] 	 ram_l [0:8/*8191*/];
+   wire [7:0] do_h, do_l;
+   wire [7:0] di_h, di_l;
+   wire we_h, we_l;
 
    wire [12:0] 	 BA;
+
+   ram_16kx8 ram_h(CLK, RESET, BA, di_h, do_h, ~CE_N, we_h);
+   ram_16kx8 ram_l(CLK, RESET, BA, di_l, do_l, ~CE_N, we_l);
 
    // synthesis translate_off
    integer 	 i;
@@ -29,8 +57,8 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
      begin
 	for (i = 0; i < 8192; i=i+1)
 	  begin
-             ram_h[i] = 7'b0;
-	     ram_l[i] = 7'b0;
+             ram_h.ram[i] = 7'b0;
+	     ram_l.ram[i] = 7'b0;
 	  end
 
  	n = $scan$plusargs("test=", testfilename);
@@ -42,8 +70,8 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 	     while ($fscanf(file, "%o %o", i, v) > 0)
 	       begin
 		  $display("ram[%o] <- %o", i, v);
-		  ram_h[i/2] = v[15:8];
-		  ram_l[i/2] = v[7:0];
+		  ram_h.ram[i/2] = v[15:8];
+		  ram_l.ram[i/2] = v[7:0];
 	       end
 
 	     $fclose(file);
@@ -64,46 +92,33 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 		    default:  v = 16'o000000;
 		  endcase
 
-		  ram_h[14'o0500/2 + i] = v[15:8];
-		  ram_l[14'o0500/2 + i] = v[7:0];
+		  ram_h.ram[14'o0500/2 + i] = v[15:8];
+		  ram_l.ram[14'o0500/2 + i] = v[7:0];
 	       end
 	  end
      end
-   // synthesis translate_on
 
-   assign BA = A[13:1];
-
-   // synchronous write
-   always @(posedge CLK)
-     begin
-	if (WE_N == 0 && CE_N == 0)
-          begin
-	     $display("ram: write [%o] <- %o", A, DI);
-	     if (BYTE_OP)
-	       begin
-		  if (A[0])
-		    ram_h[ BA ] = DI[7:0];
-		  else
-		    ram_l[ BA ] = DI[7:0];
-	       end
-	     else
-	       begin
-		  ram_h[ BA ] = DI[15:8];
-		  ram_l[ BA ] = DI[7:0];
-	       end
-          end
-     end
-
-   assign DO = { BYTE_OP ? 8'b0 : ram_h[BA],
-		 BYTE_OP ? (A[0] ? ram_l[BA] : ram_h[BA]) : ram_l[BA] };
-
-   // synthesis translate_off
    always @(A or CE_N or WE_N or DO)
      begin
 	if (CE_N == 0 && WE_N == 1)
 	$display("ram: ce_n %b, we_n %b [%o] -> %o", CE_N, WE_N, A, DO);
      end
+
+   always @(posedge CLK)
+     if (WE_N == 0 && CE_N == 0)
+       $display("ram: write [%o] <- %o", A, DI);
    // synthesis translate_on
+
+   assign BA = A[13:1];
+
+   assign DO = { BYTE_OP ? 8'b0 : do_h,
+		 BYTE_OP ? (A[0] ? do_h : do_l) : do_l };
+
+   assign we_h = ~WE_N && (~BYTE_OP | (BYTE_OP & A[0]));
+   assign we_l = ~WE_N && (~BYTE_OP | (BYTE_OP & ~A[0]));
+
+   assign di_h = ~BYTE_OP ? DI[15:8] : DI[7:0];
+   assign di_l = DI[7:0];
 
 endmodule
 
