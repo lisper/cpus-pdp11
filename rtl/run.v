@@ -35,7 +35,9 @@ module test;
     begin
        clk = 0;
        reset_n = 1;
-
+       switches = 0;
+       rs232_rx = 0;
+       
        #1 begin
           reset_n = 0;
        end

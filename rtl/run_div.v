@@ -1,3 +1,5 @@
+// run_div.v
+// testbench for div3216
 
 `timescale 1ns / 1ns
 
@@ -11,13 +13,17 @@ module test;
 
    reg [31:0] dividend;
    reg [15:0] divider;
-   wire [31:0] quotient;
-
+   wire [15:0] quotient;
+   wire [15:0] remainder;
+   wire        overflow;
+   
    div3216 div(.clk(clk), .reset(reset),
 	       .ready(ready), .done(done),
 	       .dividend(dividend),
 	       .divider(divider),
-	       .quotient(quotient)); 
+	       .quotient(quotient),
+   	       .remainder(remainder),
+	       .overflow(overflow));
 
    task divide;
       input [31:0] arg1;
@@ -59,9 +65,18 @@ module test;
        #1 reset = 1;
        #20 reset = 0;
 
+       divide({16'o77777,16'o177777}, 16'o2); wait_for_mul;
+
+`ifdef xxx       
+       divide({16'o25253,16'o1}, 16'o125252); wait_for_mul;
+       divide({16'o177777,16'o177776}, 16'd3); wait_for_mul;
+       
+       divide({16'o177777, 16'o177767}, 16'd2); wait_for_mul;
+       divide(32'd10, 16'd3); wait_for_mul;
        divide(32'd2, 16'd1); wait_for_mul;
        divide(32'd2, 16'd2); wait_for_mul;
        divide(32'd10, 16'd10); wait_for_mul;
+       divide(32'd88, 16'd10); wait_for_mul;
 
        divide(-32'd2, 16'd2); wait_for_mul;
        divide(-32'd2, -16'd2); wait_for_mul;
@@ -70,7 +85,6 @@ module test;
        divide(32'd100, 16'd10); wait_for_mul;
        
        divide(32'd1000, 16'd33); wait_for_mul;
-`ifdef xxx       
        divide(32'ha5a5, -16'ha5a5); wait_for_mul;
        divide(32'ha5a5, -16'd1); wait_for_mul;
        divide(32'ha5a5, 16'd1); wait_for_mul;
@@ -92,15 +106,17 @@ module test;
 
    always @(posedge clk)
      #2 begin
-	$display("reset %d, ready %d, done %d, state %b bit %d %x %x -> %x",
+	$display("reset %d, ready %d, done %d, state %b bit %d %x %x -> %x %x",
 		 div.reset, div.ready, div.done,
-		 div.state, div.bit,
+		 div.state, div.bitnum,
 		 div.dividend,
 		 div.divider,
-		 div.quotient);
+		 div.quotient,
+		 div.remainder);
 
-	$display(" quot-temp %x, d-end %x d-ider %x",
-		 div.quotient_temp, div.dividend_copy, div.divider_copy);
+	$display(" quot-temp %x, d-end %x d-ider %x, overflow %x",
+		 div.quotient_temp, div.dividend_copy, div.divider_copy,
+		 div.overflow);
      end
 
 endmodule

@@ -6,7 +6,8 @@
 // state machine won't reset until ready deasserts
 // done will assert for only one cycle - valid to clock output
 
-module mul1616(clk, reset, ready, done, multiplier, multiplicand, product); 
+module mul1616(clk, reset, ready, done, multiplier, multiplicand,
+	       product, overflow); 
 
    input         clk;
    input 	 reset;
@@ -15,7 +16,8 @@ module mul1616(clk, reset, ready, done, multiplier, multiplicand, product);
 
    output 	 done;
    output [31:0] product;
-   
+   output 	 overflow;
+ 	 
    reg [31:0]    product, product_temp;
 
    reg [15:0]    multiplier_copy;
@@ -32,6 +34,9 @@ module mul1616(clk, reset, ready, done, multiplier, multiplicand, product);
    parameter 	 last = 2'd2;
    
    assign 	 done = state == last;
+
+   assign overflow = ($signed(product) > 32'sh00007fff) ||
+		     ($signed(product) < 32'shffff8000);
 
    always @(posedge clk)
      if (reset)

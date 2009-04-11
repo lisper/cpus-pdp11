@@ -2,21 +2,25 @@
 // Divide 32 bit by 16 bit signed
 // based on Patterson and Hennessy's algorithm
 //
+// tunes to the needs of the pdp-11
+//
 // ready can be asserted for all cycles;
 // state machine won't reset until ready deasserts
 // done will assert for only one cycle - valid to clock output
 
 module div3216(clk, reset, ready, done,
-	       dividend, divider, quotient);
+	       dividend, divider, quotient, remainder, overflow);
 
    input         clk;
    input 	 reset;
    input 	 ready;
    input [31:0]  dividend;
    input [15:0]  divider;
-   output [31:0] quotient;
+   output [15:0] quotient;
+   output [15:0] remainder;
    output 	 done;
- 	 
+   output 	 overflow;
+	 
    reg [31:0]    quotient_temp;
    reg [63:0] 	 dividend_copy, divider_copy;
    reg           negative_output;
@@ -46,8 +50,16 @@ module div3216(clk, reset, ready, done,
 
    assign diff = dividend_copy - divider_copy;
 
-   assign quotient = ~negative_output ? quotient_temp : ~quotient_temp + 1'b1;
+   assign quotient = ~negative_output ?
+		     quotient_temp[15:0] : ~quotient_temp[15:0] + 1'b1;
 
+   assign remainder = ~dividend[31]/*quotient[15]*/ ?
+		      dividend_copy[15:0] : ~dividend_copy[15:0] + 1'b1;
+
+//   assign overflow = ($signed(quotient_temp) > 32'sh00007fff) ||
+//		     ($signed(quotient_temp) < 32'shffff8000);
+   assign overflow = ($signed(quotient_temp) > 32'sh00008000) ||
+		     ($signed(quotient_temp) < 32'shffff8000);
    
    always @(posedge clk) 
      if (reset)

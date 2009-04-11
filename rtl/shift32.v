@@ -1,10 +1,12 @@
 // shift32.v
+// simple 32 bit left/right shifter
 //
 // ready can be asserted for all cycles;
 // state machine won't reset until ready deasserts
 // done will assert for only one cycle - valid to clock output
 
-module shift32(clk, reset, ready, done, in, out, last_bit, shift); 
+module shift32(clk, reset, ready, done, in, out, shift,
+	       last_bit, sign_change16, sign_change32); 
 
    input         clk;
    input 	 reset;
@@ -17,6 +19,10 @@ module shift32(clk, reset, ready, done, in, out, last_bit, shift);
    reg [31:0] 	 out;
    output 	 last_bit;
    reg 		 last_bit;
+   output 	 sign_change16;
+   reg 		 sign_change16;
+   output 	 sign_change32;
+   reg 		 sign_change32;
    
    reg [5:0] 	 count; 
    wire 	 final;
@@ -24,10 +30,11 @@ module shift32(clk, reset, ready, done, in, out, last_bit, shift);
    reg [1:0] 	 state;
    wire [1:0] 	 next_state;
    wire 	 up;
+   wire 	 sign_different16, sign_different32;
    
-   parameter 	 idle    = 2'd0;
-   parameter 	 running = 2'd1;
-   parameter 	 last    = 2'd2;
+   parameter 	 idle    = 2'b00;
+   parameter 	 running = 2'b01;
+   parameter 	 last    = 2'b10;
    
    assign 	 done = state == last;
    assign 	 up = ~shift[5];
@@ -38,12 +45,15 @@ module shift32(clk, reset, ready, done, in, out, last_bit, shift);
      else
        state <= next_state;
 
-   assign next_state = (state == idle && ready) ? running :
+   assign next_state = (state == idle && ready) ? (shift==6'd0 ? last:running) :
 		       (state == running) ? (final ? last : running) :
-		       (state == last) ? (ready ? last : idle) : idle;
+			 (state == last) ? (ready ? last : idle) :
+				 idle;
 
-   assign final = up ? (count == 5'd1) : (count == -5'd1);
-   
+   assign final = up ? (count == 6'd1) : (count == -6'd1);
+
+   assign sign_different16 = out[15] ^ out[14];
+   assign sign_different32 = out[31] ^ out[30];
 	  
    always @(posedge clk)
      if (reset)
@@ -56,6 +66,9 @@ module shift32(clk, reset, ready, done, in, out, last_bit, shift);
        begin
           count <= shift;
 	  out <= in;
+	  sign_change16 <= 0;
+	  sign_change32 <= 0;
+	  last_bit <= 0;
        end 
      else
        if (state == running)
@@ -64,6 +77,12 @@ module shift32(clk, reset, ready, done, in, out, last_bit, shift);
 	      last_bit <= out[31];
 	      out <= { out[30:0], 1'b0 };
 	      count <= count - 1;
+
+	      if (sign_different16)
+		sign_change16 <= 1'b1;
+
+	      if (sign_different32)
+		sign_change32 <= 1'b1;
 	   end
 	 else
 	   begin

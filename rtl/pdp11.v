@@ -636,11 +636,13 @@ module pdp11(clk, reset_n, switches,
    assign store_result32 =
 			  (isn_15_9 == 7'o070) ||		// mul
 			  (isn_15_9 == 7'o071) ||		// div
-			  (isn_15_9 == 7'o072);			// ashc
+			  (isn_15_9 == 7'o073);			// ashc
    
    assign store_result =
 		!no_operand &&
 		!store_result32 &&
+		!(isn_15_9 == 7'o004) &&			// jsr
+		!(isn_15_9 == 7'o072) &&			// ash
 		!(isn_15_9 == 7'o077) &&			// sob
 		!(isn_15_6 == 10'o0001) &&			// jmp
 		!(isn_15_6 == 10'o0057) &&
@@ -651,7 +653,6 @@ module pdp11(clk, reset_n, switches,
 		!(isn_15_12 == 4'o12) &&			// cmp/cmpb
 		!(isn_15_12 == 4'o03) &&
 		!(isn_15_12 == 4'o13) &&			// bit/bitb
-		!(isn_15_9 == 7'o004) &&			// jsr
 		!((isn_15_6 >= 10'o1000) && (isn_15_6 <= 10'o1037)) &&// bcs-blo
 		!((isn_15_6 >= 10'o0004) && (isn_15_6 <= 10'o0034));  // br-ble
 
@@ -673,8 +674,8 @@ module pdp11(clk, reset_n, switches,
    assign is_isn_rss = 
 		       (isn_15_9 == 7'o070) ||			// mul
 		       (isn_15_9 == 7'o071) ||			// div
-		       (isn_15_9 == 7'o072) ||			// ashc
-		       (isn_15_9 == 7'o073);			// ash
+		       (isn_15_9 == 7'o072) ||			// ash
+		       (isn_15_9 == 7'o073);			// ashc
 
    assign is_isn_rxx = is_isn_rdd || is_isn_rss;
 
@@ -695,6 +696,7 @@ module pdp11(clk, reset_n, switches,
    assign ss_ea_ind = ss_mode == 7;
 
    assign store_ss_reg = (isn_15_9 == 004 && ss_reg != 7) ||	// jsr
+			 (isn_15_9 == 7'o072) ||		// ash
 			 (isn_15_9 == 7'o077) ||		// sob
 			 (isn_15_6 == 10'o0064);		// mark
 
@@ -843,8 +845,8 @@ module pdp11(clk, reset_n, switches,
 	  r6[1] <= 0;
 	  r6[2] <= 0;
 	  r6[3] <= 0;
-//	  pc <= 16'o0200;
-	  pc <= 16'o0500;
+	  pc <= 16'o0200;
+//	  pc <= 16'o0500;
 //  	  pc <= 16'o173000;
 
 	  isn <= 0;
@@ -998,9 +1000,9 @@ module pdp11(clk, reset_n, switches,
 		   else
 		     if (store_result32)
 		       begin
-			  $display(" r%d <- %0o (e32)",
+			  $display(" r%0d <- %0o (e32)",
 				   ss_reg, e32_data);
-			  $display(" r%d <- %0o (e32)",
+			  $display(" r%0d <- %0o (e32)",
 				   ss_reg|1, e1_data);
 
 			  //regs[ss_reg    ] <= e32_data;
@@ -1385,8 +1387,11 @@ module pdp11(clk, reset_n, switches,
    	case (istate)
 	  f1:
 	    begin
-	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d",
-			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
+//	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d",
+//			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
+	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o)",
+			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
+			r0, r1, r2, r3, r4, r5, sp, pc);
 	       $display("    trap=%d, interrupt=%d", trap, interrupt);
 	    end // case: f1
 
@@ -1476,7 +1481,8 @@ module pdp11(clk, reset_n, switches,
 
 	       $display("    ss_data %0o, dd_data %0o, e1_result %0o",
 			ss_data, dd_data, e1_result);
-	       $display("    latch_pc %d, latch_cc %d", latch_pc, latch_cc);
+	       $display("    latch_pc %d, latch_cc %d, e1_advance %o",
+			latch_pc, latch_cc, e1_advance);
 	       $display("    psw %o", psw);
 
 	       $display("    e1_result %o, e1_data %o, e1_data_mux %o",

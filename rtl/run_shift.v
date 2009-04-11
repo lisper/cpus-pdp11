@@ -60,13 +60,17 @@ module test;
        #1 reset = 1;
        #20 reset = 0;
 
-       shifter(32'h00000001, 5'd4); wait_for_shift;
-       shifter(32'h00000001, 5'd16); wait_for_shift;
-       shifter(32'h10000000, 5'd4); wait_for_shift;
-       shifter(32'h00000010, -5'd4); wait_for_shift;
-       shifter(32'h00000010, -5'd5); wait_for_shift;
-       shifter(32'h00000500, -5'd2); wait_for_shift;
-       shifter(32'hffffffff, 5'd4); wait_for_shift;
+//       shifter(32'h00000002, 6'd0); wait_for_shift;
+       shifter(32'hffff8000, 6'o61); wait_for_shift;
+`ifdef xx
+       shifter(32'h00000001, 6'd4); wait_for_shift;
+       shifter(32'h00000001, 6'd16); wait_for_shift;
+       shifter(32'h10000000, 6'd4); wait_for_shift;
+       shifter(32'h00000010, -6'd4); wait_for_shift;
+       shifter(32'h00000010, -6'd5); wait_for_shift;
+       shifter(32'h00000500, -6'd2); wait_for_shift;
+       shifter(32'hffffffff, 6'd4); wait_for_shift;
+`endif
        
        #100 $finish;
     end

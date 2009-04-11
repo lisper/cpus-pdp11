@@ -54,7 +54,8 @@ module execute(clk, reset, enable,
    output [2:0]  new_psw_prio;
 
    //
-   wire [31:0] 	 div_result;
+   wire [15:0] 	 div_result;
+   wire [15:0] 	 div_remainder;
    wire [31:0] 	 mul_result;
    wire [31:0] 	 shift_result;
 
@@ -116,32 +117,44 @@ module execute(clk, reset, enable,
    reg 	  div_ready;
    reg 	  shift_ready;
 
+   reg   div_abort;
+
    wire   shift_out;
+   wire   sign_change16;
+   wire   sign_change32;
+
+   wire   div_overflow;
+   wire   mul_overflow;
    
    wire   e1_advance;
    wire   is_isn_muldiv;
-   
+
    mul1616 mul1616_box(.clk(clk), .reset(reset),
 		       .ready(mul_ready),
 		       .done(mul_done),
 		       .multiplier(ss_data),
 		       .multiplicand(dd_data),
-		       .product(mul_result));
+		       .product(mul_result),
+		       .overflow(mul_overflow));
    
    div3216 div3216_box(.clk(clk), .reset(reset),
 		       .ready(div_ready),
 		       .done(div_done),
 		       .dividend({ss_reg_value, ss_rego1_value}),
 		       .divider(dd_data),
-		       .quotient(div_result));
+		       .quotient(div_result),
+   		       .remainder(div_remainder),
+		       .overflow(div_overflow));
 
    shift32 shift32_box(.clk(clk), .reset(reset),
 		       .ready(shift_ready),
 		       .done(shift_done),
 		       .in(shift_in),
 		       .out(shift_result),
+		       .shift(shift),
 		       .last_bit(shift_out),
-		       .shift(shift));
+		       .sign_change16(shift_sign_change16),
+		       .sign_change32(shift_sign_change32));
 
    wire   is_ash, is_ashc, is_ashx;
    
@@ -151,14 +164,14 @@ module execute(clk, reset, enable,
    assign is_ashx = is_ash || is_ashc;
    
    assign shift_in = is_ash ?
-		     {ss_data[15],15'b0,ss_data} :		/* ash */
+		     {ss_data[15] ? 16'hffff : 16'b0,ss_data} :	/* ash */
 		     {ss_reg_value, ss_rego1_value};		/* ashc */
    
    assign is_isn_muldiv =
 			 (isn[15:9] == 7'o070) ||		/* mul */
 			 (isn[15:9] == 7'o071);			/* div */
 
-   assign e1_advance = is_isn_muldiv ? (mul_done || div_done) :
+   assign e1_advance = is_isn_muldiv ? (mul_done || div_done || div_abort) :
 		       is_ashx ? (shift_done) : 1'b1;
    
    //
@@ -196,6 +209,8 @@ module execute(clk, reset, enable,
 	new_psw_prio = 0;
 	mul_ready = 0;
 	div_ready = 0;
+	div_abort = 0;
+	shift_ready = 0;
 	shift = 0;
      end
      else
@@ -226,6 +241,8 @@ module execute(clk, reset, enable,
 
 	mul_ready = 0;
 	div_ready = 0;
+	div_abort = 0;
+	shift_ready = 0;
 
 	shift = 0;
 	
@@ -693,8 +710,7 @@ module execute(clk, reset, enable,
 			new_cc_n = e32_result_sign;
 			new_cc_z = e32_result_zero;
 			new_cc_v = 0;
-			new_cc_c = (({e32_result,e1_result} > 16'h7fff) ||
-				    ({e32_result,e1_result} < 32'hffff8000));
+			new_cc_c = mul_overflow;
 			latch_cc = 1;
 		     end
 
@@ -702,35 +718,44 @@ module execute(clk, reset, enable,
 		     begin
 			if (dd_data == 0)
 			  begin
+			     e32_result = ss_reg_value;
+			     e1_result = ss_rego1_value;
 			     new_cc_n = 0;
 			     new_cc_z = 1;
 			     new_cc_v = 1;
 			     new_cc_c = 1;
+			     latch_cc = 1;
+			     div_abort = 1;
 			  end
 			else if ((ss_reg_value == 16'h8000 &&
 				  ss_rego1_value == 0) &&
 				 (dd_data == 16'o177777))
 			  begin
+			     e32_result = ss_reg_value;
+			     e1_result = ss_rego1_value;
 			     new_cc_v = 1;
 			     new_cc_z = 1;
 			     new_cc_n = 1;
 			     new_cc_c = 1;
+			     latch_cc = 1;
+			     div_abort = 1;
 			  end
 			else begin
 			   div_ready = 1;
-			   e32_result = mul_result[31:16];
-			   e1_result = mul_result[15:0];
+			   e32_result = div_result;
+			   e1_result = div_remainder;
 
-			   if (({e32_result,e1_result} > 16'h7fff) ||
-			       ({e32_result,e1_result} < 32'hffff8000))
+			   if (div_overflow)
 			     begin
+				e32_result = ss_reg_value;
+				e1_result = ss_rego1_value;
 				new_cc_n = e32_result_sign;
 				new_cc_z = 0;
 				new_cc_v = 1;
 				new_cc_c = 0;
 			     end else begin
 				new_cc_n = e32_result_sign;
-				new_cc_z = e32_result_zero;
+				new_cc_z = e32_result == 16'b0;
 				new_cc_v = 0;
 				new_cc_c = 0;
 			     end
@@ -743,15 +768,15 @@ module execute(clk, reset, enable,
 		   2:					    /* ash */
 		     begin
 			shift = dd_data[5:0];
-
+			$display(" ASH %o; done %b", shift, shift32_box.done);
+			
 			shift_ready = 1;
 			e1_result = shift_result[15:0];
 
 			new_cc_n = e1_result_sign;
 			new_cc_z = e1_result_zero;
 
-			new_cc_v = shift == 0 ? 0 :
-				   (ss_data[15] ^ shift_result[15]);
+			new_cc_v = shift == 0 ? 0 : shift_sign_change16;
 
 			new_cc_c = shift[5] ? shift_out : shift_result[16];
 			latch_cc = 1;
@@ -763,17 +788,16 @@ module execute(clk, reset, enable,
 			shift = dd_data[5:0];
 
 			shift_ready = 1;
-			e32_result = shift_result;
+			e32_result = shift_result[31:16];
+			e1_result = shift_result[15:0];
 
 			new_cc_n = e32_result_sign;
 			new_cc_z = e32_result_zero;
 
-			new_cc_v = shift == 0 ? 0 :
-				   (ss_reg_value[15] ^ shift_result[31]);
+			new_cc_v = shift == 0 ? 0 : shift_sign_change32;
 
 			new_cc_c = shift_out;
 			latch_cc = 1;
-
 		     end
 
 		   4:					    /* xor */
