@@ -6,18 +6,23 @@
 //`define minimal_debug 1
 `define debug 1
 //`define minimal_bus 1
+`define debug_novcd
+`define debug_nolog
+//`define debug_bus
+//`define debug_io
 
 `include "ipl_below.v"
 `include "add8.v"
 `include "bus.v"
 `include "execute.v"
 
-module pdp11(clk, reset_n, switches,
+module pdp11(clk, reset_n, switches, initial_pc,
 	     rs232_tx, rs232_rx,
 	     ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da);
 
    input clk, reset_n;
    input [15:0] switches;
+   input [15:0] initial_pc;
 
    inout [15:0] ide_data_bus;
    output 	ide_dior, ide_diow;
@@ -31,18 +36,27 @@ module pdp11(clk, reset_n, switches,
    reg 		halted;
    reg 		waited;
 
-   reg 		trap;
+   wire 	trap;
    reg 		trap_bpt;
    reg 		trap_iot;
    reg 		trap_emt;
    reg 		trap_trap;
    reg 		trap_odd;
+   reg 		trap_oflo;
    reg 		trap_bus;
    reg 		trap_ill;
+   reg 		trap_res;
    reg 		trap_priv;
 
+   reg 		trace_inhibit;
+   
    reg 		interrupt;
+   reg [7:0] 	interrupt_ack;
    reg [7:0] 	interrupt_vector;
+
+   wire 	trace;
+   wire 	odd_fetch;
+   wire 	odd_pc;
 
    reg [15:0] 	psw;
 
@@ -63,11 +77,15 @@ module pdp11(clk, reset_n, switches,
    wire 	assert_bpt;
    wire 	assert_iot;
    wire 	assert_trap_odd;
+   wire 	assert_trap_oflo;
    wire 	assert_trap_ill;
+   wire 	assert_trap_res;
    wire 	assert_trap_priv;
    wire 	assert_trap_emt;
    wire 	assert_trap_trap;
    wire 	assert_trap_bus;
+
+   wire 	assert_trace_inhibit;
 
    wire 	assert_int;
    wire [7:0] 	assert_int_vec;
@@ -90,6 +108,7 @@ module pdp11(clk, reset_n, switches,
    wire 	is_isn_mfpx;
    wire 	is_isn_mtpx;
    wire 	is_illegal;
+   wire 	is_reserved;
    wire 	no_operand;
    wire 	store_result;
    wire 	store_result32;
@@ -342,6 +361,8 @@ module pdp11(clk, reset_n, switches,
 	    .bus_ack(bus_ack),
 	    .bus_error(assert_trap_bus),
 	    .interrupt(assert_int),
+	    .interrupt_ipl(assert_int_ipl),
+	    .ack_ipl(interrupt_ack),
 	    .vector(assert_int_vec),
 
    	    .ide_data_bus(ide_data_bus),
@@ -352,13 +373,19 @@ module pdp11(clk, reset_n, switches,
 	    .switches(switches),
 	    .rs232_tx(rs232_tx), .rs232_rx(rs232_rx)
 	    );
+
+   wire        enable_execute;
    
+//   assign      enable_execute = (istate == e1 ? 1'b1 : 1'b0);
+   assign      enable_execute = istate == e1 &&
+				~is_illegal && ~is_reserved &&
+				~trap_odd;
   
    //
    // execute unit
    //
    execute exec1(.clk(clk), .reset(~reset_n),
-		 .enable(istate == e1 ? 1'b1 : 1'b0),
+		 .enable(enable_execute),
 		 .pc(pc), .psw(psw),
 		 .ss_data(ss_data), .dd_data(dd_data),
 		 .cc_n(cc_n), .cc_z(cc_z), .cc_v(cc_v), .cc_c(cc_c),
@@ -380,6 +407,7 @@ module pdp11(clk, reset_n, switches,
 		 .assert_bpt(assert_bpt),
 		 .assert_iot(assert_iot),
 		 .assert_reset(assert_reset),
+		 .assert_trace_inhibit(assert_trace_inhibit),
 		 
 		 .e1_result(e1_result), .e32_result(e32_result),
 		 .e1_advance(e1_advance),
@@ -414,9 +442,9 @@ module pdp11(clk, reset_n, switches,
 		      ss_mode == 2 ? ss_reg_value :
 		      ss_mode == 3 ? ss_reg_value :
 		      ss_mode == 4 ? (ss_reg_value -
-					(is_isn_byte ? 16'd1 : 16'd2)) :
+      		       		((is_isn_byte && ss_reg < 6) ? 16'd1 : 16'd2)) :
 		      ss_mode == 5 ? (ss_reg_value -
-					(is_isn_byte ? 16'd1 : 16'd2)) :
+      		       		((is_isn_byte && ss_reg < 6) ? 16'd1 : 16'd2)) :
 		      ss_mode == 6 ? pc :
 		      ss_mode == 7 ? pc :
 		      16'b0) :
@@ -430,10 +458,11 @@ module pdp11(clk, reset_n, switches,
 		     
      istate == s3 ? bus_out :
 
-     istate == t1 ? ((trap_odd | trap_bus) ? 16'o4 :
+     istate == t1 ? ((odd_pc |
+		      trap_odd | trap_oflo | trap_bus | trap_res) ? 16'o4 :
 		     trap_ill ? 16'o10 :
 		     trap_priv ? 16'o10 :
-		     trap_bpt ? 16'o14 :
+		     (trap_bpt | (trace && ~trap_iot)) ? 16'o14 :
 		     trap_iot ? 16'o20 :
 		     trap_emt ? 16'o30 :
 		     trap_trap ? 16'o34 :
@@ -456,8 +485,10 @@ module pdp11(clk, reset_n, switches,
 		       dd_mode == 1 ? dd_reg_value :
 		       dd_mode == 2 ? dd_reg_value :
 		       dd_mode == 3 ? dd_reg_value :
-		       dd_mode == 4 ? dd_reg_value - (is_isn_byte ? 16'd1 : 16'd2) :
-		       dd_mode == 5 ? dd_reg_value - (is_isn_byte ? 16'd1 : 16'd2) :
+		       dd_mode == 4 ? (dd_reg_value -
+		       		((is_isn_byte && dd_reg < 6) ? 16'd1 : 16'd2)) :
+		       dd_mode == 5 ? (dd_reg_value -
+				((is_isn_byte && dd_reg < 6) ? 16'd1 : 16'd2)) :
 		       dd_mode == 6 ? pc :
 		       dd_mode == 7 ? pc :
 		       16'b0) :
@@ -495,7 +526,7 @@ module pdp11(clk, reset_n, switches,
    //
    // mux sources of pc changes into new pc
    //
-   wire trap_or_int = trap || interrupt;
+   wire trap_or_int = trap || interrupt || trace || odd_pc;
 
    assign pc_mux =
 	  (istate == f1 && !trap_or_int                  ) ? pc + 16'd2 :
@@ -610,10 +641,14 @@ module pdp11(clk, reset_n, switches,
 
    assign is_illegal =
 	(isn_15_6 == 10'o0000 && isn_5_0 > 6'o07) ||
-	(isn_15_6 == 10'o0001 && isn_5_0 < 6'o10) ||		// jmp rx
+	(isn_15_6 == 10'o0000 && isn_5_0 == 6'o07) ||		// trapa/mfpt
 	(isn_15_6 == 10'o0002 && (isn_5_0 >= 6'o10 && isn_5_0 <= 6'o27)) ||
 	(isn_15_12 == 4'o07 && (isn_11_9 == 5 || isn_11_9 == 6)) ||
 	(isn_15_12 == 4'o17);
+
+   assign is_reserved =
+	(isn_15_6 == 10'o0001 && isn[5:3] == 3'b000) ||		// jmp rx
+   	(isn_15_9 == 7'o004 && isn[5:3] == 3'b000);		// jsp rx
 
    assign need_pop_reg =					// rts
 			(isn_15_6 == 10'o0002 && (isn_5_0 < 6'o10)) ||
@@ -630,8 +665,20 @@ module pdp11(clk, reset_n, switches,
 
    assign assert_trap_ill = is_illegal;
 
-   assign assert_trap_odd = (istate == f1) && (pc & 1);
+   assign assert_trap_res = is_reserved;
+
+   assign odd_pc = pc & 1;
    
+   assign odd_fetch = (bus_rd || bus_wr) && (bus_addr & 1) && ~bus_byte_op;
+
+   assign assert_trap_odd = odd_fetch;			// fetch from odd
+
+   assign assert_trap_oflo = 				// stack overflow
+		(ss_pre_dec && ss_reg == 6 && new_ss_reg_pre_decr < 16'o0400) ||
+		(dd_pre_dec && dd_reg == 6 && new_dd_reg_pre_decr < 16'o0400) ||
+		(trap && (sp - 16'd2) < 16'o0400);
+
+   assign trace = psw[4] && !trace_inhibit;			// trace bit
    
    assign store_result32 =
 			  (isn_15_9 == 7'o070) ||		// mul
@@ -823,7 +870,7 @@ module pdp11(clk, reset_n, switches,
 		    istate == t2 ? sp - 16'd2 :
 		    istate == t3 ? ss_ea :
 		    istate == t4 ? ss_ea :
-		    16'b0/*bus_addr*/;
+		    16'b0;
    
 
    assign bus_byte_op = (istate == w1 || istate == s4 || istate == d4) ?
@@ -845,9 +892,7 @@ module pdp11(clk, reset_n, switches,
 	  r6[1] <= 0;
 	  r6[2] <= 0;
 	  r6[3] <= 0;
-	  pc <= 16'o0200;
-//	  pc <= 16'o0500;
-//  	  pc <= 16'o173000;
+	  pc <= initial_pc;
 
 	  isn <= 0;
        end
@@ -877,11 +922,13 @@ module pdp11(clk, reset_n, switches,
 
 	  s1:
 	    begin
+`ifdef debug
                if (ss_post_incr)
 		 $display(" R%d <- %o (ss r++)", ss_reg, new_ss_reg_incdec);
 
 	       if (ss_pre_dec)
 		 $display(" R%d <- %o (ss r--)", ss_reg, new_ss_reg_incdec);
+`endif
 
 	       if (ss_post_incr || ss_pre_dec)
 		 case (ss_reg)
@@ -913,11 +960,13 @@ module pdp11(clk, reset_n, switches,
 
 	  d1:
 	    begin
+`ifdef debug
                if (dd_post_incr)
 		 $display(" R%d <- %o (dd r++)", dd_reg, new_dd_reg_incdec);
 
 	       if (dd_pre_dec)
 		 $display(" R%d <- %o (dd r--)", dd_reg, new_dd_reg_incdec);
+`endif
 
 	       if (dd_post_incr || dd_pre_dec)
 		 case (dd_reg)
@@ -934,10 +983,7 @@ module pdp11(clk, reset_n, switches,
 
 	  d2:
 	    begin
-	       // note: cycle needs to be long enough for memory read and
-	       // addition to take place
-	       // (or, possibly move mode 6/7 +reg to ea for d3)
-
+	       // note: cycle needs to be long enough for memory read
 	       // bus_rd asserted
 	    end
 
@@ -1057,12 +1103,14 @@ module pdp11(clk, reset_n, switches,
 	    begin
 	       // push: sp_mux <= sp - 2
 	       // bus_wr asserted
+	       // bus_in <= psw
 	    end
 
 	  t2:
 	    begin
 	       // push: sp_mux <= sp - 2
 	       // bus_wr asserted
+	       // bus_in <= pc
 	    end
 
 	  t3:
@@ -1088,39 +1136,54 @@ module pdp11(clk, reset_n, switches,
    //
    wire ok_to_assert_trap;
    wire ok_to_reset_trap;
-
+   wire ok_to_reset_trace_inhibit;
+   
    assign ok_to_assert_trap =
 			     istate == f1 || istate == c1 || istate == e1 ||
 			     istate == s4 || istate == d4 || istate == w1;
    
    assign ok_to_reset_trap = istate == t1;
 
+   assign ok_to_reset_trace_inhibit = istate == f1;
+
+   assign trap =
+            trap_bpt || trap_iot || trap_emt || trap_trap ||
+	    trap_res || trap_ill || trap_odd || trap_oflo ||
+	    trap_priv || trap_bus;
+
    always @(posedge clk)
      if (reset_n == 0)
        begin
 	     trap_odd <= 0;
+	     trap_oflo <= 0;
 	     trap_ill <= 0;
+	     trap_res <= 0;
 	     trap_priv <= 0;
 	     trap_bpt <= 0;
 	     trap_iot <= 0;
 	     trap_emt <= 0;
 	     trap_trap <= 0;
 	     trap_bus <= 0;
-	     trap <= 0;
+	     trace_inhibit <= 0;
        end
    else
      begin
 	if (ok_to_reset_trap)
 	  begin
-	     trap_odd <= 0;	// f1
-	     trap_ill <= 0;	// c1
-	     trap_priv <= 0;	// e1
+	     trap_odd <= 0;
+	     // allow double trap if trap causes oflo
+	     if (~trap_odd && ~trap_ill && ~trap_res &&
+		 ~trap_priv && ~trap_bpt && ~trap_iot &&
+		 ~trap_emt && ~trap_trap && ~trap_bus)
+	       trap_oflo <= 0;
+	     trap_ill <= 0;
+	     trap_res <= 0;
+	     trap_priv <= 0;
 	     trap_bpt <= 0;
 	     trap_iot <= 0;
 	     trap_emt <= 0;
 	     trap_trap <= 0;
 	     trap_bus <= 0;
-	     trap <= 0;
 	  end
 	else
 	  if (ok_to_assert_trap)
@@ -1128,14 +1191,29 @@ module pdp11(clk, reset_n, switches,
 	       if (assert_trap_odd)
 		    trap_odd <= 1;
 	
+	       if (assert_trap_oflo)
+		    trap_oflo <= 1;
+	
 	       if (assert_trap_bus)
 		    trap_bus <= 1;
 
 	       if (assert_trap_ill)
-		 begin
 		    trap_ill <= 1;
-		 end
 
+	       if (assert_trap_res)
+		    trap_res <= 1;
+
+`ifdef debug
+	       if (trace)
+		 $display("trace pc %o, addr %o", pc, bus_addr);
+	       if (assert_trap_bus)
+		 $display("buserr pc %o, addr %o", pc, bus_addr);
+	       if (assert_trap_ill)
+	       	 $display("trap_ill pc %o", pc);
+	       if (assert_trap_res)
+		 $display("trap_ill pc %o", pc);
+`endif
+	       
                if (istate == e1)
 		 begin
 		    if (assert_trap_priv)
@@ -1152,31 +1230,36 @@ module pdp11(clk, reset_n, switches,
 
 		    if (assert_trap_trap)
                       trap_trap <= 1;
-		 end // if (istate == e1)
+
+		    if (assert_trace_inhibit)
+		      trace_inhibit <= 1;
+		 end
 	    end // if (ok_to_assert_trap)
 
-        trap <=
-            trap_bpt || trap_iot || trap_emt || trap_trap ||
-            trap_ill || trap_odd || trap_priv || trap_bus;
+	if (ok_to_reset_trace_inhibit)
+	  trace_inhibit <= 0;
 
         if (trap)
 	  begin
-            $display("trap: asserts ");
-	     $display(" %o %o %o %o %o %o %o %o",
+             $display("trap: asserts ");
+	     $display(" %o %o %o %o %o %o %o %o %o %o",
 		      trap_bpt, trap_iot, trap_emt, trap_trap,
-		      trap_ill, trap_odd, trap_priv, trap_bus);
+		      trap_res, trap_ill, trap_odd, trap_oflo,
+		      trap_priv, trap_bus);
 
-            if (assert_trap_priv) $display("PRIV ");
-            if (assert_trap_odd) $display("ODD ");
-            if (assert_trap_ill) $display("ILL ");
-            if (assert_bpt) $display("BPT ");
-            if (assert_iot) $display("IOT ");
-            if (assert_trap_emt) $display("EMT ");
-            if (assert_trap_trap) $display("TRAP ");
-            if (assert_trap_bus) $display("BUS ");
-            $display("");
+             if (assert_trap_priv) $display("PRIV ");
+             if (assert_trap_odd) $display("ODD ");
+             if (assert_trap_oflo) $display("OFLO");
+             if (assert_trap_ill) $display("ILL ");
+             if (assert_trap_res) $display("RES ");
+             if (assert_bpt) $display("BPT ");
+             if (assert_iot) $display("IOT ");
+             if (assert_trap_emt) $display("EMT ");
+             if (assert_trap_trap) $display("TRAP ");
+             if (assert_trap_bus) $display("BUS ");
+             $display("");
 
-            $display("trap: %d", trap);
+             $display("trap: %d", trap);
 	  end // if (trap)
      end // always @ (posedge clk)
 
@@ -1225,6 +1308,7 @@ module pdp11(clk, reset_n, switches,
      if (reset_n == 0)
        begin
 	  interrupt <= 0;
+	  interrupt_ack <= 0;
        end
      else
        if (ok_to_assert_int)
@@ -1232,26 +1316,53 @@ module pdp11(clk, reset_n, switches,
           if (assert_int & ipl_below)
 	    begin
                interrupt <= 1;
+	       interrupt_ack <= assert_int_ipl;
                interrupt_vector <= assert_int_vec;
-`ifdef debug
-               $display("interrupt: asserts; vector %o", interrupt_vector);
-`endif
+//`ifdef debug
+               $display("cpu: XXX interrupt asserts; vector %o",
+			assert_int_vec);
+//`endif
             end
 	  else
-            interrupt <= 0;
+	    begin
+	       interrupt_ack <= 0;
+	    end
        end
      else
        if (istate == t4)
-	 interrupt <= 0;
+	 begin
+	    interrupt <= 0;
+	    interrupt_ack <= 0;
+	    interrupt_vector <= 0;
+	 end
    
+`ifdef debug_cpu_int
+   always @(posedge clk)
+     if (ok_to_assert_int && assert_int)
+       $display("cpu: XXX cpu int; ipl %o, int_ipl %b, ack_ipl %b below %b, vector %o",
+		ipl, assert_int_ipl, interrupt_ack, ipl_below, assert_int_vec);
+`endif
+
+   
+//`ifdef debug_cpu_int
+   always @(posedge clk)
+     if (interrupt)
+       $display("cpu: XXX cpu int; vector %o, istate %o, interrupt_ack %o",
+		interrupt_vector, istate, interrupt_ack);
+   
+   always @(posedge clk)
+     if (interrupt_ack)
+       $display("cpu: XXX cpu int_ack; interrupt_ack %b, istate %o",
+		interrupt_ack, istate);
+//`endif   
 
    //
    // calculate next state
    //
-   assign new_istate = istate == f1 ? ((trap || interrupt) ? t1 :
+   assign new_istate = istate == f1 ? ((trap||interrupt||trace||odd_pc) ? t1 :
         			       c1) :
 
-		       istate == c1 ? (is_illegal ? f1 :
+		       istate == c1 ? ((is_illegal || is_reserved) ? f1 :
         			       no_operand ? e1 :
         			       need_s1 ? s1 :
         			       need_d1 ? d1 :
@@ -1375,7 +1486,8 @@ module pdp11(clk, reset_n, switches,
 	    begin
 	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d",
 			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
-	       $display("    trap=%d, interrupt=%d", trap, interrupt);
+	       $display("    trap=%d, interrupt=%d, trace_inhibit=%d",
+			trap, interrupt, trace_inhibit);
 	    end // case: f1
 	endcase
      end
@@ -1392,7 +1504,8 @@ module pdp11(clk, reset_n, switches,
 	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o)",
 			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
 			r0, r1, r2, r3, r4, r5, sp, pc);
-	       $display("    trap=%d, interrupt=%d", trap, interrupt);
+	       $display("    trap=%d, interrupt=%d, trace_inhibit=%d",
+			trap, interrupt, trace_inhibit);
 	    end // case: f1
 
 	  c1:

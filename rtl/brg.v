@@ -11,9 +11,15 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
    parameter SYS_CLK = 20000000;
    parameter BAUD = 9600;
 
+`ifdef debug
+   parameter RX_CLK_DIV = 2;
+   parameter TX_CLK_DIV = 2;
+`else
    parameter RX_CLK_DIV = SYS_CLK / (BAUD * 16 * 2);
-   parameter RX_CW = 9;		   // CW >= log2(CLK_DIV)
    parameter TX_CLK_DIV = SYS_CLK / (BAUD * 2);
+`endif
+   
+   parameter RX_CW = 9;		   // CW >= log2(CLK_DIV)
    parameter TX_CW = 11;	   // CW >= log2(CLK_DIV)
    
    reg [RX_CW-1:0] rx_clk_div;

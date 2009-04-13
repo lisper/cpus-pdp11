@@ -7,7 +7,8 @@
 
 module bus(clk, reset, bus_addr, data_in, data_out,
 	   bus_rd, bus_wr, bus_byte_op,
-	   bus_ack, bus_error, interrupt, vector,
+	   bus_ack, bus_error,
+	   interrupt, interrupt_ipl, ack_ipl, vector,
 
 	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 
@@ -21,11 +22,13 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    input [21:0] bus_addr;
    input [15:0] data_in;
    input 	bus_rd, bus_wr, bus_byte_op;
+   input [7:0] 	ack_ipl;
    output [15:0] data_out;
 
    output 	 bus_ack;
    output 	 bus_error;
    output 	 interrupt;
+   output [7:0]  interrupt_ipl;
    output [7:0]  vector;
    
    inout [15:0] ide_data_bus;
@@ -53,8 +56,10 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    wire [15:0] 	ram_addr;
 
    
-   assign 	ram_access = ~&bus_addr[15:13];
-   assign 	iopage_access = &bus_addr[15:13];
+   assign 	ram_access = bus_addr[21:16] == 6'b0 &&
+			     bus_addr[15:13] != 3'b111;
+   
+   assign 	iopage_access = bus_addr[15:13] == 3'b111;
 
    wire 	iopage_rd, iopage_wr;
    wire 	dma_rd, dma_wr, dma_req, dma_ack;
@@ -64,7 +69,7 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    assign 	iopage_wr = bus_wr & iopage_access;
 
    assign data_out = ram_access ? ram_bus_out :
-		     iopage_access ? iopage_out : 16'b0/*data_out*/;
+		     iopage_access ? iopage_out : 16'hffff/*16'b0*/;
 
    assign ram_ce_n = ~( ((bus_rd | bus_wr) & ram_access) ||
 			(dma_rd | dma_wr) );
@@ -80,6 +85,7 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    assign ram_data_in = grant_cpu ? data_in : dma_data_in;
    assign ram_byte_op = grant_cpu ? bus_byte_op : 1'b0;
    
+`ifdef use_ram_model
    ram_16kx16 ram(.CLK(clk),
 		 .RESET(reset),
 		 .A(ram_addr[15:0]),
@@ -88,6 +94,13 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 		 .CE_N(ram_ce_n),
 		 .WE_N(ram_we_n),
 		 .BYTE_OP(ram_byte_op));
+`else
+   always @(posedge clk or ram_ce_n or ram_we_n or ram_byte_op or ram_addr)
+     begin
+	$pli_ram(clk, reset, ram_addr[15:0],
+		 ram_data_in, ram_bus_out, ram_ce_n, ram_we_n, ram_byte_op);
+     end
+`endif
 
 `ifdef debug_bus
    always @(posedge clk)
@@ -100,6 +113,39 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 	    $display("     ram_ce_n %o, ram_we_n %o ram_byte_op %o",
 		     ram_ce_n, ram_we_n, ram_byte_op);
        end
+`endif
+
+`define debug_io
+`ifdef debug_io
+   always @(posedge clk)
+     if (iopage_access)
+       begin
+	  if (bus_wr)
+	    $display("bus: iopage write %o <- %o (byte %o, error %o)",
+		     bus_addr, data_in, bus_byte_op, bus_error);
+	  if (bus_rd)
+	    $display("bus: iopage read %o -> %o (byte %o, error %o)",
+		     bus_addr, data_out, bus_byte_op, bus_error);
+       end
+`endif
+
+`ifdef debug
+   always @(posedge clk)
+     if (iopage_access)
+       begin
+	  if (bus_wr && bus_error)
+	    $display("bus: iopage buserr write %o <- %o (byte %o)",
+		     bus_addr, data_in, bus_byte_op);
+	  if (bus_rd && bus_error)
+	    $display("bus: iopage buserr read %o -> %o (byte %o)",
+		     bus_addr, data_out, bus_byte_op);
+       end
+`endif
+
+`ifdef debug_but_int
+   always @(posedge clk)
+     if (interrupt)
+       $display("bus: XXX bus interrupt, vector %o", vector);
 `endif
    
    // simple arbiter
@@ -123,7 +169,11 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 
    assign bus_ack = grant_cpu;
    assign dma_ack = grant_dma;
-   
+
+   wire   iopage_bus_error;
+
+   assign bus_error = iopage_bus_error;
+	
    iopage iopage1(.clk(clk),
 		  .reset(reset),
 		  .address(bus_addr),
@@ -133,8 +183,10 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 		  .iopage_wr(iopage_wr),
 		  .iopage_byte_op(bus_byte_op),
 
-		  .no_decode(bus_error),
+		  .no_decode(iopage_bus_error),
 		  .interrupt(interrupt),
+		  .interrupt_ipl(interrupt_ipl),
+		  .ack_ipl(ack_ipl),
 		  .vector(vector),
 
 		  // external connection to ide drive

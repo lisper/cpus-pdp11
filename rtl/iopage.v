@@ -13,7 +13,7 @@
 module iopage(clk, reset, address, data_in, data_out,
 	      iopage_rd, iopage_wr, iopage_byte_op,
 
-	      no_decode, interrupt, vector,
+	      no_decode, interrupt, interrupt_ipl, ack_ipl, vector,
 
 	      ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 
@@ -36,7 +36,9 @@ module iopage(clk, reset, address, data_in, data_out,
 
    output 	 no_decode;
    output 	 interrupt;
+   output [7:0]	 interrupt_ipl;
    output [7:0]  vector;
+   input [7:0] 	 ack_ipl;
 
    inout [15:0] ide_data_bus;
    output 	ide_dior, ide_diow;
@@ -81,7 +83,7 @@ module iopage(clk, reset, address, data_in, data_out,
 		     sr_decode ? sr_data_out :
 		     psw_decode ? psw_data_out :
 		     rk_decode ? rk_data_out :
-		     16'b0/*data_out*/;
+		     16'b0;
 
    assign good_decode = bootrom_decode | mmu_decode | tt_decode | clk_decode |
 			sr_decode | psw_decode | rk_decode;
@@ -90,9 +92,18 @@ module iopage(clk, reset, address, data_in, data_out,
 
 
    wire tt_interrupt, clk_interrupt, rk_interrupt;
+   wire tt_interrupt_ack, rk_interrupt_ack;
+   
    wire [7:0] tt_vector, clk_vector, rk_vector;
 
    assign interrupt = tt_interrupt | clk_interrupt | rk_interrupt;
+
+   assign interrupt_ipl = { 1'b0,
+			    clk_interrupt, rk_interrupt, tt_interrupt,
+			    4'b0000 };
+
+   assign rk_interrupt_ack = ack_ipl[5];
+   assign tt_interrupt_ack = ack_ipl[4];
 
    assign vector = tt_interrupt ? tt_vector :
 		     clk_interrupt ? clk_vector :
@@ -172,6 +183,7 @@ module iopage(clk, reset, address, data_in, data_out,
 		      .psw(psw),
 		      .psw_io_wr(psw_io_wr));
 
+`ifdef use_rk_model
    rk_regs rk_regs1(.clk(clk),
 		    .reset(reset),
 		    .iopage_addr(iopage_addr),
@@ -183,6 +195,7 @@ module iopage(clk, reset, address, data_in, data_out,
 		    .iopage_byte_op(iopage_byte_op),
 
 		    .interrupt(rk_interrupt),
+		    .interrupt_ack(rk_interrupt_ack);
 		    .vector(rk_vector),
 
 		    // connection to ide drive
@@ -197,5 +210,16 @@ module iopage(clk, reset, address, data_in, data_out,
 		    .dma_data_out(dma_data_out),
 		    .dma_rd(dma_rd), .dma_wr(dma_wr)
 		    );
-
+`else
+   always @(posedge clk or iopage_addr)
+     begin
+	$pli_rk(clk, reset, iopage_addr, data_in, rk_data_out, rk_decode,
+		iopage_rd, iopage_wr, iopage_byte_op,
+		rk_interrupt, rk_interrupt_ack, rk_vector,
+		ide_data_bus, ide_dior,ide_diow, ide_cs, ide_da,
+		dma_req, dma_ack, dma_addr, dma_data_in, dma_data_out,
+		dma_rd, dma_wr);
+     end
+`endif
+   
 endmodule

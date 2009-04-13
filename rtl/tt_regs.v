@@ -100,12 +100,21 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	 case (iopage_addr)
 	   13'o17560: rx_int_enable <= data_in[6];	// tti csr
    	   //13'o17562: tti_data <= data_in;
-	   13'o17564: tx_int_enable <= data_in[6];	// tto csr
+	   13'o17564:
+	     begin
+`ifdef debug
+		$display("tt: XXX tx_int_enable %b", data_in[6]);
+`endif
+		tx_int_enable <= data_in[6];		// tto csr
+	     end
 	   13'o17566:
 	     begin
 		tto_data <= data_in;		// tto data
 `ifdef debug
-		$display("tto_data %o", tto_data);
+		if (tto_data < 16'o40)
+		  $display("tto_data %o", tto_data);
+		else
+		  $display("tto_data %o %c", tto_data, tto_data);
 `endif
 	     end
 	 endcase
@@ -177,6 +186,14 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    assign vector = rx_int ? 8'o60 :
 		   tx_int ? 8'o64 :
 		   8'b0;
+
+`ifdef debug_tt_int
+   always @(posedge clk)
+     begin
+	if (tx_int)
+	  $display("tt: XXX tx_int %b", tx_int);
+     end
+`endif
    
 endmodule
 

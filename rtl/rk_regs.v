@@ -9,7 +9,7 @@
 
 module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		iopage_rd, iopage_wr, iopage_byte_op,
-		interrupt, vector,
+		interrupt, interrupt_ack, vector,
 		ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
    		dma_req, dma_ack, dma_addr, dma_data_in, dma_data_out,
 		dma_rd, dma_wr);
@@ -25,7 +25,8 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 
    output 	 interrupt;
    output [7:0]  vector;
-
+   input 	 interrupt_ack;
+   
    output 	 dma_req;
    input 	 dma_ack;
    output [17:0] dma_addr;
@@ -248,6 +249,8 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
        end
 
    assign interrupt = assert_int;
+
+//xxx clock assert_int and reset after int_ack
    
    // rk state machine
    always @(posedge clk)

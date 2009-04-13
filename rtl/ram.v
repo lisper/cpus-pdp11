@@ -7,12 +7,12 @@ module ram_16kx8(clk, reset, a, di, do, ce, we);
 
    input clk;
    input reset;
-   input[12:0] a;
+   input [14/*12*/:0] a;
    input [7:0] di;
    input ce, we;
    output [7:0] do;
 
-   reg [7:0] ram[8191:0];
+   reg [7:0] ram[32767/*8191*/:0];
 
    assign do = ram[a];
 
@@ -30,7 +30,7 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 
    input CLK;
    input RESET;
-   input[15:0] A;
+   input [15:0] A;
    input [15:0] DI;
    input 	CE_N, WE_N;
    input 	BYTE_OP;
@@ -40,7 +40,7 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
    wire [7:0] di_h, di_l;
    wire we_h, we_l;
 
-   wire [12:0] 	 BA;
+   wire [14/*12*/:0] 	 BA;
 
    ram_16kx8 ram_h(CLK, RESET, BA, di_h, do_h, ~CE_N, we_h);
    ram_16kx8 ram_l(CLK, RESET, BA, di_l, do_l, ~CE_N, we_l);
@@ -55,7 +55,7 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 
    initial
      begin
-	for (i = 0; i < 8192; i=i+1)
+	for (i = 0; i < 32768/*8192*/; i=i+1)
 	  begin
              ram_h.ram[i] = 7'b0;
 	     ram_l.ram[i] = 7'b0;
@@ -109,11 +109,11 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
        $display("ram: write [%o] <- %o", A, DI);
    // synthesis translate_on
 
-   assign BA = A[13:1];
+   assign BA = A[15/*13*/:1];
 
    assign DO = { BYTE_OP ? 8'b0 : do_h,
 		 BYTE_OP ? (A[0] ? do_h : do_l) : do_l };
-
+   
    assign we_h = ~WE_N && (~BYTE_OP | (BYTE_OP & A[0]));
    assign we_l = ~WE_N && (~BYTE_OP | (BYTE_OP & ~A[0]));
 

@@ -19,7 +19,8 @@ module execute(clk, reset, enable,
 	       isn, r5,
 
 	       assert_halt, assert_wait, assert_trap_priv, assert_trap_emt, 
-	       assert_trap_trap, assert_bpt, assert_iot, assert_reset, 
+	       assert_trap_trap, assert_bpt, assert_iot, assert_reset,
+	       assert_trace_inhibit,
 
 	       e1_result, e32_result, e1_advance,
 
@@ -42,7 +43,8 @@ module execute(clk, reset, enable,
 
    output 	assert_halt, assert_wait, assert_trap_priv, assert_trap_emt, 
 		assert_trap_trap, assert_bpt, assert_iot, assert_reset;
-
+   output 	assert_trace_inhibit;
+ 	
    output [15:0] e1_result, new_pc;
    output [15:0] e32_result;
    output 	 e1_advance;
@@ -61,6 +63,7 @@ module execute(clk, reset, enable,
 
    reg 		assert_halt, assert_wait, assert_trap_priv, assert_trap_emt, 
 		assert_trap_trap, assert_bpt, assert_iot, assert_reset;
+   reg 		assert_trace_inhibit;
 
    reg [15:0] e1_result, new_pc;
    reg [15:0] e32_result;
@@ -194,6 +197,7 @@ module execute(clk, reset, enable,
 	assert_bpt = 0;
 	assert_iot = 0;
 	assert_reset = 0;
+	assert_trace_inhibit = 0;
 
 	e1_result = 0;
 	e32_result = 0;
@@ -223,6 +227,7 @@ module execute(clk, reset, enable,
 	assert_bpt = 0;
 	assert_iot = 0;
 	assert_reset = 0;
+	assert_trace_inhibit = 0;
 
 	e1_result = 0;
 	e32_result = 0;
@@ -250,15 +255,16 @@ module execute(clk, reset, enable,
 	  begin
 	     if (isn[11:6] == 000 && isn[5:0] < 010)
 	       begin
-		  $display("e: MS");
+		  if (0) $display("e: MS");
 		  case (isn[2:0])
 		    0:					    /* halt */
 		      begin
 			 $display("e: HALT");
-			 if (current_mode == mode_kernel)
+//xxx fix me
+//			 if (current_mode == mode_kernel)
 			   assert_halt = 1;
-			 else
-			   assert_trap_priv = 1;
+//			 else
+//			   assert_trap_priv = 1;
 		      end
 		    
 		    1:					    /* wait */
@@ -268,20 +274,30 @@ module execute(clk, reset, enable,
 		      end
 
 		    3:					    /* bpt */
-		      assert_bpt = 1;
+		      begin
+			 assert_bpt = 1;
+		      end
 
 		    4:					    /* iot */
-		      assert_iot = 1;
+		      begin
+			 assert_iot = 1;
+			 assert_trace_inhibit = 1;
+		      end
 
 		    5:					    /* reset */
 		      if (current_mode == mode_kernel)
 			assert_reset = 1;
 
 		    2:					    /* rti */
-		      $display("e: RTI");
+		      begin
+			 $display("e: RTI");
+		      end
 
 		    6:					    /* rtt */
-		      $display("e: RTT");
+		      begin
+			 $display("e: RTT");
+			 assert_trace_inhibit = 1;
+		      end
 
 		    7:					    /* mfpt */
 		      e1_result = 16'h1234;
@@ -295,9 +311,10 @@ module execute(clk, reset, enable,
 
 		    6'o01:					    /* jmp */
 		      begin
-			 $display("e: JMP; dest_ea %6o", dd_ea);
+			 $display("e: JMP; dest_ea %o", dd_ea);
 			 new_pc = dd_ea;
-			 latch_pc = 1;
+			 // don't latch if illegal jmp rx
+			 latch_pc = isn[5:3] != 3'b000;
 		      end
 
 		    6'o02:					    /* rts */
@@ -461,11 +478,12 @@ module execute(clk, reset, enable,
 		    6'o40, 6'o41, 6'o42, 6'o43,	    /* jsr */
 		      6'o44, 6'o45, 6'o46, 6'o47:
 			begin
-			   $display(" JSR r%d; dd_data %6o, dd_ea %6o",
+			   $display(" JSR r%d; dd_data %o, dd_ea %o",
 				    ss_reg, dd_data, dd_ea);
 			   e1_result = pc;
 			   new_pc = dd_ea;
-			   latch_pc = 1;
+			   // don't latch if illegal jsr rx
+			   latch_pc = isn[5:3] != 3'b000;
 			end
 
 		    6'o50:					    /* clr */
@@ -647,7 +665,7 @@ module execute(clk, reset, enable,
 
 	       4'o02:					    /* cmp */
 		 begin
-		    //$display(" CMP %6o %6o", ss_data, dd_data);
+		    //$display(" CMP %o %o", ss_data, dd_data);
 		    e1_result = ss_data - dd_data;
 		    new_cc_n = e1_result_sign;
 		    new_cc_z = e1_result_zero;
