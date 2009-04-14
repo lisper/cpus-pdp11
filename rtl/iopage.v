@@ -91,8 +91,8 @@ module iopage(clk, reset, address, data_in, data_out,
    assign no_decode = (iopage_rd | iopage_wr) & ~good_decode;
 
 
-   wire tt_interrupt, clk_interrupt, rk_interrupt;
-   wire tt_interrupt_ack, rk_interrupt_ack;
+   wire clk_interrupt, tt_interrupt, rk_interrupt;
+   wire clk_interrupt_ack, tt_interrupt_ack, rk_interrupt_ack;
    
    wire [7:0] tt_vector, clk_vector, rk_vector;
 
@@ -102,6 +102,7 @@ module iopage(clk, reset, address, data_in, data_out,
 			    clk_interrupt, rk_interrupt, tt_interrupt,
 			    4'b0000 };
 
+   assign clk_interrupt_ack = ack_ipl[6];
    assign rk_interrupt_ack = ack_ipl[5];
    assign tt_interrupt_ack = ack_ipl[4];
 
@@ -141,6 +142,7 @@ module iopage(clk, reset, address, data_in, data_out,
 		    .iopage_wr(iopage_wr),
 		    .iopage_byte_op(iopage_byte_op),
 		    .interrupt(tt_interrupt),
+		    .interrupt_ack(tt_interrupt_ack),
 		    .vector(tt_vector),
 
 		    // connection to rs-232
@@ -156,6 +158,7 @@ module iopage(clk, reset, address, data_in, data_out,
 		      .iopage_wr(iopage_wr),
 		      .iopage_byte_op(iopage_byte_op),
 		      .interrupt(clk_interrupt),
+		      .interrupt_ack(clk_interrupt_ack),
 		      .vector(clk_vector));
 
    sr_regs sr_regs1(.clk(clk),
@@ -195,7 +198,7 @@ module iopage(clk, reset, address, data_in, data_out,
 		    .iopage_byte_op(iopage_byte_op),
 
 		    .interrupt(rk_interrupt),
-		    .interrupt_ack(rk_interrupt_ack);
+		    .interrupt_ack(rk_interrupt_ack),
 		    .vector(rk_vector),
 
 		    // connection to ide drive

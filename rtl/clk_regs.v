@@ -5,13 +5,15 @@
 
 module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 		iopage_rd, iopage_wr, iopage_byte_op,
-		interrupt, vector);
+		interrupt, interrupt_ack, vector);
 
    input clk;
    input reset;
    input [12:0] iopage_addr;
    input [15:0] data_in;
    input 	iopage_rd, iopage_wr, iopage_byte_op;
+   input 	interrupt_ack;
+   
    output [15:0] data_out;
    reg [15:0] 	 data_out;
    output 	 decode;

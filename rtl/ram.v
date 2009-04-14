@@ -19,21 +19,18 @@ module ram_16kx8(clk, reset, a, di, do, ce, we);
    always @(posedge clk)
      begin
 	if (we && ce)
-	  begin
-	     //$display("ram8 write %o %o", a, di);
-	     ram[a] = di;
-	  end
+	  ram[a] = di;
      end
 endmodule
 
-module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
+module ram_16kx16(clk, reset, addr, DI, DO, CE_N, WE_N, byte_op);
 
-   input CLK;
-   input RESET;
-   input [15:0] A;
+   input clk;
+   input reset;
+   input [15:0] addr;
    input [15:0] DI;
    input 	CE_N, WE_N;
-   input 	BYTE_OP;
+   input 	byte_op;
    output [15:0] DO;
 
    wire [7:0] do_h, do_l;
@@ -42,8 +39,8 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 
    wire [14/*12*/:0] 	 BA;
 
-   ram_16kx8 ram_h(CLK, RESET, BA, di_h, do_h, ~CE_N, we_h);
-   ram_16kx8 ram_l(CLK, RESET, BA, di_l, do_l, ~CE_N, we_l);
+   ram_16kx8 ram_h(clk, reset, BA, di_h, do_h, ~CE_N, we_h);
+   ram_16kx8 ram_l(clk, reset, BA, di_l, do_l, ~CE_N, we_l);
 
    // synthesis translate_off
    integer 	 i;
@@ -98,26 +95,26 @@ module ram_16kx16(CLK, RESET, A, DI, DO, CE_N, WE_N, BYTE_OP);
 	  end
      end
 
-   always @(A or CE_N or WE_N or DO)
+   always @(addr or CE_N or WE_N or DO)
      begin
 	if (CE_N == 0 && WE_N == 1)
-	$display("ram: ce_n %b, we_n %b [%o] -> %o", CE_N, WE_N, A, DO);
+	$display("ram: ce_n %b, we_n %b [%o] -> %o", CE_N, WE_N, addr, DO);
      end
 
-   always @(posedge CLK)
+   always @(posedge clk)
      if (WE_N == 0 && CE_N == 0)
-       $display("ram: write [%o] <- %o", A, DI);
+       $display("ram: write [%o] <- %o", addr, DI);
    // synthesis translate_on
 
-   assign BA = A[15/*13*/:1];
+   assign BA = addr[15/*13*/:1];
 
-   assign DO = { BYTE_OP ? 8'b0 : do_h,
-		 BYTE_OP ? (A[0] ? do_h : do_l) : do_l };
+   assign DO = { byte_op ? 8'b0 : do_h,
+		 byte_op ? (addr[0] ? do_h : do_l) : do_l };
    
-   assign we_h = ~WE_N && (~BYTE_OP | (BYTE_OP & A[0]));
-   assign we_l = ~WE_N && (~BYTE_OP | (BYTE_OP & ~A[0]));
+   assign we_h = ~WE_N && (~byte_op || (byte_op && addr[0]));
+   assign we_l = ~WE_N && (~byte_op || (byte_op && ~addr[0]));
 
-   assign di_h = ~BYTE_OP ? DI[15:8] : DI[7:0];
+   assign di_h = ~byte_op ? DI[15:8] : DI[7:0];
    assign di_l = DI[7:0];
 
 endmodule

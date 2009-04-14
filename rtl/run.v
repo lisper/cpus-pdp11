@@ -45,12 +45,12 @@ module test;
 	     $display("arg %s pc %o", arg, starting_pc);
 	  end
 	
-`ifdef debug_nolog
+`ifdef debug_log
+`else
 	$nolog;
 `endif
 	
-`ifdef debug_novcd
-`else       
+`ifdef debug_vcd
 	$dumpfile("pdp11.vcd");
 	$dumpvars(0, test.cpu);
 `endif

@@ -24,6 +24,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    output 	 decode;
 
    output 	 interrupt;
+   reg 		 interrupt;
    output [7:0]  vector;
    input 	 interrupt_ack;
    
@@ -42,7 +43,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    reg 		 dma_wr;
    
    //
-   reg [7:0]  vector;
+//   reg [7:0]  vector;
    
    reg [15:0] 	 rkds, rker, rkwc, rkda;
    reg [17:0] 	 rkba;
@@ -61,6 +62,9 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
  	 
    reg inc_ba;
    reg inc_wc;
+
+   //
+   wire [15:0] lba;
    
    parameter CSR_BIT_GO = 0;
    parameter CSR_BIT_IE = 6;
@@ -147,6 +151,20 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 
    assign rkcs_mex = rkba[17:16];
 
+   //
+   // 111111
+   // 5432109876543210
+   //   ttttttttttssss
+   //
+   wire [3:0] sector;
+   wire [9:0] track;
+   
+   assign sector = rkda[3:0];
+   assign track = rkda[13:4];
+   
+   // (track*12)+sector = 4*(track+track+track) + sector
+   assign lba = {(track + track + track), 2'b0} + sector;
+		
    // register read
    always @(clk or decode or iopage_addr or iopage_rd or iopage_byte_op or
 	    rkda or rker or rkwc or rkba or
@@ -156,9 +174,14 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	  case (iopage_addr)
 	    13'o17400: data_out = rkda;
 	    13'o17402: data_out = rker;
-	    13'o17404: data_out = { rkcs_err, 7'b0,
-				    rkcs_done, rkcs_ie, rkcs_mex,
-				    rkcs_cmd };
+	    13'o17404:
+	      begin
+		 data_out = { rkcs_err, 7'b0,
+			      rkcs_done, rkcs_ie, rkcs_mex,
+			      rkcs_cmd };
+		 //if (data_out != 16'o5)
+		 //$display("rk: XXX read rkcs %o", data_out);
+	      end
 	    13'o17406: data_out = rkwc;
 	    13'o17410: data_out = rkba[15:0];
 	    13'o17412: data_out = rkda;
@@ -212,7 +235,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	      13'o17412:
 		begin
 		   rkda <= data_in;
-		   $display("rk: write rkda %o", data_in);
+		   $display("rk: XXX write rkda %o", data_in);
 		end
 
 	    endcase
@@ -236,22 +259,20 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	       if (inc_ba)
 		 begin
 		    rkba <= rkba + 18'd2;
-		    $display("rk: inc ba %o", rkba);
+		    if (0) $display("rk: inc ba %o", rkba);
 		 end
 	       
 	       if (inc_wc)
 		 begin
 		    rkwc <= rkwc + 16'd1;
-		    $display("rk: inc wc %o", rkwc);
+		    if (0) $display("rk: inc wc %o", rkwc);
 		 end
 	       
 	    end
        end
 
-   assign interrupt = assert_int;
+   assign vector = 8'o220;
 
-//xxx clock assert_int and reset after int_ack
-   
    // rk state machine
    always @(posedge clk)
      if (reset)
@@ -261,6 +282,22 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	  rk_state <= rk_state_next;
        end
 
+   always @(posedge clk)
+     if (reset)
+       interrupt <= 0;
+     else
+	  if (assert_int)
+	    begin
+	       $display("rk: XXX assert interrupt\n");
+	       interrupt <= 1;
+	    end
+	  else
+	    if (interrupt_ack)
+	      begin
+		 interrupt <= 0;
+		 $display("rk: XXX ack interrupt\n");
+	      end
+   
    always @(rk_state or rkcs_cmd or rkcs_ie or 
 	    rkwc or rkda or rkba or
             ata_done or ata_out or
@@ -269,7 +306,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	rk_state_next = rk_state;
 
 	assert_int = 0;
-	vector = 8'b0;
+//	vector = 8'b0;
 	
 	clear_err = 0;
 	set_err = 0;
@@ -295,17 +332,19 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	  ready:
 	    begin
 	       if (rkcs_cmd[0])
-		 rk_state_next = init0;
+		 begin
+		    rk_state_next = init0;
+$display("rk: XXX go!");
+		 end
 	    end
 	  
 	  init0:
 	    begin
 	       ata_addr = ATA_STATUS;
 	       ata_rd = 1;
-$display("init0: ata_done %o, ata_out %o", ata_done, ata_out);
 	       if (ata_done &&
 		   ~ata_out[IDE_STATUS_BSY] &&
-		   ~ata_out[IDE_STATUS_DRQ])
+		   ata_out[IDE_STATUS_DRDY])
 		 rk_state_next = init1;
 	    end
 
@@ -323,6 +362,7 @@ $display("init0: ata_done %o, ata_out %o", ata_done, ata_out);
 	       // rk_cnt = 1;
 	       // if (rk_cnt_rdy)
 	       rk_state_next = init2;
+//$display("rk: XXX wait0");
 	    end
 
 	  init2:
@@ -331,12 +371,13 @@ $display("init0: ata_done %o, ata_out %o", ata_done, ata_out);
 	       ata_rd = 1;
 	       if (ata_done &&
 		   ~ata_out[IDE_STATUS_BSY] &&
-		   ~ata_out[IDE_STATUS_DRQ])
+		   ata_out[IDE_STATUS_DRDY])
 		 rk_state_next = init3;
 	    end
 
 	  init3:
 	    begin
+$display("rk: XXX init3");
 	       ata_wr = 1;
 	       ata_addr = ATA_DEVCTRL;
 	       ata_in = 16'h0002;		// nIEN
@@ -357,7 +398,7 @@ $display("init0: ata_done %o, ata_out %o", ata_done, ata_out);
 	    begin
 	       ata_wr = 1;
 	       ata_addr = ATA_SECNUM;
-	       ata_in = {8'b0, rkda[7:0]};	// LBA[7:0]
+	       ata_in = {8'b0, lba[7:0]};	// LBA[7:0]
 	       if (ata_done)
 		 rk_state_next = init6;
 	    end
@@ -366,7 +407,7 @@ $display("init0: ata_done %o, ata_out %o", ata_done, ata_out);
 	    begin
 	       ata_wr = 1;
 	       ata_addr = ATA_CYLLOW;
-	       ata_in = {8'b0, rkda[15:8]};	// LBA[15:8]
+	       ata_in = {8'b0, lba[15:8]};	// LBA[15:8]
 	       if (ata_done)
 		 rk_state_next = init7;
 	    end
@@ -409,6 +450,7 @@ $display("init0: ata_done %o, ata_out %o", ata_done, ata_out);
 	  
 	  init10:
 	    begin
+$display("rk: XXX init10");
 	       ata_rd = 1;
 	       ata_addr = ATA_ALTER;
 	       if (ata_done)
@@ -420,7 +462,7 @@ $display("init0: ata_done %o, ata_out %o", ata_done, ata_out);
 	       ata_rd = 1;
 	       ata_addr = ATA_STATUS;
 
-if (ata_done) $display("rk: ata_out %x", ata_out);
+//if (ata_done) $display("rk: XXX init11 ata_out %x", ata_out);
 	       if (ata_done &&
 		   ~ata_out[IDE_STATUS_BSY] &&
 		   ata_out[IDE_STATUS_DRQ])
@@ -456,7 +498,9 @@ if (ata_done) $display("rk: ata_out %x", ata_out);
 	       dma_req = 1;
 	       dma_addr = rkba;
 	       dma_data_in = ata_out;
-$display("read1: ata_out %o, dma_addr %o", ata_out, dma_addr);
+	       
+	       if (0) $display("read1: XXX ata_out %o, dma_addr %o",
+			       ata_out, dma_addr);
 			    
 	       if (dma_ack)
 		 begin
@@ -522,7 +566,8 @@ $display("read1: ata_out %o, dma_addr %o", ata_out, dma_addr);
 	       if (rkcs_ie)
 		 begin
 		    assert_int = 1;
-		    vector = 8'o220;
+//		    vector = 8'o220;
+		    $display("rk: XXX last2, interrupt");
 		 end
 	       
 	       clear_err = 1;
@@ -538,10 +583,12 @@ $display("read1: ata_out %o, dma_addr %o", ata_out, dma_addr);
 	       if (rkcs_ie)
 		 begin
 		    assert_int = 1;
-		    vector = 8'o220;
+//		    vector = 8'o220;
+		    $display("rk: XXX last3, interrupt");
 		 end
 	       
 	       rk_state_next = ready;
+	       $display("rk: XXX last3, done (ie %b)", rkcs_ie);
 	    end
 		 
 	  default:

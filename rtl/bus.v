@@ -7,7 +7,7 @@
 
 module bus(clk, reset, bus_addr, data_in, data_out,
 	   bus_rd, bus_wr, bus_byte_op,
-	   bus_ack, bus_error,
+	   bus_arbitrate, bus_ack, bus_error,
 	   interrupt, interrupt_ipl, ack_ipl, vector,
 
 	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
@@ -23,6 +23,7 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    input [15:0] data_in;
    input 	bus_rd, bus_wr, bus_byte_op;
    input [7:0] 	ack_ipl;
+   input 	bus_arbitrate;
    output [15:0] data_out;
 
    output 	 bus_ack;
@@ -71,29 +72,35 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    assign data_out = ram_access ? ram_bus_out :
 		     iopage_access ? iopage_out : 16'hffff/*16'b0*/;
 
-   assign ram_ce_n = ~( ((bus_rd | bus_wr) & ram_access) ||
+//   assign ram_ce_n = ~( ((bus_rd | bus_wr) & ram_access) ||
+//			(dma_rd | dma_wr) );
+   assign ram_ce_n = ~( grant_cpu ? ((bus_rd | bus_wr) & ram_access) :
 			(dma_rd | dma_wr) );
    
-   assign ram_we_n = ~( (bus_wr & ram_access) || dma_wr );
+//   assign ram_we_n = ~( (bus_wr & ram_access) || dma_wr );
+   assign ram_we_n = ~( grant_cpu ? (bus_wr & ram_access) : dma_wr );
 
    wire [15:0] ram_data_in, dma_data_in;
    wire        ram_byte_op;
 
-   reg 	  grant_cpu, grant_dma;
-
+   wire        grant_cpu, grant_dma;
+   reg [2:0] 	  grant_state;
+   reg [3:0] 	  grant_count;
+   wire [1:0] 	  grant_state_next;
+ 	  
    assign ram_addr = grant_cpu ? bus_addr[15:0] : dma_addr[15:0];
    assign ram_data_in = grant_cpu ? data_in : dma_data_in;
    assign ram_byte_op = grant_cpu ? bus_byte_op : 1'b0;
    
 `ifdef use_ram_model
-   ram_16kx16 ram(.CLK(clk),
-		 .RESET(reset),
-		 .A(ram_addr[15:0]),
+   ram_16kx16 ram(.clk(clk),
+		 .reset(reset),
+		 .addr(ram_addr[15:0]),
 		 .DI(ram_data_in),
 		 .DO(ram_bus_out),
 		 .CE_N(ram_ce_n),
 		 .WE_N(ram_we_n),
-		 .BYTE_OP(ram_byte_op));
+		 .byte_op(ram_byte_op));
 `else
    always @(posedge clk or ram_ce_n or ram_we_n or ram_byte_op or ram_addr)
      begin
@@ -142,31 +149,31 @@ module bus(clk, reset, bus_addr, data_in, data_out,
        end
 `endif
 
-`ifdef debug_but_int
+`ifdef debug_bus_int
    always @(posedge clk)
      if (interrupt)
        $display("bus: XXX bus interrupt, vector %o", vector);
 `endif
    
    // simple arbiter
+   // wait for dma request and cpu to allow
+   // then run 4 dma cycles
    always @ (posedge clk)
      if (reset)
-       begin
-	  grant_cpu <= 1;
-	  grant_dma <= 0;
-       end
+       grant_state <= 3'd0;
      else
-       if (dma_req && !grant_dma)
-	 begin
-	    grant_cpu <= 0;
-	    grant_dma <= 1;
-	 end
-       else
-	 begin
-	    grant_cpu <= 1;
-	    grant_dma <= 0;
-	 end
+       grant_state <= grant_state_next;
 
+   assign grant_state_next =
+		(grant_state == 3'd0 && dma_req && bus_arbitrate) ? 3'd1 :
+		(grant_state == 3'd1 && dma_req) ? 3'd2 :
+		(grant_state == 3'd2 && dma_req) ? 3'd3 :
+		(grant_state == 3'd3 && dma_req) ? 3'd4 :
+		3'd0;
+
+   assign grant_cpu = grant_state == 3'd0;
+   assign grant_dma = grant_state != 3'd0;
+   
    assign bus_ack = grant_cpu;
    assign dma_ack = grant_dma;
 

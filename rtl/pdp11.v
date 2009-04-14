@@ -5,11 +5,14 @@
 
 //`define minimal_debug 1
 `define debug 1
-//`define minimal_bus 1
-`define debug_novcd
-`define debug_nolog
+`define debug_vcd
+//`define debug_log
 //`define debug_bus
 //`define debug_io
+`define debug_tt_out
+
+`define use_rk_model 1
+`define use_ram_model 1
 
 `include "ipl_below.v"
 `include "add8.v"
@@ -349,6 +352,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 
    wire        psw_io_wr;
    wire        bus_ack;
+   wire        bus_arbitrate;
         
    bus bus1(.clk(clk), .reset(~reset_n),
 	    .bus_addr({ 6'b0, bus_addr }),
@@ -358,8 +362,10 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	    .bus_wr(bus_wr),
 	    .bus_byte_op(bus_byte_op),
 
+	    .bus_arbitrate(bus_arbitrate),
 	    .bus_ack(bus_ack),
 	    .bus_error(assert_trap_bus),
+
 	    .interrupt(assert_int),
 	    .interrupt_ipl(assert_int_ipl),
 	    .ack_ipl(interrupt_ack),
@@ -897,6 +903,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	  isn <= 0;
        end
      else
+       if (bus_ack)
        begin
 
 	  if (istate != w1)
@@ -914,6 +921,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	    begin
 	       // bus_rd asserted
 	       isn <= bus_out;
+	       $display(" fetch pc %o, isn %o", pc, bus_out);
 	    end
 
 	  c1:
@@ -1419,9 +1427,10 @@ module pdp11(clk, reset_n, switches, initial_pc,
   always @(posedge clk)
     if (reset_n == 0)
       istate <= f1;
-   else
-     istate <= bus_ack ? new_istate : istate;
+    else
+      istate <= bus_ack ? new_istate : istate;
 
+   assign bus_arbitrate = istate == f1;
 
    //
    // clock internal registes
@@ -1437,8 +1446,8 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	  e32_data <= 0;
        end
      else
+       if (bus_ack)
        begin
-
 	  ss_ea <= (istate == c1 ||
 		    istate == s1 ||
 		    istate == s2 ||

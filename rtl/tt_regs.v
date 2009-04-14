@@ -8,7 +8,7 @@
 
 module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	       iopage_rd, iopage_wr, iopage_byte_op,
-	       interrupt, vector,
+	       interrupt, interrupt_ack, vector,
 	       rs232_tx, rs232_rx);
 
    input clk;
@@ -16,11 +16,14 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    input [12:0] iopage_addr;
    input [15:0] data_in;
    input 	iopage_rd, iopage_wr, iopage_byte_op;
+   input 	interrupt_ack;
+   
    output [15:0] data_out;
    reg [15:0] 	 data_out;
    output 	 decode;
 
    output 	 interrupt;
+   reg 		 interrupt;
    output [7:0]  vector;
 
    output 	 rs232_tx;
@@ -31,7 +34,9 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    wire 	 tto_data_wr;
    wire 	 tti_empty;
    wire 	 tti_data_rd;
- 	 
+
+   wire 	 interrupt_req;
+
    assign 	 decode = (iopage_addr == 13'o17560) |
 			  (iopage_addr == 13'o17562) |
 			  (iopage_addr == 13'o17564) |
@@ -110,7 +115,7 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	   13'o17566:
 	     begin
 		tto_data <= data_in;		// tto data
-`ifdef debug
+`ifdef debug_tt_out
 		if (tto_data < 16'o40)
 		  $display("tto_data %o", tto_data);
 		else
@@ -178,11 +183,23 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
        if (~rx_empty)
 	 tti_data <= rx_data;
 
+   always @(posedge clk)
+     if (reset)
+       interrupt <= 0;
+     else
+       if (interrupt_req)
+	 interrupt <= 1'b1;
+       else
+//	 if (interrupt_ack)
+	   interrupt <= 1'b0;
+	       
+
    // interrupts
    assign rx_int = rx_int_enable && ~tti_empty;
    assign tx_int = tx_int_enable && tto_empty;
 
-   assign interrupt = rx_int || tx_int;
+   assign interrupt_req = rx_int || tx_int;
+   
    assign vector = rx_int ? 8'o60 :
 		   tx_int ? 8'o64 :
 		   8'b0;

@@ -427,8 +427,8 @@ module execute(clk, reset, enable,
 		      begin
 			 new_pc = new_pc_w;
 			 latch_pc = (cc_n ^ cc_v) ? 1'b0 : 1'b1;
-			 $display("e: bge; isn %o, latch_pc %o pc %o new_pc %o",
-				  isn, latch_pc, pc, new_pc);
+			 $display("e: bge; latch_pc %o pc %o new_pc %o",
+				  latch_pc, pc, new_pc);
 		      end
 
 		    6'o22, 6'o23:				    /* bge */
