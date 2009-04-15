@@ -65,8 +65,9 @@ module top(rs232_txd, rs232_rxd,
    wire [15:0] bus_data_in, bus_data_out;
    wire        bus_rd, bus_wr, bus_byte_op;
    wire        bus_arbitrate, bus_ack, bus_error;
-   wire        interrupt;
-   wire [7:0]  interrupt_ipl, interrupt_ack_ipl, interrupt_vector;
+   wire        bus_int;
+   wire [7:0]  bus_int_ipl, bus_int_vector;
+   wire [7:0]  interrupt_ack_ipl;
    wire [15:0] psw;
    wire        psw_io_wr;
    
@@ -85,10 +86,10 @@ module top(rs232_txd, rs232_rxd,
 	     .bus_ack(bus_ack),
 	     .bus_error(bus_error),
 
-	     .interrupt(interrupt),
-	     .interrupt_ipl(interrupt_ipl),
+	     .bus_int(bus_int),
+	     .bus_int_ipl(bus_int_ipl),
+	     .bus_int_vector(bus_int_vector),
 	     .interrupt_ack_ipl(interrupt_ack_ipl),
-	     .interrupt_vector(assert_vector),
 
 	     .psw(psw),
 	     .psw_io_wr(psw_io_wr));
@@ -101,8 +102,6 @@ module top(rs232_txd, rs232_rxd,
    wire [15:0] ram1_io, ram2_io;
    wire        ram_ub, ram_lb;
 
-   wire        bus_interrupt;
-   
    bus bus1(.clk(clk),
 	    .reset(reset),
 	    .bus_addr(bus_addr),
@@ -115,10 +114,10 @@ module top(rs232_txd, rs232_rxd,
 	    .bus_ack(bus_ack),
 	    .bus_error(bus_error),
 
-	    .bus_interrupt(bus_interrupt),
-	    .interrupt_ipl(interrupt_ipl),
+	    .bus_int(bus_int),
+	    .bus_int_ipl(bus_int_ipl),
+	    .bus_int_vector(bus_int_vector),
 	    .interrupt_ack_ipl(interrupt_ack_ipl),
-	    .interrupt_vector(assert_vector),
 
 	    .ram_addr(ram_addr),
 	    .ram_data_in(ram_data_in),
@@ -146,7 +145,8 @@ module top(rs232_txd, rs232_rxd,
 
 		  .ram_a(ram_a),
 		  .ram_oe_n(ram_oe_n), .ram_we_n(ram_we_n),
-		  .ram1_io(ram1_io), .ram1_ce_n(ram_ce_n),
+
+		  .ram1_io(ram1_io), .ram1_ce_n(ram1_ce_n),
 		  .ram1_ub_n(ram1_ub_n), .ram1_lb_n(ram1_lb_n),
 		   
 		  .ram2_io(ram2_io), .ram2_ce_n(ram2_ce_n), 

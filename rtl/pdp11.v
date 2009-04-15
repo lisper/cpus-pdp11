@@ -11,8 +11,8 @@
 //
 // bus reports done via bus_ack
 // bus reports errors via bus_error
-// bus reports interrupts via ipl lines in interrupt_ipl
-// bus assert interrupt_vector until acked
+// bus reports interrupts via ipl lines in bus_int_ipl
+// bus assert bus_int_vector until acked
 // bus can write psw by asserting psw_io_wr
 //
 
@@ -24,7 +24,7 @@ module pdp11(clk, reset, switches, initial_pc,
 	     bus_addr, bus_data_out, bus_data_in,
 	     bus_rd, bus_wr, bus_byte_op,
 	     bus_arbitrate, bus_ack, bus_error,
-	     interrupt, interrupt_ipl, interrupt_ack_ipl, interrupt_vector,
+	     bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl, 
 	     psw, psw_io_wr);
 
    input clk, reset;
@@ -37,8 +37,8 @@ module pdp11(clk, reset, switches, initial_pc,
    output 	 bus_rd, bus_wr, bus_byte_op;
    output 	 bus_arbitrate;
    input 	 bus_ack, bus_error;
-   output 	 interrupt;
-   input [7:0] 	 interrupt_ipl, interrupt_vector;
+   input 	 bus_int;
+   input [7:0] 	 bus_int_ipl, bus_int_vector;
    output [7:0]  interrupt_ack_ipl;
    output [15:0] psw;
    input 	 psw_io_wr;
@@ -98,9 +98,6 @@ module pdp11(clk, reset, switches, initial_pc,
    wire 	assert_trap_bus;
 
    wire 	assert_trace_inhibit;
-
-   wire 	assert_int;
-   wire [7:0] 	assert_int_vec;
 
    wire [3:0] 	isn_15_12;
    wire [6:0] 	isn_15_9;
@@ -1282,7 +1279,7 @@ module pdp11(clk, reset, switches, initial_pc,
 
    wire ipl_below;
 
-   ipl_below_func ibf(ipl, interrupt_ipl, ipl_below);
+   ipl_below_func ibf(ipl, bus_int_ipl, ipl_below);
    
    always @(posedge clk)
      if (reset)
@@ -1293,14 +1290,14 @@ module pdp11(clk, reset, switches, initial_pc,
      else
        if (ok_to_assert_int)
 	 begin
-          if (assert_int & ipl_below)
+          if (bus_int & ipl_below)
 	    begin
                interrupt <= 1;
-	       interrupt_ack_ipl <= interrupt_ipl;
-               vector <= interrupt_vector;
+	       interrupt_ack_ipl <= bus_int_ipl;
+               vector <= bus_int_vector;
 //`ifdef debug
                $display("cpu: XXX interrupt asserts; vector %o",
-			interrupt_vector);
+			bus_int_vector);
 //`endif
             end
 	  else
@@ -1318,10 +1315,10 @@ module pdp11(clk, reset, switches, initial_pc,
    
 `ifdef debug_cpu_int
    always @(posedge clk)
-     if (ok_to_assert_int && assert_int)
-       $display("cpu: XXX cpu int; ipl %o, int_ipl %b, ack_ipl %b below %b, vector %o",
-		ipl, interrupt_ipl, interrupt_ack_ipl, ipl_below,
-		interrupt_vector);
+     if (ok_to_assert_int && bus_int)
+       $display("cpu: XXX cpu int; ipl %o, int_ipl %b, vector %o, ack_ipl %b below %b",
+		ipl, bus_int_ipl, bus_int_vector,
+		interrupt_ack_ipl, ipl_below);
 `endif
 
    

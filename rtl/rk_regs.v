@@ -450,7 +450,7 @@ $display("rk: XXX go!");
 	  
 	  init10:
 	    begin
-$display("rk: XXX init10");
+//$display("rk: XXX init10");
 	       ata_rd = 1;
 	       ata_addr = ATA_ALTER;
 	       if (ata_done)

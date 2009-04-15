@@ -22,6 +22,9 @@ module ram_256kx16(a, io, ce_n, ub_n, lb_n, we_n, oe_n);
    always @(we_n or ce_n or ub_n or lb_n or a or ba or io)
      if (~we_n && ~ce_n)
        begin
+	  if (0) $display("ram: ce_n %b ub_n %b lb_n %b we_n %b oe_n %b",
+			  ce_n, ub_n, lb_n, we_n, oe_n);
+		   
 	  if (~ub_n && ~lb_n) $display("ram: write %o <- %o", a, io);
 	  else
 	    if (~ub_n) $display("ram: writeh %o <- %o", a, io);
@@ -38,7 +41,7 @@ module ram_s3board(ram_a, ram_oe_n, ram_we_n,
 		   ram1_io, ram1_ce_n, ram1_ub_n, ram1_lb_n,
 		   ram2_io, ram2_ce_n, ram2_ub_n, ram2_lb_n);
 		   
-   input [15/*17*/:0] ram_a;
+   input [17:0] ram_a;
    input 	ram_oe_n, ram_we_n;
    inout [15:0] ram1_io;
    inout [15:0] ram2_io;

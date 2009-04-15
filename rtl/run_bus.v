@@ -11,10 +11,13 @@
 `define debug_io 1
 `define debug_bus_int 1
 `define use_rk_model 1
-`define use_ram_model 1
+//`define use_ram_sync 1
+`define use_ram_async 1
 
 `include "bus.v"
 `include "ram_sync.v"
+`include "ram_async.v"
+`include "ram_s3board.v"
 
 module test;
 
@@ -31,9 +34,10 @@ module test;
    wire        bus_ack;
    wire        bus_error;
 
-   wire        interrupt;
+   wire        bus_int;
+   wire [7:0]  bus_int_ipl;
+   wire [7:0]  bus_int_vector;
    wire [7:0]  interrupt_ack_ipl;
-   wire [7:0]  interrupt_vector;
 
    wire [21:0] ram_addr;
    wire [15:0] ram_data_in, ram_data_out;
@@ -64,10 +68,10 @@ module test;
 	    .bus_ack(bus_ack),
 	    .bus_error(bus_error),
 
-	    .interrupt(interrupt),
-	    .interrupt_ipl(interrupt_ipl),
+	    .bus_int(bus_int),
+	    .bus_int_ipl(bus_int_ipl),
+	    .bus_int_vector(bus_int_vector),
 	    .interrupt_ack_ipl(interrupt_ack_ipl),
-	    .interrupt_vector(interrupt_vector),
 
 	    .ram_addr(ram_addr),
 	    .ram_data_in(ram_data_in), .ram_data_out(ram_data_out),
@@ -81,6 +85,7 @@ module test;
 	    .switches(switches), .rs232_tx(rs232_tx), .rs232_rx(rs232_rx)
 	    );
 
+`ifdef use_ram_sync
    ram_sync ram1(.clk(clk),
 		 .reset(reset),
 		 .addr(ram_addr[15:0]),
@@ -89,7 +94,42 @@ module test;
 		 .rd(ram_rd),
 		 .wr(ram_wr),
 		 .byte_op(ram_byte_op));
-   
+`endif
+
+`ifdef use_ram_async
+   wire [17:0] ram_a;
+   wire        ram_oe_n, ram_we_n;
+   wire [15:0] ram1_io;
+   wire        ram1_ce_n, ram1_ub_n, ram1_lb_n;
+   wire [15:0] ram2_io;
+   wire        ram2_ce_n, ram2_ub_n, ram2_lb_n;
+
+   ram_async ram1(.addr(ram_addr[17:0]),
+		  .data_in(ram_data_out),
+		  .data_out(ram_data_in),
+		  .rd(ram_rd),
+		  .wr(ram_wr),
+		  .byte_op(ram_byte_op),
+
+		  .ram_a(ram_a),
+		  .ram_oe_n(ram_oe_n), .ram_we_n(ram_we_n),
+		  .ram1_io(ram1_io), .ram1_ce_n(ram1_ce_n),
+		  .ram1_ub_n(ram1_ub_n), .ram1_lb_n(ram1_lb_n),
+		   
+		  .ram2_io(ram2_io), .ram2_ce_n(ram2_ce_n), 
+		  .ram2_ub_n(ram2_ub_n), .ram2_lb_n(ram2_lb_n));
+
+   ram_s3board ram2(.ram_a(ram_a),
+		    .ram_oe_n(ram_oe_n),
+		    .ram_we_n(ram_we_n),
+		    .ram1_io(ram1_io),
+		    .ram1_ce_n(ram1_ce_n),
+		    .ram1_ub_n(ram1_ub_n), .ram1_lb_n(ram1_lb_n),
+		    .ram2_io(ram2_io),
+		    .ram2_ce_n(ram2_ce_n),
+		    .ram2_ub_n(ram2_ub_n), .ram2_lb_n(ram2_lb_n));
+`endif
+
    task write_io_reg;
       input [12:0] addr;
       input [15:0] data;

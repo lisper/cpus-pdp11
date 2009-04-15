@@ -7,7 +7,7 @@
 module bus(clk, reset, bus_addr, bus_data_in, bus_data_out,
 	   bus_rd, bus_wr, bus_byte_op,
 	   bus_arbitrate, bus_ack, bus_error,
-	   bus_interrupt, interrupt_ipl, interrupt_ack_ipl, interrupt_vector,
+	   bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl,
 	   ram_addr, ram_data_in, ram_data_out, ram_rd, ram_wr, ram_byte_op,
 	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 	   psw, psw_io_wr, switches, rs232_tx, rs232_rx
@@ -23,10 +23,10 @@ module bus(clk, reset, bus_addr, bus_data_in, bus_data_out,
 
    output 	 bus_ack;
    output 	 bus_error;
-   output 	 bus_interrupt;
-   output [7:0]  interrupt_ipl;
+   output 	 bus_int;
+   output [7:0]  bus_int_ipl;
+   output [7:0]  bus_int_vector;
    input [7:0] 	 interrupt_ack_ipl;
-   output [7:0]  interrupt_vector;
 
    output [21:0]  ram_addr;
    input [15:0]   ram_data_in;
@@ -132,11 +132,11 @@ module bus(clk, reset, bus_addr, bus_data_in, bus_data_out,
        end
 `endif
 
-`ifdef debug_bus_int
+//`ifdef debug_bus_int
    always @(posedge clk)
-     if (bus_interrupt)
-       $display("bus: XXX bus interrupt, vector %o", interrupt_vector);
-`endif
+     if (bus_int)
+       $display("bus: XXX bus interrupt, vector %o", bus_int_vector);
+//`endif
    
    // simple arbiter
    // wait for dma request and cpu to allow
@@ -179,10 +179,10 @@ module bus(clk, reset, bus_addr, bus_data_in, bus_data_out,
 		  .iopage_byte_op(bus_byte_op),
 
 		  .no_decode(iopage_bus_error),
-		  .interrupt(bus_interrupt),
-		  .interrupt_ipl(interrupt_ipl),
+		  .interrupt(bus_int),
+		  .interrupt_ipl(bus_int_ipl),
+		  .vector(bus_int_vector),
 		  .ack_ipl(interrupt_ack_ipl),
-		  .vector(interrupt_vector),
 
 		  // external connection to ide drive
 		  .ide_data_bus(ide_data_bus),

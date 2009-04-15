@@ -45,11 +45,12 @@ module test;
    wire        bus_rd, bus_wr, bus_byte_op;
    wire        bus_arbitrate, bus_ack, bus_error;
    wire        interrupt;
-   wire [7:0]  interrupt_ipl, interrupt_ack_ipl, interrupt_vector;
+   wire [7:0]  bus_int_ipl, bus_int_vector;
+   wire [7:0]  interrupt_ack_ipl;
    wire [15:0] psw;
    wire        psw_io_wr;
 
-   wire        bus_interrupt;
+   wire        bus_int;
    
    pdp11 cpu(.clk(clk),
 	     .reset(reset),
@@ -66,10 +67,10 @@ module test;
 	     .bus_ack(bus_ack),
 	     .bus_error(bus_error),
 
-	     .interrupt(interrupt),
-	     .interrupt_ipl(interrupt_ipl),
+	     .bus_int(bus_int),
+	     .bus_int_ipl(bus_int_ipl),
+	     .bus_int_vector(bus_int_vector),
 	     .interrupt_ack_ipl(interrupt_ack_ipl),
-	     .interrupt_vector(assert_vector),
 
 	     .psw(psw),
 	     .psw_io_wr(psw_io_wr));
@@ -90,10 +91,10 @@ module test;
 	    .bus_ack(bus_ack),
 	    .bus_error(bus_error),
 
-	    .bus_interrupt(bus_interrupt),
-	    .interrupt_ipl(interrupt_ipl),
+	    .bus_int(bus_int),
+	    .bus_int_ipl(bus_int_ipl),
+	    .bus_int_vector(bus_int_vector),
 	    .interrupt_ack_ipl(interrupt_ack_ipl),
-	    .interrupt_vector(assert_vector),
 
 	    .ram_addr(ram_addr),
 	    .ram_data_in(ram_data_in),
@@ -140,7 +141,7 @@ module test;
 
 		  .ram_a(ram_a),
 		  .ram_oe_n(ram_oe_n), .ram_we_n(ram_we_n),
-		  .ram1_io(ram1_io), .ram1_ce_n(ram_ce_n),
+		  .ram1_io(ram1_io), .ram1_ce_n(ram1_ce_n),
 		  .ram1_ub_n(ram1_ub_n), .ram1_lb_n(ram1_lb_n),
 		   
 		  .ram2_io(ram2_io), .ram2_ce_n(ram2_ce_n), 
@@ -165,9 +166,9 @@ module test;
      begin
 	$timeformat(-9, 0, "ns", 7);
 
-//	starting_pc = 16'o173000;
+	starting_pc = 16'o173000;
 //	starting_pc = 16'o0200;
-	starting_pc = 16'o0500;
+//	starting_pc = 16'o0500;
 	
  	n = $scan$plusargs("pc=", arg);
 	if (n > 0)
