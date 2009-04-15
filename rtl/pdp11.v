@@ -5,14 +5,16 @@
 
 //`define minimal_debug 1
 `define debug 1
-`define debug_vcd
+//`define debug_vcd
 //`define debug_log
 //`define debug_bus
 //`define debug_io
 `define debug_tt_out
 
 `define use_rk_model 1
-`define use_ram_model 1
+//`define use_ram_sync 1
+//`define use_ram_pli 1
+`define use_ram_s3board 1
 
 `include "ipl_below.v"
 `include "add8.v"

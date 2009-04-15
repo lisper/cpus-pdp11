@@ -3,6 +3,7 @@
 // copyright Brad Parker <brad@heeltoe.com> 2009
 
 `include "ram.v"
+`include "ram_s3board.v"
 `include "iopage.v"
 
 module bus(clk, reset, bus_addr, data_in, data_out,
@@ -72,12 +73,9 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    assign data_out = ram_access ? ram_bus_out :
 		     iopage_access ? iopage_out : 16'hffff/*16'b0*/;
 
-//   assign ram_ce_n = ~( ((bus_rd | bus_wr) & ram_access) ||
-//			(dma_rd | dma_wr) );
    assign ram_ce_n = ~( grant_cpu ? ((bus_rd | bus_wr) & ram_access) :
 			(dma_rd | dma_wr) );
    
-//   assign ram_we_n = ~( (bus_wr & ram_access) || dma_wr );
    assign ram_we_n = ~( grant_cpu ? (bus_wr & ram_access) : dma_wr );
 
    wire [15:0] ram_data_in, dma_data_in;
@@ -92,7 +90,7 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    assign ram_data_in = grant_cpu ? data_in : dma_data_in;
    assign ram_byte_op = grant_cpu ? bus_byte_op : 1'b0;
    
-`ifdef use_ram_model
+`ifdef use_ram_sync
    ram_16kx16 ram(.clk(clk),
 		 .reset(reset),
 		 .addr(ram_addr[15:0]),
@@ -101,12 +99,41 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 		 .CE_N(ram_ce_n),
 		 .WE_N(ram_we_n),
 		 .byte_op(ram_byte_op));
-`else
+`endif
+
+`ifdef use_ram_pli
    always @(posedge clk or ram_ce_n or ram_we_n or ram_byte_op or ram_addr)
      begin
 	$pli_ram(clk, reset, ram_addr[15:0],
 		 ram_data_in, ram_bus_out, ram_ce_n, ram_we_n, ram_byte_op);
      end
+`endif
+
+`ifdef use_ram_s3board
+   wire ram_oe_n, ram1_ub, ram1_lb;
+
+   assign ram_oe_n = ~( grant_cpu ? (bus_rd & ram_access) : dma_rd );
+
+   assign ram1_ub = ~ram_byte_op || (ram_byte_op && ram_addr[0]);
+   assign ram1_lb = ~ram_byte_op || (ram_byte_op && ~ram_addr[0]);
+
+   assign ram1_io = ~ram_oe_n ? 16'bz :
+		    (ram_byte_op ? {ram_data_in[7:0],ram_data_in[7:0]} :
+		     ram_data_in);
+
+   assign ram_bus_out = ~ram_byte_op ? ram1_io :
+			{8'b0, ram_addr[0] ? ram1_io[15:8] : ram1_io[7:0]};
+
+   wire [15:0] ram2_io;
+   assign ram2_io = 16'b0;
+   
+   ram_s3board ram(.ram_a(ram_addr[15:0]),
+		   .ram_oe_n(ram_oe_n), .ram_we_n(ram_we_n),
+		   .ram1_io(ram1_io), .ram1_ce_n(ram_ce_n),
+		   .ram1_ub_n(~ram1_ub), .ram1_lb_n(~ram1_lb),
+		   
+		   .ram2_io(ram2_io), .ram2_ce_n(1'b1), 
+		   .ram2_ub_n(1'b1), .ram2_lb_n(1'b1));
 `endif
 
 `ifdef debug_bus

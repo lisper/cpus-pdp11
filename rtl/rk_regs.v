@@ -377,7 +377,7 @@ $display("rk: XXX go!");
 
 	  init3:
 	    begin
-$display("rk: XXX init3");
+//$display("rk: XXX init3");
 	       ata_wr = 1;
 	       ata_addr = ATA_DEVCTRL;
 	       ata_in = 16'h0002;		// nIEN
