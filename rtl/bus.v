@@ -1,37 +1,37 @@
 // bus.v
-// bus interface to pdp11
+// simple pdp11 bus interface
 // copyright Brad Parker <brad@heeltoe.com> 2009
 
-`include "ram.v"
-`include "ram_s3board.v"
 `include "iopage.v"
 
-module bus(clk, reset, bus_addr, data_in, data_out,
+module bus(clk, reset, bus_addr, bus_data_in, bus_data_out,
 	   bus_rd, bus_wr, bus_byte_op,
 	   bus_arbitrate, bus_ack, bus_error,
-	   interrupt, interrupt_ipl, ack_ipl, vector,
-
+	   bus_interrupt, interrupt_ipl, interrupt_ack_ipl, interrupt_vector,
+	   ram_addr, ram_data_in, ram_data_out, ram_rd, ram_wr, ram_byte_op,
 	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
-
-	   psw, psw_io_wr,
-	   switches,
-	   rs232_tx, rs232_rx
+	   psw, psw_io_wr, switches, rs232_tx, rs232_rx
 	  );
 
    input clk;
    input reset;
    input [21:0] bus_addr;
-   input [15:0] data_in;
+   input [15:0] bus_data_in;
    input 	bus_rd, bus_wr, bus_byte_op;
-   input [7:0] 	ack_ipl;
    input 	bus_arbitrate;
-   output [15:0] data_out;
+   output [15:0] bus_data_out;
 
    output 	 bus_ack;
    output 	 bus_error;
-   output 	 interrupt;
+   output 	 bus_interrupt;
    output [7:0]  interrupt_ipl;
-   output [7:0]  vector;
+   input [7:0] 	 interrupt_ack_ipl;
+   output [7:0]  interrupt_vector;
+
+   output [21:0]  ram_addr;
+   input [15:0]   ram_data_in;
+   output [15:0]  ram_data_out;
+   output 	  ram_rd, ram_wr, ram_byte_op;
    
    inout [15:0] ide_data_bus;
    output 	ide_dior, ide_diow;
@@ -47,119 +47,75 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    input	rs232_rx;
    
    //
-   wire 	ram_ce_n;
-   wire 	ram_we_n;
    wire 	ram_access;
    wire 	iopage_access;
 
-   wire [15:0] 	ram_bus_out;
    wire [15:0] 	iopage_out;
-
-   wire [15:0] 	ram_addr;
-
-   
-   assign 	ram_access = bus_addr[21:16] == 6'b0 &&
-			     bus_addr[15:13] != 3'b111;
-   
-   assign 	iopage_access = bus_addr[15:13] == 3'b111;
 
    wire 	iopage_rd, iopage_wr;
    wire 	dma_rd, dma_wr, dma_req, dma_ack;
    wire [17:0] 	dma_addr;
    
+   wire [15:0] 	dma_data_out;
+
+   wire 	grant_cpu, grant_dma;
+   reg [2:0] 	grant_state;
+   reg [3:0] 	grant_count;
+   wire [1:0] 	grant_state_next;
+ 	  
+   //
+   assign 	ram_access = bus_addr[21:16] == 6'b0 &&
+			     bus_addr[15:13] != 3'b111;
+   
+   assign 	iopage_access = bus_addr[15:13] == 3'b111;
+
    assign 	iopage_rd = bus_rd & iopage_access;
    assign 	iopage_wr = bus_wr & iopage_access;
 
-   assign data_out = ram_access ? ram_bus_out :
-		     iopage_access ? iopage_out : 16'hffff/*16'b0*/;
+   assign bus_data_out = ram_access ? ram_data_in :
+			 iopage_access ? iopage_out : 16'hffff/*16'b0*/;
 
-   assign ram_ce_n = ~( grant_cpu ? ((bus_rd | bus_wr) & ram_access) :
-			(dma_rd | dma_wr) );
-   
-   assign ram_we_n = ~( grant_cpu ? (bus_wr & ram_access) : dma_wr );
-
-   wire [15:0] ram_data_in, dma_data_in;
-   wire        ram_byte_op;
-
-   wire        grant_cpu, grant_dma;
-   reg [2:0] 	  grant_state;
-   reg [3:0] 	  grant_count;
-   wire [1:0] 	  grant_state_next;
- 	  
    assign ram_addr = grant_cpu ? bus_addr[15:0] : dma_addr[15:0];
-   assign ram_data_in = grant_cpu ? data_in : dma_data_in;
+   assign ram_data_out = grant_cpu ? bus_data_in : dma_data_out;
+   assign ram_rd = grant_cpu ? (bus_rd & ram_access) : dma_rd;
+   assign ram_wr = grant_cpu ? (bus_wr & ram_access) : dma_wr;
    assign ram_byte_op = grant_cpu ? bus_byte_op : 1'b0;
-   
-`ifdef use_ram_sync
-   ram_16kx16 ram(.clk(clk),
-		 .reset(reset),
-		 .addr(ram_addr[15:0]),
-		 .DI(ram_data_in),
-		 .DO(ram_bus_out),
-		 .CE_N(ram_ce_n),
-		 .WE_N(ram_we_n),
-		 .byte_op(ram_byte_op));
-`endif
 
-`ifdef use_ram_pli
-   always @(posedge clk or ram_ce_n or ram_we_n or ram_byte_op or ram_addr)
-     begin
-	$pli_ram(clk, reset, ram_addr[15:0],
-		 ram_data_in, ram_bus_out, ram_ce_n, ram_we_n, ram_byte_op);
-     end
-`endif
-
-`ifdef use_ram_s3board
-   wire ram_oe_n, ram1_ub, ram1_lb;
-
-   assign ram_oe_n = ~( grant_cpu ? (bus_rd & ram_access) : dma_rd );
-
-   assign ram1_ub = ~ram_byte_op || (ram_byte_op && ram_addr[0]);
-   assign ram1_lb = ~ram_byte_op || (ram_byte_op && ~ram_addr[0]);
-
-   assign ram1_io = ~ram_oe_n ? 16'bz :
-		    (ram_byte_op ? {ram_data_in[7:0],ram_data_in[7:0]} :
-		     ram_data_in);
-
-   assign ram_bus_out = ~ram_byte_op ? ram1_io :
-			{8'b0, ram_addr[0] ? ram1_io[15:8] : ram1_io[7:0]};
-
-   wire [15:0] ram2_io;
-   assign ram2_io = 16'b0;
-   
-   ram_s3board ram(.ram_a(ram_addr[15:0]),
-		   .ram_oe_n(ram_oe_n), .ram_we_n(ram_we_n),
-		   .ram1_io(ram1_io), .ram1_ce_n(ram_ce_n),
-		   .ram1_ub_n(~ram1_ub), .ram1_lb_n(~ram1_lb),
-		   
-		   .ram2_io(ram2_io), .ram2_ce_n(1'b1), 
-		   .ram2_ub_n(1'b1), .ram2_lb_n(1'b1));
-`endif
 
 `ifdef debug_bus
    always @(posedge clk)
      if (ram_access)
        begin
-	  if (bus_wr) $display("bus: ram write %o <- %o", bus_addr, data_in);
-	  if (bus_rd) $display("bus: ram read %o -> %o", bus_addr, data_out);
-
+	  if (bus_wr) $display("bus: ram write %o <- %o", bus_addr,bus_data_in);
+	  if (bus_rd) $display("bus: ram read %o -> %o", bus_addr,bus_data_out);
 	  if (bus_wr || bus_rd)
-	    $display("     ram_ce_n %o, ram_we_n %o ram_byte_op %o",
-		     ram_ce_n, ram_we_n, ram_byte_op);
+	    $display("     ram_rd %o, ram_wr %o ram_byte_op %o",
+		     ram_rd, ram_wr, ram_byte_op);
+       end
+`endif
+   
+`ifdef debug_bus_dma
+   always @(posedge clk)
+     if (dma_ack)
+       begin
+//	  if (bus_wr) $display("bus: ram write %o <- %o", bus_addr,bus_data_in);
+//	  if (bus_rd) $display("bus: ram read %o -> %o", bus_addr,bus_data_out);
+	  if (dma_rd || dma_wr)
+	    $display("     dma_rd %o dma_wr %o ram_data_in %o, dma_data_out %o",
+		     dma_rd, dma_wr, ram_data_in, dma_data_out);
        end
 `endif
 
-`define debug_io
 `ifdef debug_io
    always @(posedge clk)
      if (iopage_access)
        begin
 	  if (bus_wr)
 	    $display("bus: iopage write %o <- %o (byte %o, error %o)",
-		     bus_addr, data_in, bus_byte_op, bus_error);
+		     bus_addr, bus_data_in, bus_byte_op, bus_error);
 	  if (bus_rd)
 	    $display("bus: iopage read %o -> %o (byte %o, error %o)",
-		     bus_addr, data_out, bus_byte_op, bus_error);
+		     bus_addr, bus_data_out, bus_byte_op, bus_error);
        end
 `endif
 
@@ -169,17 +125,17 @@ module bus(clk, reset, bus_addr, data_in, data_out,
        begin
 	  if (bus_wr && bus_error)
 	    $display("bus: iopage buserr write %o <- %o (byte %o)",
-		     bus_addr, data_in, bus_byte_op);
+		     bus_addr, bus_data_in, bus_byte_op);
 	  if (bus_rd && bus_error)
 	    $display("bus: iopage buserr read %o -> %o (byte %o)",
-		     bus_addr, data_out, bus_byte_op);
+		     bus_addr, bus_data_out, bus_byte_op);
        end
 `endif
 
 `ifdef debug_bus_int
    always @(posedge clk)
-     if (interrupt)
-       $display("bus: XXX bus interrupt, vector %o", vector);
+     if (bus_interrupt)
+       $display("bus: XXX bus interrupt, vector %o", interrupt_vector);
 `endif
    
    // simple arbiter
@@ -189,7 +145,12 @@ module bus(clk, reset, bus_addr, data_in, data_out,
      if (reset)
        grant_state <= 3'd0;
      else
-       grant_state <= grant_state_next;
+       begin
+	  grant_state <= grant_state_next;
+`ifdef debug_bus_state
+	  $display("grant_state %b", grant_state_next);
+`endif
+       end
 
    assign grant_state_next =
 		(grant_state == 3'd0 && dma_req && bus_arbitrate) ? 3'd1 :
@@ -211,17 +172,17 @@ module bus(clk, reset, bus_addr, data_in, data_out,
    iopage iopage1(.clk(clk),
 		  .reset(reset),
 		  .address(bus_addr),
-		  .data_in(data_in),
+		  .data_in(bus_data_in),
 		  .data_out(iopage_out),
 		  .iopage_rd(iopage_rd),
 		  .iopage_wr(iopage_wr),
 		  .iopage_byte_op(bus_byte_op),
 
 		  .no_decode(iopage_bus_error),
-		  .interrupt(interrupt),
+		  .interrupt(bus_interrupt),
 		  .interrupt_ipl(interrupt_ipl),
-		  .ack_ipl(ack_ipl),
-		  .vector(vector),
+		  .ack_ipl(interrupt_ack_ipl),
+		  .vector(interrupt_vector),
 
 		  // external connection to ide drive
 		  .ide_data_bus(ide_data_bus),
@@ -241,8 +202,8 @@ module bus(clk, reset, bus_addr, data_in, data_out,
 		  .dma_req(dma_req),
 		  .dma_ack(dma_ack),
 		  .dma_addr(dma_addr),
-		  .dma_data_in(dma_data_in),
-		  .dma_data_out(ram_bus_out),
+		  .dma_data_in(ram_data_in),
+		  .dma_data_out(dma_data_out),
 		  .dma_rd(dma_rd),
 		  .dma_wr(dma_wr)
 		  );

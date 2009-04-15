@@ -31,14 +31,14 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    output 	 dma_req;
    input 	 dma_ack;
    output [17:0] dma_addr;
-   output [15:0] dma_data_in;
-   input [15:0]  dma_data_out;
+   output [15:0] dma_data_out;
+   input [15:0]  dma_data_in;
    output 	 dma_rd;
    output 	 dma_wr;
 
    reg 		 dma_req;
    reg [17:0] 	 dma_addr;
-   reg [15:0] 	 dma_data_in;
+   reg [15:0] 	 dma_data_out;
    reg 		 dma_rd;
    reg 		 dma_wr;
    
@@ -301,7 +301,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    always @(rk_state or rkcs_cmd or rkcs_ie or 
 	    rkwc or rkda or rkba or
             ata_done or ata_out or
-	    dma_data_out or dma_ack)
+	    dma_data_in or dma_ack)
      begin
 	rk_state_next = rk_state;
 
@@ -326,7 +326,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	dma_rd = 0;
 	dma_wr = 0;
 	dma_addr = 0;
-	dma_data_in = 0;
+	dma_data_out = 0;
 
 	case (rk_state)
 	  ready:
@@ -497,7 +497,7 @@ $display("rk: XXX init10");
 	       // after mem-ack, inc18 {mex,ba}, set mex bits
 	       dma_req = 1;
 	       dma_addr = rkba;
-	       dma_data_in = ata_out;
+	       dma_data_out = ata_out;
 	       
 	       if (0) $display("read1: XXX ata_out %o, dma_addr %o",
 			       ata_out, dma_addr);
@@ -526,7 +526,7 @@ $display("rk: XXX init10");
 	       if (dma_ack)
 		 begin
 		    dma_rd = 1;
-		    ata_in = dma_data_out;
+		    ata_in = dma_data_in;
 		    inc_wc = 1;
 		    rk_state_next = write1;
 		 end

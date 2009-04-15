@@ -1,12 +1,20 @@
 // run_bus.v
 // simple testbench for bus interface; memory & rk dma
 // read and writes memory
-// does dma read from rk to memory
+// does dma write from rk to memory
 // brad@heeltoe.com 2009
 
 `timescale 1ns / 1ns
 
+`define debug 1
+`define debug_bus 1
+`define debug_io 1
+`define debug_bus_int 1
+`define use_rk_model 1
+`define use_ram_model 1
+
 `include "bus.v"
+`include "ram_sync.v"
 
 module test;
 
@@ -19,35 +27,68 @@ module test;
    wire [15:0] bus_out;
    reg 	       bus_byte_op;
 
+   reg 	       bus_arbitrate;
    wire        bus_ack;
    wire        bus_error;
+
    wire        interrupt;
-   wire [7:0]  vector;
+   wire [7:0]  interrupt_ack_ipl;
+   wire [7:0]  interrupt_vector;
+
+   wire [21:0] ram_addr;
+   wire [15:0] ram_data_in, ram_data_out;
+   wire        ram_rd, ram_wr, ram_byte_op;
 
    wire [15:0] ide_data_bus;
    wire        ide_dior, ide_diow;
    wire [1:0]  ide_cs;
    wire [2:0]  ide_da;
 
-   bus bus1(.clk(clk), .reset(reset),
+   reg [15:0]  psw;
+   wire        psw_io_wr;
+
+   reg [15:0]  switches;
+   wire        rs232_tx;
+   reg 	       rs232_rx;
+   
+   bus bus1(.clk(clk),
+	    .reset(reset),
 	    .bus_addr(bus_addr),
-	    .data_in(bus_in),
-	    .data_out(bus_out),
+	    .bus_data_in(bus_in),
+	    .bus_data_out(bus_out),
 	    .bus_rd(bus_rd),
 	    .bus_wr(bus_wr),
 	    .bus_byte_op(bus_byte_op),
 
+	    .bus_arbitrate(bus_arbitrate),
 	    .bus_ack(bus_ack),
 	    .bus_error(bus_error),
+
 	    .interrupt(interrupt),
-	    .vector(vector),
+	    .interrupt_ipl(interrupt_ipl),
+	    .interrupt_ack_ipl(interrupt_ack_ipl),
+	    .interrupt_vector(interrupt_vector),
+
+	    .ram_addr(ram_addr),
+	    .ram_data_in(ram_data_in), .ram_data_out(ram_data_out),
+	    .ram_rd(ram_rd), .ram_wr(ram_wr), .ram_byte_op(ram_byte_op),
 
    	    .ide_data_bus(ide_data_bus),
 	    .ide_dior(ide_dior), .ide_diow(ide_diow),
 	    .ide_cs(ide_cs), .ide_da(ide_da),
 
-	    .psw(psw), .psw_io_wr(psw_io_wr)
+	    .psw(psw), .psw_io_wr(psw_io_wr),
+	    .switches(switches), .rs232_tx(rs232_tx), .rs232_rx(rs232_rx)
 	    );
+
+   ram_sync ram1(.clk(clk),
+		 .reset(reset),
+		 .addr(ram_addr[15:0]),
+		 .data_in(ram_data_out),
+		 .data_out(ram_data_in),
+		 .rd(ram_rd),
+		 .wr(ram_wr),
+		 .byte_op(ram_byte_op));
    
    task write_io_reg;
       input [12:0] addr;
@@ -83,7 +124,7 @@ module test;
    endtask
 
    task write_mem;
-      input [16:0] addr;
+      input [15:0] addr;
       input [15:0] data;
 
       begin
@@ -138,7 +179,8 @@ module test;
        bus_wr = 0;
        bus_rd = 0;
        bus_byte_op = 0;
-
+       bus_arbitrate = 0;
+       
        #1 reset = 1;
        #20 reset = 0;
 
@@ -156,6 +198,7 @@ module test;
        
        write_io_reg(13'o17410, 0); // rkba;
        write_io_reg(13'o17412, 0); // rkda;
+       bus_arbitrate = 1;
        write_io_reg(13'o17404, 5); // rkcs
 
        wait_for_rk;
@@ -169,6 +212,7 @@ module test;
 
        wait_for_rk;
        
+       bus_arbitrate = 0;
        read_mem(16'h0000);
        read_mem(16'h0002);
        read_mem(16'h0004);
@@ -189,8 +233,8 @@ module test;
 
    always @(posedge clk)
      #2 begin
-//	$display("",
-//		 rk.rkcs_done, rk.rkcs_cmd, rk.rkba, rk.rkwc);
+	if (0) $display("grant_state %b",
+			bus1.grant_state);
      end
    
 endmodule

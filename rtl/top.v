@@ -1,5 +1,11 @@
-`include "pdp11.v"
+//
+// pdp-11 in verilog - fpga top level
+// copyright Brad Parker <brad@heeltoe.com> 2009
+//
 
+`include "pdp11.v"
+`include "bus.v"
+`include "ram_async.v"
 `include "debounce.v"
 
 module top(rs232_txd, rs232_rxd,
@@ -54,12 +60,96 @@ module top(rs232_txd, rs232_rxd,
    assign initial_pc = 16'o173000;
 
    debounce reset_sw(.clk(clk), .in(button[3]), .out(reset));
-	       
-   pdp11 cpu(.clk(clk), .reset_n(~reset), .switches({8'b0, slideswitch}),
-	     .initial_pc(initial_pc),
-	     .rs232_tx(rs232_txd), .rs232_rx(rs232_rxd),
-	     .ide_data_bus(ide_data_bus),
-	     .ide_dior(ide_dior), .ide_diow(ide_diow),
-	     .ide_cs(ide_cs), .ide_da(ide_da));
 
+   wire [21:0] bus_addr;
+   wire [15:0] bus_data_in, bus_data_out;
+   wire        bus_rd, bus_wr, bus_byte_op;
+   wire        bus_arbitrate, bus_ack, bus_error;
+   wire        interrupt;
+   wire [7:0]  interrupt_ipl, interrupt_ack_ipl, interrupt_vector;
+   wire [15:0] psw;
+   wire        psw_io_wr;
+   
+   pdp11 cpu(.clk(clk),
+	     .reset(reset),
+	     .switches({8'b0, slideswitch}),
+	     .initial_pc(initial_pc),
+
+	     .bus_addr(bus_addr),
+	     .bus_data_in(bus_data_out),
+	     .bus_data_out(bus_data_in),
+	     .bus_rd(bus_rd),
+	     .bus_wr(bus_wr),
+	     .bus_byte_op(bus_byte_op),
+	     .bus_arbitrate(bus_arbitrate),
+	     .bus_ack(bus_ack),
+	     .bus_error(bus_error),
+
+	     .interrupt(interrupt),
+	     .interrupt_ipl(interrupt_ipl),
+	     .interrupt_ack_ipl(interrupt_ack_ipl),
+	     .interrupt_vector(assert_vector),
+
+	     .psw(psw),
+	     .psw_io_wr(psw_io_wr));
+   
+   wire [21:0] ram_addr;
+   wire [15:0] ram_data_in, ram_data_out;
+   wire        ram_rd, ram_wr, ram_byte_op;
+
+   wire        ram_oe_n, ram_we_n, ram_ce_n;
+   wire [15:0] ram1_io, ram2_io;
+   wire        ram_ub, ram_lb;
+
+   wire        bus_interrupt;
+   
+   bus bus1(.clk(clk),
+	    .reset(reset),
+	    .bus_addr(bus_addr),
+	    .bus_data_in(bus_data_in),
+	    .bus_data_out(bus_data_out),
+	    .bus_rd(bus_rd),
+	    .bus_wr(bus_wr),
+	    .bus_byte_op(bus_byte_op),
+	    .bus_arbitrate(bus_arbitrate),
+	    .bus_ack(bus_ack),
+	    .bus_error(bus_error),
+
+	    .bus_interrupt(bus_interrupt),
+	    .interrupt_ipl(interrupt_ipl),
+	    .interrupt_ack_ipl(interrupt_ack_ipl),
+	    .interrupt_vector(assert_vector),
+
+	    .ram_addr(ram_addr),
+	    .ram_data_in(ram_data_in),
+	    .ram_data_out(ram_data_out),
+	    .ram_rd(ram_rd),
+	    .ram_wr(ram_wr),
+	    .ram_byte_op(ram_byte_op),
+
+   	    .ide_data_bus(ide_data_bus),
+	    .ide_dior(ide_dior), .ide_diow(ide_diow),
+	    .ide_cs(ide_cs), .ide_da(ide_da),
+
+	    .psw(psw),
+	    .psw_io_wr(psw_io_wr),
+	    .switches(switches),
+	    .rs232_tx(rs232_tx),
+	    .rs232_rx(rs232_rx));
+
+   ram_async ram1(.addr(ram_addr[17:0]),
+		  .data_in(ram_data_out),
+		  .data_out(ram_data_in),
+		  .rd(ram_rd),
+		  .wr(ram_wr),
+		  .byte_op(ram_byte_op),
+
+		  .ram_a(ram_a),
+		  .ram_oe_n(ram_oe_n), .ram_we_n(ram_we_n),
+		  .ram1_io(ram1_io), .ram1_ce_n(ram_ce_n),
+		  .ram1_ub_n(ram1_ub_n), .ram1_lb_n(ram1_lb_n),
+		   
+		  .ram2_io(ram2_io), .ram2_ce_n(ram2_ce_n), 
+		  .ram2_ub_n(ram2_ub_n), .ram2_lb_n(ram2_lb_n));
+   
 endmodule

@@ -56,8 +56,8 @@ module iopage(clk, reset, address, data_in, data_out,
    output 	dma_req;
    input 	dma_ack;
    output [17:0] dma_addr;
-   output [15:0]  dma_data_in;
-   input [15:0] dma_data_out;
+   output [15:0]  dma_data_out;
+   input [15:0] dma_data_in;
    output 	 dma_rd;
    output 	 dma_wr;
    

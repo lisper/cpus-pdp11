@@ -1,41 +1,50 @@
 //
-// pdp-11 in verilog
+// pdp-11 in verilog - cpu
 // copyright Brad Parker <brad@heeltoe.com> 2009
 //
-
-//`define minimal_debug 1
-`define debug 1
-//`define debug_vcd
-//`define debug_log
-//`define debug_bus
-//`define debug_io
-`define debug_tt_out
-
-`define use_rk_model 1
-//`define use_ram_sync 1
-//`define use_ram_pli 1
-`define use_ram_s3board 1
+// Basic pdp-11/34ish cpu implementation
+// current with no mmu or split I & D
+//
+// cpu expects a bus interface which contains ram and unibus
+// cpu allows dma to occur when "bus_arbitrate" is asserted
+// cpu acks interrupts via "interupt_ack_ipl"
+//
+// bus reports done via bus_ack
+// bus reports errors via bus_error
+// bus reports interrupts via ipl lines in interrupt_ipl
+// bus assert interrupt_vector until acked
+// bus can write psw by asserting psw_io_wr
+//
 
 `include "ipl_below.v"
 `include "add8.v"
-`include "bus.v"
 `include "execute.v"
 
-module pdp11(clk, reset_n, switches, initial_pc,
-	     rs232_tx, rs232_rx,
-	     ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da);
+module pdp11(clk, reset, switches, initial_pc,
+	     bus_addr, bus_data_out, bus_data_in,
+	     bus_rd, bus_wr, bus_byte_op,
+	     bus_arbitrate, bus_ack, bus_error,
+	     interrupt, interrupt_ipl, interrupt_ack_ipl, interrupt_vector,
+	     psw, psw_io_wr);
 
-   input clk, reset_n;
+   input clk, reset;
    input [15:0] switches;
    input [15:0] initial_pc;
 
-   inout [15:0] ide_data_bus;
-   output 	ide_dior, ide_diow;
-   output [1:0] ide_cs;
-   output [2:0] ide_da;
+   output [21:0] bus_addr;
+   input [15:0]  bus_data_in;
+   output [15:0] bus_data_out;
+   output 	 bus_rd, bus_wr, bus_byte_op;
+   output 	 bus_arbitrate;
+   input 	 bus_ack, bus_error;
+   output 	 interrupt;
+   input [7:0] 	 interrupt_ipl, interrupt_vector;
+   output [7:0]  interrupt_ack_ipl;
+   output [15:0] psw;
+   input 	 psw_io_wr;
 
-   output	rs232_tx;
-   input	rs232_rx;
+   reg 		 interrupt;
+   reg [7:0] 	 interrupt_ack_ipl;
 
    // state
    reg 		halted;
@@ -55,9 +64,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 
    reg 		trace_inhibit;
    
-   reg 		interrupt;
-   reg [7:0] 	interrupt_ack;
-   reg [7:0] 	interrupt_vector;
+   reg [7:0] 	vector;
 
    wire 	trace;
    wire 	odd_fetch;
@@ -94,7 +101,6 @@ module pdp11(clk, reset_n, switches, initial_pc,
 
    wire 	assert_int;
    wire [7:0] 	assert_int_vec;
-   wire [7:0] 	assert_int_ipl;
 
    wire [3:0] 	isn_15_12;
    wire [6:0] 	isn_15_9;
@@ -343,48 +349,9 @@ module pdp11(clk, reset_n, switches, initial_pc,
    wire [4:0] 	new_istate;
    reg [4:0] 	istate;
 
-
    //
-   // bus unit
-   //
-   wire [15:0] bus_in;
-   wire [15:0] bus_out;
-   wire [15:0] bus_addr;
-   wire        bus_wr, bus_rd, bus_byte_op;
-
-   wire        psw_io_wr;
-   wire        bus_ack;
-   wire        bus_arbitrate;
-        
-   bus bus1(.clk(clk), .reset(~reset_n),
-	    .bus_addr({ 6'b0, bus_addr }),
-	    .data_in(bus_in),
-	    .data_out(bus_out),
-	    .bus_rd(bus_rd),
-	    .bus_wr(bus_wr),
-	    .bus_byte_op(bus_byte_op),
-
-	    .bus_arbitrate(bus_arbitrate),
-	    .bus_ack(bus_ack),
-	    .bus_error(assert_trap_bus),
-
-	    .interrupt(assert_int),
-	    .interrupt_ipl(assert_int_ipl),
-	    .ack_ipl(interrupt_ack),
-	    .vector(assert_int_vec),
-
-   	    .ide_data_bus(ide_data_bus),
-	    .ide_dior(ide_dior), .ide_diow(ide_diow),
-	    .ide_cs(ide_cs), .ide_da(ide_da),
-
-	    .psw(psw), .psw_io_wr(psw_io_wr),
-	    .switches(switches),
-	    .rs232_tx(rs232_tx), .rs232_rx(rs232_rx)
-	    );
-
    wire        enable_execute;
    
-//   assign      enable_execute = (istate == e1 ? 1'b1 : 1'b0);
    assign      enable_execute = istate == e1 &&
 				~is_illegal && ~is_reserved &&
 				~trap_odd;
@@ -392,7 +359,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
    //
    // execute unit
    //
-   execute exec1(.clk(clk), .reset(~reset_n),
+   execute exec1(.clk(clk), .reset(reset),
 		 .enable(enable_execute),
 		 .pc(pc), .psw(psw),
 		 .ss_data(ss_data), .dd_data(dd_data),
@@ -458,13 +425,13 @@ module pdp11(clk, reset_n, switches, initial_pc,
 		      16'b0) :
 
      istate == s2 ?
-		     (ss_mode == 3 ? bus_out :
-		      ss_mode == 5 ? bus_out :
-		      ss_mode == 6 ? (bus_out + ss_reg_value) :
-		      ss_mode == 7 ? (bus_out + ss_reg_value) :
+		     (ss_mode == 3 ? bus_data_in :
+		      ss_mode == 5 ? bus_data_in :
+		      ss_mode == 6 ? (bus_data_in + ss_reg_value) :
+		      ss_mode == 7 ? (bus_data_in + ss_reg_value) :
 		      ss_ea) :
 		     
-     istate == s3 ? bus_out :
+     istate == s3 ? bus_data_in :
 
      istate == t1 ? ((odd_pc |
 		      trap_odd | trap_oflo | trap_bus | trap_res) ? 16'o4 :
@@ -474,7 +441,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 		     trap_iot ? 16'o20 :
 		     trap_emt ? 16'o30 :
 		     trap_trap ? 16'o34 :
-		     interrupt ? { 8'b0, interrupt_vector } :
+		     interrupt ? { 8'b0, vector } :
 		     16'd0) :
 
      istate == t2 ? ss_ea :
@@ -502,13 +469,13 @@ module pdp11(clk, reset_n, switches, initial_pc,
 		       16'b0) :
 
 		      istate == d2 ?
-		      (dd_mode == 3 ? bus_out :
-		       dd_mode == 5 ? bus_out :
-		       dd_mode == 6 ? (bus_out + dd_reg_value) :
-		       dd_mode == 7 ? (bus_out + dd_reg_value) :
+		      (dd_mode == 3 ? bus_data_in :
+		       dd_mode == 5 ? bus_data_in :
+		       dd_mode == 6 ? (bus_data_in + dd_reg_value) :
+		       dd_mode == 7 ? (bus_data_in + dd_reg_value) :
 		       dd_ea) :
 
-		      istate == d3 ? bus_out :
+		      istate == d3 ? bus_data_in :
 		      dd_ea;
 
 
@@ -517,13 +484,13 @@ module pdp11(clk, reset_n, switches, initial_pc,
    //
    assign ss_data_mux =
 	       (istate == c1 && (ss_mode == 0 || is_isn_rxx)) ? ss_reg_value :
-	       (istate == s4) ? bus_out :
+	       (istate == s4) ? bus_data_in :
 	       16'b0;
 
    assign dd_data_mux =
 	       (istate == c1 && (isn_15_6 == 10'o1067)) ? psw[7:0] : // mfps 
 	       (istate == c1 && dd_mode == 0) ? dd_reg_value :
-	       (istate == d4) ? bus_out :
+	       (istate == d4) ? bus_data_in :
 	       16'b0;
 
    assign e1_data_mux =
@@ -541,7 +508,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	  (istate == s1 && (ss_mode == 6 || ss_mode == 7)) ? pc + 16'd2 :
 	  (istate == d1 && (dd_mode == 6 || dd_mode == 7)) ? pc + 16'd2 :
 	  (istate == e1 && latch_pc                      ) ? new_pc :
-	  (istate == o1 || istate == t3                  ) ? bus_out :
+	  (istate == o1 || istate == t3                  ) ? bus_data_in :
 	  pc;
 
    //
@@ -577,7 +544,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
    assign new_psw_cc = {new_cc_n, new_cc_z, new_cc_v, new_cc_c};
 
    always @(posedge clk)
-     if (reset_n == 0)
+     if (reset)
 	  psw <= 16'o0340;
      else
        begin
@@ -588,17 +555,18 @@ module pdp11(clk, reset_n, switches, initial_pc,
 		     latch_cc ? new_psw_cc : psw[3:0]};
 	  else
             if (istate == o2 || istate == t4)
-	      psw <= bus_out;
+	      psw <= bus_data_in;
 	    else
 	      if (istate == w1 && psw_io_wr)
 		begin
 		   if (~bus_byte_op)
-		     psw <= {bus_in[15:5], psw[4], bus_in[3:0]};
+		     psw <= {bus_data_out[15:5], psw[4], bus_data_out[3:0]};
 		   else
 		     if (bus_addr[0])
-		       psw <= {bus_in[15:8], psw[7:0]};
+		       psw <= {bus_data_out[15:8], psw[7:0]};
 		     else
-		       psw <= {psw[15:8], bus_in[7:5], psw[4], bus_in[3:0]};
+		       psw <= {psw[15:8], bus_data_out[7:5],
+			       psw[4], bus_data_out[3:0]};
 		end
        end
 
@@ -677,7 +645,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 
    assign odd_pc = pc & 1;
    
-   assign odd_fetch = (bus_rd || bus_wr) && (bus_addr & 1) && ~bus_byte_op;
+   assign odd_fetch = (bus_rd || bus_wr) && bus_addr[0] && ~bus_byte_op;
 
    assign assert_trap_odd = odd_fetch;			// fetch from odd
 
@@ -685,6 +653,8 @@ module pdp11(clk, reset_n, switches, initial_pc,
 		(ss_pre_dec && ss_reg == 6 && new_ss_reg_pre_decr < 16'o0400) ||
 		(dd_pre_dec && dd_reg == 6 && new_dd_reg_pre_decr < 16'o0400) ||
 		(trap && (sp - 16'd2) < 16'o0400);
+
+   assign assert_trap_bus = bus_error;
 
    assign trace = psw[4] && !trace_inhibit;			// trace bit
    
@@ -853,7 +823,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	   istate == t1 ||
 	   istate == t2;
 
-   assign bus_in =
+   assign bus_data_out =
 		  istate == w1 ? e1_data :
 		  istate == p1 ? (is_isn_mfpx ?			// mfpi/mfpd
 				  dd_data : ss_reg_value) :
@@ -888,7 +858,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
    // clock data
    //
    always @(posedge clk)
-     if (reset_n == 0)
+     if (reset)
        begin
 	  r0 <= 0;
 	  r1 <= 0;
@@ -922,8 +892,8 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	    f1:
 	    begin
 	       // bus_rd asserted
-	       isn <= bus_out;
-	       $display(" fetch pc %o, isn %o", pc, bus_out);
+	       isn <= bus_data_in;
+	       $display(" fetch pc %o, isn %o", pc, bus_data_in);
 	    end
 
 	  c1:
@@ -1105,7 +1075,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	    begin
 	       // push: sp_mux <= sp - 2
 	       // bus_wr asserted
-	       // bus_in <= regs[ss_reg]
+	       // bus_data_out <= regs[ss_reg]
 	       // bus_addr <= sp - 2
 	    end
 
@@ -1113,14 +1083,14 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	    begin
 	       // push: sp_mux <= sp - 2
 	       // bus_wr asserted
-	       // bus_in <= psw
+	       // bus_data_out <= psw
 	    end
 
 	  t2:
 	    begin
 	       // push: sp_mux <= sp - 2
 	       // bus_wr asserted
-	       // bus_in <= pc
+	       // bus_data_out <= pc
 	    end
 
 	  t3:
@@ -1138,7 +1108,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	    begin
 	    end
 	endcase // case(istate)
-       end // else: !if(reset_n == 0)
+       end
    
    
    //
@@ -1162,7 +1132,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	    trap_priv || trap_bus;
 
    always @(posedge clk)
-     if (reset_n == 0)
+     if (reset)
        begin
 	     trap_odd <= 0;
 	     trap_oflo <= 0;
@@ -1277,7 +1247,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
    // halt & wait entry
    //
    always @(posedge clk)
-     if (reset_n == 0)
+     if (reset)
        begin
 	  halted <= 0;
 	  waited <= 0;
@@ -1312,13 +1282,13 @@ module pdp11(clk, reset_n, switches, initial_pc,
 
    wire ipl_below;
 
-   ipl_below_func ibf(ipl, assert_int_ipl, ipl_below);
+   ipl_below_func ibf(ipl, interrupt_ipl, ipl_below);
    
    always @(posedge clk)
-     if (reset_n == 0)
+     if (reset)
        begin
 	  interrupt <= 0;
-	  interrupt_ack <= 0;
+	  interrupt_ack_ipl <= 0;
        end
      else
        if (ok_to_assert_int)
@@ -1326,44 +1296,45 @@ module pdp11(clk, reset_n, switches, initial_pc,
           if (assert_int & ipl_below)
 	    begin
                interrupt <= 1;
-	       interrupt_ack <= assert_int_ipl;
-               interrupt_vector <= assert_int_vec;
+	       interrupt_ack_ipl <= interrupt_ipl;
+               vector <= interrupt_vector;
 //`ifdef debug
                $display("cpu: XXX interrupt asserts; vector %o",
-			assert_int_vec);
+			interrupt_vector);
 //`endif
             end
 	  else
 	    begin
-	       interrupt_ack <= 0;
+	       interrupt_ack_ipl <= 0;
 	    end
        end
      else
        if (istate == t4)
 	 begin
 	    interrupt <= 0;
-	    interrupt_ack <= 0;
-	    interrupt_vector <= 0;
+	    interrupt_ack_ipl <= 0;
+	    vector <= 0;
 	 end
    
 `ifdef debug_cpu_int
    always @(posedge clk)
      if (ok_to_assert_int && assert_int)
        $display("cpu: XXX cpu int; ipl %o, int_ipl %b, ack_ipl %b below %b, vector %o",
-		ipl, assert_int_ipl, interrupt_ack, ipl_below, assert_int_vec);
+		ipl, interrupt_ipl, interrupt_ack_ipl, ipl_below,
+		interrupt_vector);
 `endif
 
    
 //`ifdef debug_cpu_int
    always @(posedge clk)
      if (interrupt)
-       $display("cpu: XXX cpu int; vector %o, istate %o, interrupt_ack %o",
-		interrupt_vector, istate, interrupt_ack);
+       $display("cpu: XXX cpu int; vector %o, istate %o, interrupt_ack_ipl %o",
+		vector, istate, interrupt_ack_ipl);
    
    always @(posedge clk)
-     if (interrupt_ack)
-       $display("cpu: XXX cpu int_ack; interrupt_ack %b, istate %o",
-		interrupt_ack, istate);
+     if (interrupt_ack_ipl)
+       $display("cpu: XXX cpu int_ack; interrupt_ack_ipl %b, istate %o",
+		interrupt_ack_ipl, istate);
 //`endif   
 
    //
@@ -1427,7 +1398,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 		       istate;
 
   always @(posedge clk)
-    if (reset_n == 0)
+    if (reset)
       istate <= f1;
     else
       istate <= bus_ack ? new_istate : istate;
@@ -1438,7 +1409,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
    // clock internal registes
    //
    always @(posedge clk)
-     if (reset_n == 0)
+     if (reset)
        begin
 	  ss_data <= 0;
 	  dd_data <= 0;
@@ -1479,7 +1450,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	       dd_data <= dd_data_mux;
 
 	  e1_data <= (istate == e1 || istate == w1) ? e1_data_mux :
-		     (istate == o3) ? bus_out :
+		     (istate == o3) ? bus_data_in :
 		     e1_data;
 
 	  e32_data <= istate == e1  ? e32_result : e32_data;
@@ -1551,7 +1522,7 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	  
 	  s2:
 	    begin
-	       $display("s2: ss_ea_mux %0o, [ea]=%0o", ss_ea_mux, bus_out);
+	       $display("s2: ss_ea_mux %0o, [ea]=%0o", ss_ea_mux, bus_data_in);
 	    end
 
 	  s3:
@@ -1561,8 +1532,8 @@ module pdp11(clk, reset_n, switches, initial_pc,
 
 	  s4:
 	    begin
-	       $display("s4: ss_ea_mux %0o, ss_data_mux %o, bus_out %o",
-			ss_ea_mux, ss_data_mux, bus_out);
+	       $display("s4: ss_ea_mux %0o, ss_data_mux %o, bus_data_in %o",
+			ss_ea_mux, ss_data_mux, bus_data_in);
 	    end
 
 	  d1:
@@ -1686,8 +1657,8 @@ module pdp11(clk, reset_n, switches, initial_pc,
 	if (istate == o1 || istate == o2 || istate == o3)
 	     $display("    sp %0o", r6[current_mode]);
 	
-	$display("    bus_rd=%d, bus_wr=%d, bus_addr %o, bus_in %o bus_out %o",
-		 bus_rd, bus_wr, bus_addr, bus_in, bus_out);
+	$display("    bus rd=%d wr=%d addr %o data_out %o data_in %o",
+		 bus_rd, bus_wr, bus_addr, bus_data_out, bus_data_in);
 
 	$display("    ss_ea_mux %0o, ss_ea %0o, dd_ea_mux %0o, dd_ea %0o",
 		 ss_ea_mux, ss_ea, dd_ea_mux, dd_ea);
