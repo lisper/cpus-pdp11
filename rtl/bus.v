@@ -61,7 +61,7 @@ module bus(clk, reset, bus_addr, bus_data_in, bus_data_out,
    wire 	grant_cpu, grant_dma;
    reg [2:0] 	grant_state;
    reg [3:0] 	grant_count;
-   wire [1:0] 	grant_state_next;
+   wire [2:0] 	grant_state_next;
  	  
    //
    assign 	ram_access = bus_addr[21:16] == 6'b0 &&

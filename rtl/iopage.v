@@ -12,17 +12,11 @@
 
 module iopage(clk, reset, address, data_in, data_out,
 	      iopage_rd, iopage_wr, iopage_byte_op,
-
 	      no_decode, interrupt, interrupt_ipl, ack_ipl, vector,
-
 	      ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
-
 	      psw, psw_io_wr,
-
 	      switches,
-
 	      rs232_tx, rs232_rx,
-
    	      dma_req, dma_ack, dma_addr, dma_data_in, dma_data_out,
 	      dma_rd, dma_wr
 	      );

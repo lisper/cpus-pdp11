@@ -20,7 +20,7 @@
 `include "add8.v"
 `include "execute.v"
 
-module pdp11(clk, reset, switches, initial_pc,
+module pdp11(clk, reset, initial_pc,
 	     bus_addr, bus_data_out, bus_data_in,
 	     bus_rd, bus_wr, bus_byte_op,
 	     bus_arbitrate, bus_ack, bus_error,
@@ -28,7 +28,6 @@ module pdp11(clk, reset, switches, initial_pc,
 	     psw, psw_io_wr);
 
    input clk, reset;
-   input [15:0] switches;
    input [15:0] initial_pc;
 
    output [21:0] bus_addr;
@@ -105,7 +104,6 @@ module pdp11(clk, reset, switches, initial_pc,
    wire [5:0] 	isn_11_6;
    wire [2:0] 	isn_11_9;
    wire [5:0] 	isn_5_0;
-   wire [3:0] 	isn_3_0;
 
    wire 	is_isn_rss;
    wire 	is_isn_rdd;
@@ -367,7 +365,7 @@ module pdp11(clk, reset, switches, initial_pc,
 		 .ss_reg(ss_reg),
 		 
 		 .ss_reg_value(ss_reg_value),
-		 .ss_rego1_value(ss_reg01_value),
+		 .ss_rego1_value(ss_rego1_value),
 		 
 		 .isn(isn),  .r5(r5),
 
@@ -576,7 +574,6 @@ module pdp11(clk, reset, switches, initial_pc,
    assign isn_11_6  = isn[11:6];
    assign isn_11_9  = isn[11:9];
    assign isn_5_0   = isn[5:0];
-   assign isn_3_0   = isn[3:0];
 
    assign need_destspec_dd_word =
 	(isn_15_6 == 10'o0001) ||				// jmp
@@ -640,7 +637,7 @@ module pdp11(clk, reset, switches, initial_pc,
 
    assign assert_trap_res = is_reserved;
 
-   assign odd_pc = pc & 1;
+   assign odd_pc = pc[0];
    
    assign odd_fetch = (bus_rd || bus_wr) && bus_addr[0] && ~bus_byte_op;
 
@@ -780,9 +777,9 @@ module pdp11(clk, reset, switches, initial_pc,
 			 ss_reg == 6 ? r6[current_mode] :
 			 pc;
 
-   assign ss_reg01_value = (ss_reg == 0 || ss_reg == 1) ? r1 :
-			   (ss_reg == 2 || ss_reg == 3) ? r3 :
-			   (ss_reg == 4 || ss_reg == 5) ? r5 :
+   assign ss_rego1_value = (ss_reg == 3'd0 || ss_reg == 3'd1) ? r1 :
+			   (ss_reg == 3'd2 || ss_reg == 3'd3) ? r3 :
+			   (ss_reg == 3'd4 || ss_reg == 3'd5) ? r5 :
 			   pc;
 
    assign dd_reg_value = dd_reg == 0 ? r0 :
@@ -890,7 +887,9 @@ module pdp11(clk, reset, switches, initial_pc,
 	    begin
 	       // bus_rd asserted
 	       isn <= bus_data_in;
+`ifdef debug
 	       $display(" fetch pc %o, isn %o", pc, bus_data_in);
+`endif
 	    end
 
 	  c1:

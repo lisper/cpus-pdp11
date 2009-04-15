@@ -21,7 +21,7 @@ module debounce(clk, in, out);
    assign     out = hold == 10'b1 || ~onetime;
 		
    always @(posedge clk)
-     clkdiv <= clkdiv + 1;
+     clkdiv <= clkdiv + 1'b1;
 
    always @(posedge clk)
      if (clkdiv == 0)

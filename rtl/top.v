@@ -3,6 +3,8 @@
 // copyright Brad Parker <brad@heeltoe.com> 2009
 //
 
+`define use_rk_model 1
+
 `include "pdp11.v"
 `include "bus.v"
 `include "ram_async.v"
@@ -54,6 +56,7 @@ module top(rs232_txd, rs232_rxd,
 
    //
    wire 	clk;
+   wire         reset;
    wire [15:0] initial_pc;
 
    assign clk = sysclk;
@@ -73,7 +76,6 @@ module top(rs232_txd, rs232_rxd,
    
    pdp11 cpu(.clk(clk),
 	     .reset(reset),
-	     .switches({8'b0, slideswitch}),
 	     .initial_pc(initial_pc),
 
 	     .bus_addr(bus_addr),
@@ -101,6 +103,9 @@ module top(rs232_txd, rs232_rxd,
    wire        ram_oe_n, ram_we_n, ram_ce_n;
    wire [15:0] ram1_io, ram2_io;
    wire        ram_ub, ram_lb;
+
+   wire [15:0] switches;
+   assign switches = {8'b0, slideswitch};
 
    bus bus1(.clk(clk),
 	    .reset(reset),
@@ -133,8 +138,8 @@ module top(rs232_txd, rs232_rxd,
 	    .psw(psw),
 	    .psw_io_wr(psw_io_wr),
 	    .switches(switches),
-	    .rs232_tx(rs232_tx),
-	    .rs232_rx(rs232_rx));
+	    .rs232_tx(rs232_txd),
+	    .rs232_rx(rs232_rxd));
 
    ram_async ram1(.addr(ram_addr[17:0]),
 		  .data_in(ram_data_out),

@@ -149,6 +149,9 @@ module execute(clk, reset, enable,
    		       .remainder(div_remainder),
 		       .overflow(div_overflow));
 
+   wire [31:0] shift_in;
+   wire shift_sign_change16, shift_sign_change32;
+
    shift32 shift32_box(.clk(clk), .reset(reset),
 		       .ready(shift_ready),
 		       .done(shift_done),
@@ -161,10 +164,10 @@ module execute(clk, reset, enable,
 
    wire   is_ash, is_ashc, is_ashx;
    
-   assign is_ash =	 (isn[15:9] == 7'o072);			/* ash */
-   assign is_ashc =      (isn[15:9] == 7'o073);			/* ashc */
+   assign is_ash = (isn[15:9] == 7'o072) ? 1'b1 : 1'b0;		/* ash */
+   assign is_ashc = (isn[15:9] == 7'o073) ? 1'b1 : 1'b0;	/* ashc */
 
-   assign is_ashx = is_ash || is_ashc;
+   assign is_ashx = is_ash | is_ashc;
    
    assign shift_in = is_ash ?
 		     {ss_data[15] ? 16'hffff : 16'b0,ss_data} :	/* ash */
@@ -179,15 +182,20 @@ module execute(clk, reset, enable,
    
    //
    always @(clk or enable or isn or pc or psw or ss_data or dd_data or
-	    ss_reg_value or ss_rego1_value or
+	    ss_reg or ss_reg_value or ss_rego1_value or
 	    dd_ea or
 	    cc_n or cc_z or cc_v or cc_c or isn or
 	    e32_result or e32_result_sign or e32_result_zero or
 	    e1_result or e1_result_sign or e1_result_zero or
 	    e1_result_byte_sign or e1_result_byte_zero or
-	    mul_result or div_result or
+	    mul_result or div_result or div_remainder or
+	    div_overflow or mul_overflow or
 	    dd_data_sign or dd_data_zero or ss_data_sign or
-	    pc_offset or new_pc_w or new_pc_b)
+	    pc_offset or new_pc_w or new_pc_b or new_pc_sob or
+	    current_mode or r5 or
+	    shift_result or shift_out or
+	    shift_sign_change16 or shift_sign_change32
+           )
      if (~enable) begin
 	assert_halt = 0;
 	assert_wait = 0;
@@ -253,7 +261,7 @@ module execute(clk, reset, enable,
 	
 	if (isn[15:12] == 0)
 	  begin
-	     if (isn[11:6] == 000 && isn[5:0] < 010)
+	     if (isn[11:6] == 6'o00 && isn[5:0] < 6'o10)
 	       begin
 		  if (0) $display("e: MS");
 		  case (isn[2:0])
@@ -638,8 +646,8 @@ module execute(clk, reset, enable,
 
 		    6'o67:					    /* sxt */
 		      begin
-			 e1_result = cc_n ? 16'hffff : 0;
-			 new_cc_z = cc_n ^ 1;
+			 e1_result = cc_n ? 16'hffff : 16'b0;
+			 new_cc_z = cc_n ^ 1'b1;
 			 new_cc_v = 0;
 			 latch_cc = 1;
 		      end
@@ -786,7 +794,9 @@ module execute(clk, reset, enable,
 		   2:					    /* ash */
 		     begin
 			shift = dd_data[5:0];
+`ifdef debug
 			$display(" ASH %o; done %b", shift, shift32_box.done);
+`endif
 			
 			shift_ready = 1;
 			e1_result = shift_result[15:0];
@@ -794,7 +804,7 @@ module execute(clk, reset, enable,
 			new_cc_n = e1_result_sign;
 			new_cc_z = e1_result_zero;
 
-			new_cc_v = shift == 0 ? 0 : shift_sign_change16;
+			new_cc_v = shift == 0 ? 1'b0 : shift_sign_change16;
 
 			new_cc_c = shift[5] ? shift_out : shift_result[16];
 			latch_cc = 1;
@@ -812,7 +822,7 @@ module execute(clk, reset, enable,
 			new_cc_n = e32_result_sign;
 			new_cc_z = e32_result_zero;
 
-			new_cc_v = shift == 0 ? 0 : shift_sign_change32;
+			new_cc_v = shift == 0 ? 1'b0 : shift_sign_change32;
 
 			new_cc_c = shift_out;
 			latch_cc = 1;

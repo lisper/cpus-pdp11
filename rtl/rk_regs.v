@@ -299,7 +299,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	      end
    
    always @(rk_state or rkcs_cmd or rkcs_ie or 
-	    rkwc or rkda or rkba or
+	    rkwc or rkda or rkba or lba or
             ata_done or ata_out or
 	    dma_data_in or dma_ack)
      begin

@@ -76,8 +76,9 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 
 
    // iopage reads
-   always @(clk or decode or iopage_addr or tti_empty or tto_empty or
-	    tti_data or tto_data or rx_int_enable or tx_int_enable)
+   always @(clk or decode or iopage_addr or iopage_rd or 
+	    tti_empty or tto_empty or tti_data or tto_data or 
+            rx_int_enable or tx_int_enable)
      begin
 	if (iopage_rd && decode)
 	  case (iopage_addr)

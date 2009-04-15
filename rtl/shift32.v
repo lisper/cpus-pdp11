@@ -25,7 +25,7 @@ module shift32(clk, reset, ready, done, in, out, shift,
    reg 		 sign_change32;
    
    reg [5:0] 	 count; 
-   wire 	 final;
+   wire 	 final_bit;
    
    reg [1:0] 	 state;
    wire [1:0] 	 next_state;
@@ -46,11 +46,11 @@ module shift32(clk, reset, ready, done, in, out, shift,
        state <= next_state;
 
    assign next_state = (state == idle && ready) ? (shift==6'd0 ? last:running) :
-		       (state == running) ? (final ? last : running) :
+		       (state == running) ? (final_bit ? last : running) :
 			 (state == last) ? (ready ? last : idle) :
 				 idle;
 
-   assign final = up ? (count == 6'd1) : (count == -6'd1);
+   assign final_bit = up ? (count == 6'd1) : (count == -6'd1);
 
    assign sign_different16 = out[15] ^ out[14];
    assign sign_different32 = out[31] ^ out[30];
@@ -76,7 +76,7 @@ module shift32(clk, reset, ready, done, in, out, shift,
 	   begin
 	      last_bit <= out[31];
 	      out <= { out[30:0], 1'b0 };
-	      count <= count - 1;
+	      count <= count - 1'b1;
 
 	      if (sign_different16)
 		sign_change16 <= 1'b1;
@@ -88,7 +88,7 @@ module shift32(clk, reset, ready, done, in, out, shift,
 	   begin
 	      last_bit <= out[0];
 	      out <= { in[31], out[31:1] };
-	      count <= count + 1;
+	      count <= count + 1'b1;
 	   end
    
 endmodule
