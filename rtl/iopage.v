@@ -10,7 +10,7 @@
 `include "tt_regs.v"
 `include "bootrom.v"
 
-module iopage(clk, reset, address, data_in, data_out,
+module iopage(clk, brgclk, reset, address, data_in, data_out,
 	      iopage_rd, iopage_wr, iopage_byte_op,
 	      no_decode, interrupt, interrupt_ipl, ack_ipl, vector,
 	      ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
@@ -19,15 +19,18 @@ module iopage(clk, reset, address, data_in, data_out,
 	      rs232_tx, rs232_rx,
    	      dma_req, dma_ack, dma_addr, dma_data_in, dma_data_out,
 	      dma_rd, dma_wr
+,rk_state
 	      );
 
    input clk;
+   input brgclk;
    input reset;
    input [21:0] address;
    input [15:0] data_in;
    input 	iopage_rd, iopage_wr, iopage_byte_op;
    output [15:0] data_out;
 
+output [4:0] rk_state;
    output 	 no_decode;
    output 	 interrupt;
    output [7:0]	 interrupt_ipl;
@@ -127,6 +130,7 @@ module iopage(clk, reset, address, data_in, data_out,
 		      .iopage_byte_op(iopage_byte_op));
 
    tt_regs tt_regs1(.clk(clk),
+		    .brgclk(brgclk),
 		    .reset(reset),
 		    .iopage_addr(iopage_addr),
 		    .data_in(data_in),
@@ -206,6 +210,7 @@ module iopage(clk, reset, address, data_in, data_out,
 		    .dma_data_in(dma_data_in),
 		    .dma_data_out(dma_data_out),
 		    .dma_rd(dma_rd), .dma_wr(dma_wr)
+,.rk_state(rk_state)
 		    );
 `else
    always @(posedge clk or iopage_addr)

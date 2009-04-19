@@ -24,6 +24,9 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
      if (iopage_rd && decode)
        begin
        case (offset)
+`define boot_rk
+//`define boot_tt
+`ifdef boot_rk
 	 0: data_out = 16'o010000;	/* nop */
 	 2: data_out = 16'o012706;
 	 4: data_out = 16'o002000;	/* MOV #boot_start, SP */
@@ -54,6 +57,37 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
 	 54: data_out = 16'o105011;	/* CLRB (R1) */
 	 56: data_out = 16'o005007;	/* CLR PC */
 	 default: data_out = 16'o0;
+ `endif
+
+ `ifdef boot_tt
+	 0: data_out = 16'h1dc0; /*  	mov	$20 <msg>, r0 */
+	 2: data_out = 16'h001c;
+	 4: data_out = 16'h9401; /*         	movb	(r0)+, r1 */
+	 6: data_out = 16'h0303; /*          	beq	e <done> */
+	 8: data_out = 16'h09f7;
+	 10: data_out = 16'h0004; /*      	jsr	pc, 10 <tpchr> */
+	 12: data_out = 16'h01fb; /*          	br	4 <loop> */
+	 14: data_out = 16'h/*0000*/01f8;
+	 16: data_out = 16'h8bff; /*      	tstb	*$1e <tps> */
+	 18: data_out = 16'h000a;
+	 20: data_out = 16'h80fd; /*          	bpl	10 <tpchr> */
+	 22: data_out = 16'h907f; /*      	movb	r1, *$1c <tpb> */
+	 24: data_out = 16'h0002;
+	 26: data_out = 16'h0087; /*          	rts	pc */
+	 28: data_out = 16'hff76;
+	 30: data_out = 16'hff74;
+	 32: data_out = 16'h0a0d;
+	 34: data_out = 16'h6548;
+	 36: data_out = 16'h6c6c;
+	 38: data_out = 16'h206f;
+	 40: data_out = 16'h6f77;
+	 42: data_out = 16'h6c72;
+	 44: data_out = 16'h2164;
+	 46: data_out = 16'h0a0d;
+	 48: data_out = 16'h0000;
+	 default: data_out = 16'o0;
+ `endif
+	 
        endcase // case(offset)
 	  #2 $display("rom fetch %o %o", iopage_addr, data_out);
 	  

@@ -45,7 +45,6 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
 				     ata_state == s2 ||
    				     ata_state == s3)) ? ata_in : 16'bz;
 
-
    // assert cs & da during r/w cycle
    assign assert_cs = (ata_rd || ata_wr) && ata_state != s4;
    
@@ -62,6 +61,7 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
 
    // send back done pulse at end
    assign ata_done = ata_state == s3;
+//   assign ata_done = ata_state == s4;
    
    always @(posedge clk)
      if (reset)

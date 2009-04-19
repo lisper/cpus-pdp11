@@ -9,10 +9,13 @@
 `include "bus.v"
 `include "ram_async.v"
 `include "debounce.v"
+`include "sevensegdecode.v"
+`include "display.v"
+`include "display_hex.v"
 
 module top(rs232_txd, rs232_rxd,
 	   button, led, sysclk,
-	   ps2_clk, ps2_data, sevenseg, sevenseg_an,
+	   sevenseg, sevenseg_an,
 	   slideswitch,
 	   ram_a, ram_oe_n, ram_we_n,
 	   ram1_io, ram1_ce_n, ram1_ub_n, ram1_lb_n,
@@ -26,9 +29,6 @@ module top(rs232_txd, rs232_rxd,
 
    output [7:0] led;
    input 	sysclk;
-
-   output 	ps2_clk;
-   inout 	ps2_data;
 
    output [7:0] sevenseg;
    output [3:0] sevenseg_an;
@@ -49,21 +49,60 @@ module top(rs232_txd, rs232_rxd,
    output 	 ram2_ub_n;
    output 	 ram2_lb_n;
    
-   inout [15:0] ide_data_bus;
-   output       ide_dior, ide_diow;
-   output [1:0] ide_cs;
-   output [2:0] ide_da;
+   inout [15:0]  ide_data_bus;
+   output 	 ide_dior, ide_diow;
+   output [1:0]  ide_cs;
+   output [2:0]  ide_da;
 
    //
-   wire 	clk;
    wire         reset;
-   wire [15:0] initial_pc;
+   wire [15:0] 	initial_pc;
+   wire [15:0] 	pc;
+   wire 	halted;
+   wire 	waited;
 
-   assign clk = sysclk;
    assign initial_pc = 16'o173000;
 
-   debounce reset_sw(.clk(clk), .in(button[3]), .out(reset));
+`define slower
+`ifdef slower
+   //-----------
+   reg clk;
+   reg [10/*15*//*22*/:0] clkdiv;
 
+   always @(posedge sysclk)
+     begin
+        clkdiv <= clkdiv + 1'b1;
+        if (clkdiv == 0)
+          clk <= ~clk;
+     end
+   //-----------
+`else
+   wire 	clk;
+   assign clk = sysclk;
+`endif
+
+wire [3:0] oled;
+wire [4:0] rk_state;
+   
+   debounce reset_sw(.clk(sysclk), .in(button[3]), .out(reset));
+
+   display show_pc(.clk(sysclk), .reset(reset),
+		   .pc(pc), .dots(pc[15:12]),
+		   .led(oled[3:0]),
+		   .sevenseg(sevenseg), .sevenseg_an(sevenseg_an));
+   assign led = {rk_state, 1'b0, waited, halted};
+
+//   display_hex show_data(.clk(sysclk), .reset(reset),
+//			 .hex(ide_data_bus), .dots(4'b0),
+//			 .sevenseg(sevenseg), .sevenseg_an(sevenseg_an));
+
+//   assign led = ide_data_bus[7:0];
+//   assign led[7:4] = {ide_da[1], ide_da[0], ide_cs};
+//   assign led = {ide_cs, ide_da[1], ide_da[0], ide_data_bus[7:4]};
+//   assign led = {ide_cs, ide_dior, ide_diow, ide_data_bus[7:4]};
+//   assign led = {ide_cs, ide_diow, rk_state};
+   
+   //
    wire [21:0] bus_addr;
    wire [15:0] bus_data_in, bus_data_out;
    wire        bus_rd, bus_wr, bus_byte_op;
@@ -77,7 +116,9 @@ module top(rs232_txd, rs232_rxd,
    pdp11 cpu(.clk(clk),
 	     .reset(reset),
 	     .initial_pc(initial_pc),
-
+	     .halted(halted),
+	     .waited(waited),
+	     
 	     .bus_addr(bus_addr),
 	     .bus_data_in(bus_data_out),
 	     .bus_data_out(bus_data_in),
@@ -93,6 +134,7 @@ module top(rs232_txd, rs232_rxd,
 	     .bus_int_vector(bus_int_vector),
 	     .interrupt_ack_ipl(interrupt_ack_ipl),
 
+	     .pc(pc),
 	     .psw(psw),
 	     .psw_io_wr(psw_io_wr));
    
@@ -108,6 +150,7 @@ module top(rs232_txd, rs232_rxd,
    assign switches = {8'b0, slideswitch};
 
    bus bus1(.clk(clk),
+	    .brgclk(sysclk),
 	    .reset(reset),
 	    .bus_addr(bus_addr),
 	    .bus_data_in(bus_data_in),
@@ -138,6 +181,7 @@ module top(rs232_txd, rs232_rxd,
 	    .psw(psw),
 	    .psw_io_wr(psw_io_wr),
 	    .switches(switches),
+.rk_state(rk_state),
 	    .rs232_tx(rs232_txd),
 	    .rs232_rx(rs232_rxd));
 

@@ -1,61 +1,51 @@
-// display.c
+// display.v
 // display pc on led'and 4x7 segment digits
 
-`include "sevenseg.v"
-
-module display(clk, reset, pc, led, sevenseg, sevenseg_an);
+module display(clk, reset, pc, led, dots, sevenseg, sevenseg_an);
    
     input 	clk;
     input 	reset;
     input [15:0] pc;
-    output [7:0] led;
+    input [3:0]  dots;
+    output [3:0] led;
     output [7:0] sevenseg;
     output [3:0] sevenseg_an;
 
    //
-   wire [3:0] 	 digit;
-   reg 		 dig_clk;
-   reg [3:0] 	 anode;
-   reg [16:0] 	 counter;
+   wire [2:0] 	 digit;
+   reg [1:0] 	 anode;
+
+   reg [10:0]    divider;
+   reg           aclk;
    
-   assign 	 led = {4'b0, pc[15:12]};
-   assign 	 sevenseg_an = anode;
+   assign 	 led = pc[15:12];
    
-   assign digit = (anode == 4'b1000) ? pc[11:9] :
-		  (anode == 4'b0100) ? pc[8:6] :
-		  (anode == 4'b0010) ? pc[5:3] :
-		  (anode == 4'b0001) ? pc[2:0] :
+   assign digit = (anode == 2'b11) ? pc[11:9] :
+		  (anode == 2'b10) ? pc[8:6] :
+		  (anode == 2'b01) ? pc[5:3] :
+		  (anode == 2'b00) ? pc[2:0] :
 		  4'b0;
 
-   assign sevenseg[0] = 1'b0;
+   assign sevenseg_an = (anode == 2'b11) ? 4'b0111 :
+			(anode == 2'b10) ? 4'b1011 :
+			(anode == 2'b01) ? 4'b1101 :
+			(anode == 2'b00) ? 4'b1110 :
+			4'b1111;
+
+
+   assign sevenseg[0] = ~dots[anode];
    
-   sevenseg decode(clk, reset, digit, sevenseg[7:1]);
+   sevensegdecode decode({1'b0, digit}, sevenseg[7:1]);
+
+   always @(posedge clk)
+     begin
+       divider <= divider + 1'b1;
+       if (divider == 0)
+          aclk = ~aclk;
+     end
 
    // digit scan clock
-   always @(posedge clk)
-     if (reset)
-       begin
-	  counter <= 0;
-	  dig_clk <= 0;
-       end
-     else
-       begin
-	  counter <= counter + 1'b1;
-	  if (counter == 0)
-	    dig_clk <= ~dig_clk;
-       end
+   always @(posedge aclk)
+       anode <= anode + 1'b1;
 
-   // anode driver
-   always @(posedge dig_clk)
-     if (reset)
-       anode <= 4'b0001;
-     else
-       case (anode)
-	 4'b0001: anode <= 4'b0010;
-	 4'b0010: anode <= 4'b0100;
-	 4'b0100: anode <= 4'b1000;
-	 4'b1000: anode <= 4'b0001;
-	 default: anode <= 4'b0001;
-       endcase
-   
 endmodule

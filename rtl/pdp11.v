@@ -20,16 +20,18 @@
 `include "add8.v"
 `include "execute.v"
 
-module pdp11(clk, reset, initial_pc,
+module pdp11(clk, reset, initial_pc, halted, waited,
 	     bus_addr, bus_data_out, bus_data_in,
 	     bus_rd, bus_wr, bus_byte_op,
 	     bus_arbitrate, bus_ack, bus_error,
 	     bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl, 
-	     psw, psw_io_wr);
+	     pc, psw, psw_io_wr);
 
    input clk, reset;
    input [15:0] initial_pc;
-
+   output 	halted;
+   output 	waited;
+   
    output [21:0] bus_addr;
    input [15:0]  bus_data_in;
    output [15:0] bus_data_out;
@@ -40,6 +42,7 @@ module pdp11(clk, reset, initial_pc,
    input [7:0] 	 bus_int_ipl, bus_int_vector;
    output [7:0]  interrupt_ack_ipl;
    output [15:0] psw;
+   output [15:0] pc;
    input 	 psw_io_wr;
 
    reg 		 interrupt;

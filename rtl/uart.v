@@ -150,17 +150,23 @@ module uart (clk, reset,
 	  if (tx_enable && !tx_empty)
 	    begin
 	       tx_cnt <= tx_cnt + 1'b1;
-	       if (tx_cnt == 0)
-		    tx_out <= 0;
 
-	       if (tx_cnt > 4'd0 && tx_cnt < 4'd9)
-		    tx_out <= tx_reg[tx_cnt -1];
-
-	       if (tx_cnt == 9) begin
-		  tx_out <= 1;
-		  tx_cnt <= 0;
-		  tx_empty <= 1;
-	       end
+	       case (tx_cnt)
+		 4'd0: tx_out <= 0;
+		 4'd1: tx_out <= tx_reg[0];
+		 4'd2: tx_out <= tx_reg[1];
+		 4'd3: tx_out <= tx_reg[2];
+		 4'd4: tx_out <= tx_reg[3];
+		 4'd5: tx_out <= tx_reg[4];
+		 4'd6: tx_out <= tx_reg[5];
+		 4'd7: tx_out <= tx_reg[6];
+		 4'd8: tx_out <= tx_reg[7];
+		 4'd9: begin
+		    tx_out <= 1;
+		    tx_cnt <= 0;
+		    tx_empty <= 1;
+		 end
+	       endcase
 	    end
 
 	  if (!tx_enable)

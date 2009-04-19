@@ -6,12 +6,13 @@
 `include "brg.v"
 `include "uart.v"
 
-module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
+module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 	       iopage_rd, iopage_wr, iopage_byte_op,
 	       interrupt, interrupt_ack, vector,
 	       rs232_tx, rs232_rx);
 
    input clk;
+   input brgclk;
    input reset;
    input [12:0] iopage_addr;
    input [15:0] data_in;
@@ -45,7 +46,7 @@ module tt_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    wire 	 uart_tx_clk;
    wire 	 uart_rx_clk;
    
-   brg baud_rate_generator(.clk(clk), .reset(reset),
+   brg baud_rate_generator(.clk(brgclk), .reset(reset),
 			   .tx_baud_clk(uart_tx_clk),
 			   .rx_baud_clk(uart_rx_clk));
 

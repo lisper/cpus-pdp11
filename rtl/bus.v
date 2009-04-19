@@ -4,16 +4,18 @@
 
 `include "iopage.v"
 
-module bus(clk, reset, bus_addr, bus_data_in, bus_data_out,
+module bus(clk, brgclk, reset, bus_addr, bus_data_in, bus_data_out,
 	   bus_rd, bus_wr, bus_byte_op,
 	   bus_arbitrate, bus_ack, bus_error,
 	   bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl,
 	   ram_addr, ram_data_in, ram_data_out, ram_rd, ram_wr, ram_byte_op,
 	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 	   psw, psw_io_wr, switches, rs232_tx, rs232_rx
+,rk_state
 	  );
 
    input clk;
+   input brgclk;
    input reset;
    input [21:0] bus_addr;
    input [15:0] bus_data_in;
@@ -21,6 +23,7 @@ module bus(clk, reset, bus_addr, bus_data_in, bus_data_out,
    input 	bus_arbitrate;
    output [15:0] bus_data_out;
 
+output [4:0] rk_state;
    output 	 bus_ack;
    output 	 bus_error;
    output 	 bus_int;
@@ -170,6 +173,7 @@ module bus(clk, reset, bus_addr, bus_data_in, bus_data_out,
    assign bus_error = iopage_bus_error;
 	
    iopage iopage1(.clk(clk),
+		  .brgclk(brgclk),
 		  .reset(reset),
 		  .address(bus_addr),
 		  .data_in(bus_data_in),
@@ -206,6 +210,7 @@ module bus(clk, reset, bus_addr, bus_data_in, bus_data_out,
 		  .dma_data_out(dma_data_out),
 		  .dma_rd(dma_rd),
 		  .dma_wr(dma_wr)
+,.rk_state(rk_state)
 		  );
 
 endmodule

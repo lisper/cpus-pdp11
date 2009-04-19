@@ -18,18 +18,18 @@ module debounce(clk, in, out);
 	slowclk = 0;
      end
    
-   assign     out = hold == 10'b1 || ~onetime;
+   assign out = hold == 10'b1111111111 || ~onetime;
 		
    always @(posedge clk)
-     clkdiv <= clkdiv + 1'b1;
-
-   always @(posedge clk)
-     if (clkdiv == 0)
-       slowclk <= ~slowclk;
+     begin
+       clkdiv <= clkdiv + 1'b1;
+       if (clkdiv == 0)
+         slowclk <= ~slowclk;
+     end
 
    always @(posedge slowclk)
      begin
-	hold <= { hold[8:0], 1'b0 };
+	hold <= { hold[8:0], in };
 	onetime <= 1;
      end
    

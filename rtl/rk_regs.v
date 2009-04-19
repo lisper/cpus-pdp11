@@ -12,7 +12,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		interrupt, interrupt_ack, vector,
 		ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
    		dma_req, dma_ack, dma_addr, dma_data_in, dma_data_out,
-		dma_rd, dma_wr);
+		dma_rd, dma_wr, rk_state);
    
    input clk;
    input reset;
@@ -22,6 +22,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    output [15:0] data_out;
    reg [15:0] 	 data_out;
    output 	 decode;
+output [4:0] rk_state;
 
    output 	 interrupt;
    reg 		 interrupt;
@@ -334,7 +335,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	       if (rkcs_cmd[0])
 		 begin
 		    rk_state_next = init0;
-$display("rk: XXX go!");
+		    //$display("rk: XXX go!");
 		 end
 	    end
 	  
@@ -362,7 +363,7 @@ $display("rk: XXX go!");
 	       // rk_cnt = 1;
 	       // if (rk_cnt_rdy)
 	       rk_state_next = init2;
-//$display("rk: XXX wait0");
+	       //$display("rk: XXX wait0");
 	    end
 
 	  init2:
@@ -377,7 +378,7 @@ $display("rk: XXX go!");
 
 	  init3:
 	    begin
-//$display("rk: XXX init3");
+	       //$display("rk: XXX init3");
 	       ata_wr = 1;
 	       ata_addr = ATA_DEVCTRL;
 	       ata_in = 16'h0002;		// nIEN
@@ -450,7 +451,7 @@ $display("rk: XXX go!");
 	  
 	  init10:
 	    begin
-//$display("rk: XXX init10");
+	       //$display("rk: XXX init10");
 	       ata_rd = 1;
 	       ata_addr = ATA_ALTER;
 	       if (ata_done)
@@ -462,7 +463,7 @@ $display("rk: XXX go!");
 	       ata_rd = 1;
 	       ata_addr = ATA_STATUS;
 
-//if (ata_done) $display("rk: XXX init11 ata_out %x", ata_out);
+	       //if (ata_done) $display("rk: XXX init11 ata_out %x", ata_out);
 	       if (ata_done &&
 		   ~ata_out[IDE_STATUS_BSY] &&
 		   ata_out[IDE_STATUS_DRQ])
@@ -560,7 +561,6 @@ $display("rk: XXX go!");
 	       if (ata_done)
 		 rk_state_next = last2;
 	    end
-
 	  last2:
 	    begin
 	       if (rkcs_ie)

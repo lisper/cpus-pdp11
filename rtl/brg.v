@@ -8,22 +8,19 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
    output tx_baud_clk;
    output rx_baud_clk;
 
-   parameter SYS_CLK = 20000000;
+   parameter SYS_CLK = 50000000;
    parameter BAUD = 9600;
 
-`ifdef debug
-   parameter RX_CLK_DIV = 2;
-   parameter TX_CLK_DIV = 2;
-`else
+//`ifdef debug
+//   parameter RX_CLK_DIV = 2;
+//   parameter TX_CLK_DIV = 2;
+//`else
    parameter RX_CLK_DIV = SYS_CLK / (BAUD * 16 * 2);
    parameter TX_CLK_DIV = SYS_CLK / (BAUD * 2);
-`endif
+//`endif
    
-   parameter RX_CW = 9;		   // CW >= log2(CLK_DIV)
-   parameter TX_CW = 11;	   // CW >= log2(CLK_DIV)
-   
-   reg [RX_CW-1:0] rx_clk_div;
-   reg [TX_CW-1:0] tx_clk_div;
+   reg [12:0] rx_clk_div;
+   reg [12:0] tx_clk_div;
    reg 		tx_baud_clk;
    reg 		rx_baud_clk;
 
@@ -42,7 +39,7 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
 	 end
        else
 	 begin
-	    rx_clk_div  <= rx_clk_div + 8'd1;
+	    rx_clk_div  <= rx_clk_div + 1'b1;
 	    rx_baud_clk <= rx_baud_clk;
 	 end
 
@@ -60,7 +57,7 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
 	 end
        else
 	 begin
-	    tx_clk_div  <= tx_clk_div + 8'd1;
+	    tx_clk_div  <= tx_clk_div + 1'b1;
 	    tx_baud_clk <= tx_baud_clk;
 	 end
 endmodule
