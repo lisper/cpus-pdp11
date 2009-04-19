@@ -1670,11 +1670,3 @@ module pdp11(clk, reset, initial_pc, halted, waited,
 	    
 endmodule
 
-
-
-/*
-* Local Variables:
- * indent-tabs-mode:nil
- * c-basic-offset:4
- * End:
-*/

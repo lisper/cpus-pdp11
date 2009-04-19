@@ -5,9 +5,10 @@
 
 `timescale 1ns / 1ns
 
+`define sim_time 1
 //`define minimal_debug 1
 `define debug 1
-`define debug_vcd
+//`define debug_vcd
 //`define debug_log
 //`define debug_bus
 //`define debug_io
@@ -51,11 +52,16 @@ module test;
    wire        psw_io_wr;
 
    wire        bus_int;
+
+   wire [15:0] pc;
+   wire        halted;
+   wire        waited;
    
    pdp11 cpu(.clk(clk),
 	     .reset(reset),
-	     .switches(switches),
 	     .initial_pc(starting_pc),
+	     .halted(halted),
+	     .waited(waited),
 
 	     .bus_addr(bus_addr),
 	     .bus_data_in(bus_data_out),
@@ -72,14 +78,17 @@ module test;
 	     .bus_int_vector(bus_int_vector),
 	     .interrupt_ack_ipl(interrupt_ack_ipl),
 
+	     .pc(pc),
 	     .psw(psw),
 	     .psw_io_wr(psw_io_wr));
    
    wire [21:0] ram_addr;
    wire [15:0] ram_data_in, ram_data_out;
    wire        ram_rd, ram_wr, ram_byte_op;
+   wire [4:0]  rk_state;
 
    bus bus1(.clk(clk),
+	    .brgclk(clk),
 	    .reset(reset),
 	    .bus_addr(bus_addr),
 	    .bus_data_in(bus_data_in),
@@ -110,6 +119,7 @@ module test;
 	    .psw(psw),
 	    .psw_io_wr(psw_io_wr),
 	    .switches(switches),
+	    .rk_state(rk_state),
 	    .rs232_tx(rs232_tx),
 	    .rs232_rx(rs232_rx));
 

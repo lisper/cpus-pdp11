@@ -118,10 +118,10 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 	     begin
 		tto_data <= data_in;		// tto data
 `ifdef debug_tt_out
-		if (tto_data < 16'o40)
-		  $display("tto_data %o", tto_data);
+		if (data_in < 16'o40)
+		  $display("tto_data %o", data_in);
 		else
-		  $display("tto_data %o %c", tto_data, tto_data);
+		  $display("tto_data %o %c", data_in, data_in);
 `endif
 	     end
 	 endcase
