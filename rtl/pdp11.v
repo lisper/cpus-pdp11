@@ -20,7 +20,7 @@
 `include "add8.v"
 `include "execute.v"
 
-module pdp11(clk, reset, initial_pc, halted, waited,
+module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	     bus_addr, bus_data_out, bus_data_in,
 	     bus_rd, bus_wr, bus_byte_op,
 	     bus_arbitrate, bus_ack, bus_error,
@@ -31,6 +31,7 @@ module pdp11(clk, reset, initial_pc, halted, waited,
    input [15:0] initial_pc;
    output 	halted;
    output 	waited;
+   output 	trapped;
    
    output [21:0] bus_addr;
    input [15:0]  bus_data_in;
@@ -976,6 +977,7 @@ module pdp11(clk, reset, initial_pc, halted, waited,
 	  d4:
 	    begin
 	       // bus_rd asserted
+	       // bus_addr <= dd_ea
 	    end
 
 	  e1:
@@ -1127,6 +1129,8 @@ module pdp11(clk, reset, initial_pc, halted, waited,
 
    assign ok_to_reset_trace_inhibit = istate == f1;
 
+   assign trapped = trap;
+   
    assign trap =
             trap_bpt || trap_iot || trap_emt || trap_trap ||
 	    trap_res || trap_ill || trap_odd || trap_oflo ||

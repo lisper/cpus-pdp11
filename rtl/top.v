@@ -60,6 +60,7 @@ module top(rs232_txd, rs232_rxd,
    wire [15:0] 	pc;
    wire 	halted;
    wire 	waited;
+   wire 	trapped;
 
    assign initial_pc = 16'o173000;
 
@@ -67,13 +68,32 @@ module top(rs232_txd, rs232_rxd,
 `ifdef slower
    //-----------
    reg clk;
-   reg [10/*15*//*22*/:0] clkdiv;
+   reg [24:0] clkdiv;
+   wire [24:0] clkmax;
 
+   assign clkmax = (slideswitch[3:0] == 3'd0)  ?  1'd1 :
+		   (slideswitch[3:0] == 3'd1)  ?  2'd2 :
+		   (slideswitch[3:0] == 3'd2)  ?  8'h1ff :
+		   (slideswitch[3:0] == 3'd3)  ? 10'h7ff :
+		   (slideswitch[3:0] == 3'd4)  ? 13'h1fff :
+		   (slideswitch[3:0] == 3'd5)  ? 15'h7fff :
+		   (slideswitch[3:0] == 3'd6)  ? 17'h1ffff :
+		   (slideswitch[3:0] == 3'd7)  ? 19'h7ffff :
+		   (slideswitch[3:0] == 3'd8)  ? 21'h1fffff :
+		   (slideswitch[3:0] == 3'd9)  ? 22'h3fffff :
+		   (slideswitch[3:0] == 3'd10) ? 23'h7fffff :
+   		   (slideswitch[3:0] == 3'd11) ? 24'hffffff :
+		   25'h1ffffff;
+     
    always @(posedge sysclk)
      begin
-        clkdiv <= clkdiv + 1'b1;
-        if (clkdiv == 0)
-          clk <= ~clk;
+        if (clkdiv == clkmax)
+	  begin
+             clk <= ~clk;
+             clkdiv <= 0;
+	  end
+	else
+          clkdiv <= clkdiv + 1'b1;
      end
    //-----------
 `else
@@ -90,7 +110,7 @@ wire [4:0] rk_state;
 		   .pc(pc), .dots(pc[15:12]),
 		   .led(oled[3:0]),
 		   .sevenseg(sevenseg), .sevenseg_an(sevenseg_an));
-   assign led = {rk_state, 1'b0, waited, halted};
+   assign led = {rk_state, trapped, waited, halted};
 
 //   display_hex show_data(.clk(sysclk), .reset(reset),
 //			 .hex(ide_data_bus), .dots(4'b0),
@@ -118,6 +138,7 @@ wire [4:0] rk_state;
 	     .initial_pc(initial_pc),
 	     .halted(halted),
 	     .waited(waited),
+	     .trapped(trapped),
 	     
 	     .bus_addr(bus_addr),
 	     .bus_data_in(bus_data_out),
@@ -185,11 +206,15 @@ wire [4:0] rk_state;
 	    .rs232_tx(rs232_txd),
 	    .rs232_rx(rs232_rxd));
 
+   wire        ram_wr_short;
+
+   assign ram_wr_short = ram_wr & ~clk;
+
    ram_async ram1(.addr(ram_addr[17:0]),
 		  .data_in(ram_data_out),
 		  .data_out(ram_data_in),
 		  .rd(ram_rd),
-		  .wr(ram_wr),
+		  .wr(ram_wr_short),
 		  .byte_op(ram_byte_op),
 
 		  .ram_a(ram_a),
