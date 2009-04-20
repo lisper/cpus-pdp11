@@ -71,8 +71,8 @@ module top(rs232_txd, rs232_rxd,
    reg [24:0] clkdiv;
    wire [24:0] clkmax;
 
-   assign clkmax = (slideswitch[3:0] == 3'd0)  ?  1'd1 :
-		   (slideswitch[3:0] == 3'd1)  ?  2'd2 :
+   assign clkmax = (slideswitch[3:0] == 3'd0)  ?  1'h1 :
+		   (slideswitch[3:0] == 3'd1)  ?  2'h2 :
 		   (slideswitch[3:0] == 3'd2)  ?  8'h1ff :
 		   (slideswitch[3:0] == 3'd3)  ? 10'h7ff :
 		   (slideswitch[3:0] == 3'd4)  ? 13'h1fff :

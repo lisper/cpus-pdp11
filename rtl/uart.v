@@ -58,10 +58,17 @@ module uart(clk, reset,
    always @(uld_rx_req or rx_uld)
      begin
 	rx_uld_next = rx_uld;
+	uld_rx_ack <= 0;
 	case (rx_uld)
 	  2'b00: if (uld_rx_req) rx_uld_next = 2'b01;
-	  2'b01: rx_uld_next = 2'b10;
-	  2'b10: if (~uld_rx_req) rx_uld_next = 2'b00;
+	  2'b01: begin
+	     uld_rx_ack <= 1;
+	     rx_uld_next = 2'b10;
+	    end
+	  2'b10: begin
+	     uld_rx_ack <= 1;
+	     if (~uld_rx_req) rx_uld_next = 2'b00;
+	    end
 	  default: rx_uld_next = 2'b00;
 	endcase
      end
@@ -79,10 +86,17 @@ module uart(clk, reset,
    always @(ld_tx_req or tx_ld)
      begin
 	tx_ld_next = tx_ld;
+	ld_tx_ack <= 0;
 	case (tx_ld)
 	  2'b00: if (ld_tx_req) tx_ld_next = 2'b01;
-	  2'b01: tx_ld_next = 2'b10;
-	  2'b10: if (~ld_tx_req) tx_ld_next = 2'b00;
+	  2'b01: begin
+	     ld_tx_ack <= 1;
+	     tx_ld_next = 2'b10;
+	    end
+	  2'b10: begin
+	     ld_tx_ack <= 1;
+	     if (~ld_tx_req) tx_ld_next = 2'b00;
+	    end
 	  default: tx_ld_next = 2'b00;
 	endcase
      end
@@ -108,8 +122,6 @@ module uart(clk, reset,
        end
      else
        begin
-	  uld_rx_ack <= 0;
-	  
 	  // synchronize the asynch signal
 	  rx_d1 <= rx_in;
 	  rx_d2 <= rx_d1;
@@ -119,7 +131,6 @@ module uart(clk, reset,
 	    begin
 	       rx_data <= rx_reg;
 	       rx_empty <= 1;
-	       uld_rx_ack <= 1;
 	  end
 
 	  // receive data only when rx is enabled
@@ -193,8 +204,6 @@ module uart(clk, reset,
 	end
       else
 	begin
-	   ld_tx_ack <= 0;
-
    	   if (ld_tx_data)
 	     begin
 		if (!tx_empty)
@@ -203,7 +212,6 @@ module uart(clk, reset,
 		  begin
 		     tx_reg <= tx_data;
 		     tx_empty <= 0;
-		     ld_tx_ack <= 1;
 		  end
 	     end
 
