@@ -6,12 +6,12 @@
 `timescale 1ns / 1ns
 
 `define sim_time 1
-`define minimal_debug 1
-//`define debug 1
+//`define minimal_debug 1
+`define debug 1
 //`define debug_vcd
 //`define debug_log
-//`define debug_bus
-//`define debug_io
+`define debug_bus
+`define debug_io
 `define debug_ram_low
 `define debug_tt_out
 

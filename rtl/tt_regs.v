@@ -149,8 +149,8 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
        tto_state <= tto_state_next;
 
    assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
-			   (tto_state == 1 && ld_rx_ack) ? 2 :
-			   (tto_state == 2 && ~ld_rx_ack) ? 3 :
+			   (tto_state == 1 && ld_tx_ack) ? 2 :
+			   (tto_state == 2 && ~ld_tx_ack) ? 3 :
 			   (tto_state == 3 && tx_empty) ? 0 :
 			   tto_state;
 
