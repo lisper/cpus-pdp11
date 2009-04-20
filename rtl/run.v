@@ -6,12 +6,13 @@
 `timescale 1ns / 1ns
 
 `define sim_time 1
-//`define minimal_debug 1
-`define debug 1
+`define minimal_debug 1
+//`define debug 1
 //`define debug_vcd
 //`define debug_log
 //`define debug_bus
 //`define debug_io
+`define debug_ram_low
 `define debug_tt_out
 
 `define use_rk_model 1
@@ -124,13 +125,15 @@ module test;
 	    .rs232_rx(rs232_rx));
 
 `ifdef use_ram_sync
+   wire        ram_wr_short;
+   assign      ram_wr_short = ram_wr & ~clk;
    ram_sync ram1(.clk(clk),
 		 .reset(reset),
 		 .addr(ram_addr[15:0]),
 		 .data_in(ram_data_out),
 		 .data_out(ram_data_in),
 		 .rd(ram_rd),
-		 .wr(ram_wr),
+		 .wr(ram_wr_short),
 		 .byte_op(ram_byte_op));
 `endif
 

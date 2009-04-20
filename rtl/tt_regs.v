@@ -50,8 +50,8 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 			   .tx_baud_clk(uart_tx_clk),
 			   .rx_baud_clk(uart_rx_clk));
 
-   wire 	 ld_tx_data;
-   wire		 uld_rx_data;
+   wire 	 ld_tx_req;
+   wire		 uld_rx_req;
    wire 	 tx_enable, tx_empty;
    wire 	 rx_enable, rx_empty;
    wire [7:0] 	 rx_data;
@@ -59,14 +59,14 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    uart tt_uart(.clk(clk), .reset(reset),
 
 		.txclk(uart_tx_clk),
-		.ld_tx_data(ld_tx_data),
+		.ld_tx_req(ld_tx_req),
 		.tx_data(tto_data[7:0]), 
 		.tx_enable(tx_enable),
 		.tx_out(rs232_tx),
 		.tx_empty(tx_empty),
 
 		.rxclk(uart_rx_clk),
-		.uld_rx_data(uld_rx_data),
+		.uld_rx_req(uld_rx_req),
 		.rx_data(rx_data),
 		.rx_enable(rx_enable),
 		.rx_in(rs232_rx),
@@ -130,7 +130,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    assign rx_enable = 1'b1;
 
    // tto state machine
-   // assert ld_tx_data until uart catches up
+   // assert ld_tx_req until uart catches up
    // hold off cpu until tx_empty does full transition
    // state 0 - idle; wait for iopage write to data
    // state 1 - wait for tx_empty to assert
@@ -151,7 +151,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 			   (tto_state == 2 && tx_empty) ? 0 :
 			   tto_state;
 
-   assign ld_tx_data = tto_state == 1;
+   assign ld_tx_req = tto_state == 1;
    assign tto_empty = tto_state == 0;
    
    // tti state machine
@@ -175,7 +175,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 			   (tti_state == 2 && tti_data_rd) ? 0 :
 			   tti_state;
 
-   assign uld_rx_data = tti_state == 1;
+   assign uld_rx_req = tti_state == 1;
    assign tti_empty = tti_state == 0;
    
    always @(posedge clk)

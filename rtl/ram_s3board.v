@@ -10,8 +10,8 @@ module ram_256kx16(a, io, ce_n, ub_n, lb_n, we_n, oe_n);
    input 	we_n;
    input 	oe_n;
 
-   reg [7:0] ram_h[65535:0];
-   reg [7:0] ram_l[65535:0];
+   reg [7:0] ram_h[131071:0];
+   reg [7:0] ram_l[131071:0];
 
    wire [16:0] ba;
    assign      ba = a[17:1];
@@ -25,15 +25,29 @@ module ram_256kx16(a, io, ce_n, ub_n, lb_n, we_n, oe_n);
 	  if (0) $display("ram: ce_n %b ub_n %b lb_n %b we_n %b oe_n %b",
 			  ce_n, ub_n, lb_n, we_n, oe_n);
 		   
+`ifdef debug_ram_low
 	  if (~ub_n && ~lb_n) $display("ram: write %o <- %o", a, io);
 	  else
 	    if (~ub_n) $display("ram: writeh %o <- %o", a, io);
 	    else
 	      if (~lb_n) $display("ram: writel %o <- %o", a, io);
+`endif
 	  
 	  if (~ub_n) ram_h[ba] = io[15:8];
 	  if (~lb_n) ram_l[ba] = io[7:0];
        end
+
+`ifdef debug_ram_low
+   always @(we_n or ce_n or ub_n or lb_n or a or ba or io)
+     if (we_n && ~ce_n)
+       begin
+	  if (~ub_n && ~lb_n) $display("ram: read %o -> %o", a, io);
+	  else
+	    if (~ub_n) $display("ram: readh %o <- %o", a, io[7:0]);
+	    else
+	      if (~lb_n) $display("ram: readl %o <- %o", a, io[7:0]);
+       end
+`endif
 
 endmodule
 
@@ -81,8 +95,8 @@ module ram_s3board(ram_a, ram_oe_n, ram_we_n,
 	  end
      end
 
-`ifdef debug
-   always @(ram_a or ram1_ce_n or ram_we_n or ram1_io)
+`ifdef debug_ram
+   always @(ram_a or ram_oe_n or ram1_ce_n or ram_we_n or ram1_io)
      begin
 	if (ram_oe_n == 0 && ram_we_n == 1)
 	  $display("ram: read  [%o] -> %o", ram_a, ram1_io);

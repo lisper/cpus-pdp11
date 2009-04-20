@@ -2,20 +2,20 @@
 // simple low speed async uart for RS-232
 // brad@heeltoe.com 2009
 
-module uart (clk, reset,
-	     txclk, ld_tx_data, tx_data, tx_enable, tx_out, tx_empty,
-	     rxclk, uld_rx_data, rx_data, rx_enable, rx_in, rx_empty);
+module uart(clk, reset,
+	    txclk, ld_tx_req, tx_data, tx_enable, tx_out, tx_empty,
+	    rxclk, uld_rx_req, rx_data, rx_enable, rx_in, rx_empty);
    
    input        clk;
    input        reset;
    input        txclk;
-   input        ld_tx_data;
+   input        ld_tx_req;
    input [7:0] 	tx_data;
    input        tx_enable;
    output       tx_out;
    output       tx_empty;
    input        rxclk;
-   input        uld_rx_data;
+   input        uld_rx_req;
    output [7:0] rx_data;
    input        rx_enable;
    input        rx_in;
@@ -37,8 +37,57 @@ module uart (clk, reset,
    reg          rx_d2;
    reg          rx_busy;
 
+   reg [1:0]	rx_uld;
+   reg [1:0] 	rx_uld_next;
+   
+   reg [1:0]	tx_ld;
+   reg [1:0] 	tx_ld_next;
+
+   // require uld_rx_req to deassert before accepting next char
+   always @(posedge rxclk or posedge reset)
+     if (reset)
+       rx_uld <= 2'b00;
+     else
+       rx_uld <= rx_uld_next;
+
+   always @(uld_rx_req or rx_uld)
+     begin
+	rx_uld_next = rx_uld;
+	case (rx_uld)
+	  2'b00: if (uld_rx_req) rx_uld_next = 2'b01;
+	  2'b01: rx_uld_next = 2'b10;
+	  2'b10: if (~uld_rx_req) rx_uld_next = 2'b00;
+	  default: rx_uld_next = 2'b00;
+	endcase
+     end
+
+   wire uld_rx_data;
+   assign uld_rx_data = rx_uld == 2'b01;
+   
+   // require tx_ld_req to deassert before accepting next char
+   always @(posedge txclk or posedge reset)
+     if (reset)
+       tx_ld <= 2'b00;
+     else
+       tx_ld <= tx_ld_next;
+
+   always @(ld_tx_req or tx_ld)
+     begin
+	tx_ld_next = tx_ld;
+	case (tx_ld)
+	  2'b00: if (ld_tx_req) tx_ld_next = 2'b01;
+	  2'b01: tx_ld_next = 2'b10;
+	  2'b10: if (~ld_tx_req) tx_ld_next = 2'b00;
+	  default: tx_ld_next = 2'b00;
+	endcase
+     end
+   
+   wire ld_tx_data;
+   assign ld_tx_data = tx_ld == 2'b01;
+   
+   
    // uart rx
-   always @ (posedge rxclk or posedge reset)
+   always @(posedge rxclk or posedge reset)
      if (reset)
        begin
 	  rx_reg <= 0; 

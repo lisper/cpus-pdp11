@@ -28,8 +28,8 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
      if (iopage_rd && decode)
        begin
        case (offset)
-//`define boot_rk
-`define boot_tt
+`define boot_rk
+//`define boot_tt
 `ifdef boot_rk
 	 0: fetch = 16'o010000;	/* nop */
 	 2: fetch = 16'o012706;

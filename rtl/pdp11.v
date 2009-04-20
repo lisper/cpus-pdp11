@@ -876,8 +876,10 @@ module pdp11(clk, reset, initial_pc, halted, waited,
        begin
 
 	  if (istate != w1)
+	    pc <= pc_mux; 			// pc
+
+	  if (istate != w1 && istate != s1 && istate != d1)
 	    begin
-	       pc <= pc_mux; 			// pc
 	       r6[current_mode] <= sp_mux;	// sp
 `ifdef debug
 	       if (r6[current_mode] != sp_mux)
