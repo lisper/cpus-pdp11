@@ -20,7 +20,6 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    input [15:0] data_in;
    input 	iopage_rd, iopage_wr, iopage_byte_op;
    output [15:0] data_out;
-   reg [15:0] 	 data_out;
    output 	 decode;
 output [4:0] rk_state;
 
@@ -63,6 +62,9 @@ output [4:0] rk_state;
  	 
    reg inc_ba;
    reg inc_wc;
+
+   wire [15:0] 	 reg_in;
+   reg [15:0] 	 reg_out;
 
    //
    wire [15:0] lba;
@@ -173,26 +175,33 @@ output [4:0] rk_state;
      begin
 	if (decode)
 	  case (iopage_addr)
-	    13'o17400: data_out = rkda;
-	    13'o17402: data_out = rker;
+	    13'o17400: reg_out = rkda;
+	    13'o17402: reg_out = rker;
 	    13'o17404:
 	      begin
-		 data_out = { rkcs_err, 7'b0,
+		 reg_out = { rkcs_err, 7'b0,
 			      rkcs_done, rkcs_ie, rkcs_mex,
 			      rkcs_cmd };
-		 //if (data_out != 16'o5)
-		 //$display("rk: XXX read rkcs %o", data_out);
+		 //if (reg_out != 16'o5)
+		 //$display("rk: XXX read rkcs %o", reg_out);
 	      end
-	    13'o17406: data_out = rkwc;
-	    13'o17410: data_out = rkba[15:0];
-	    13'o17412: data_out = rkda;
-	    default: data_out = 16'b0;
+	    13'o17406: reg_out = rkwc;
+	    13'o17410: reg_out = rkba[15:0];
+	    13'o17412: reg_out = rkda;
+	    default: reg_out = 16'b0;
 	  endcase
 	else
-	  data_out = 16'b0;
+	  reg_out = 16'b0;
      end
 
+   assign data_out = iopage_byte_op ?
+		     {8'b0, iopage_addr[0] ? reg_out[15:8] : reg_out[7:0]} :
+		     reg_out;
+
    // register write
+   assign reg_in = (iopage_byte_op & iopage_addr[0]) ? {8'b0, data_in[15:8]} :
+		   data_in;
+
    always @(posedge clk)
      if (reset)
        begin

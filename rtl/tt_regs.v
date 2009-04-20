@@ -20,7 +20,6 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    input 	interrupt_ack;
    
    output [15:0] data_out;
-   reg [15:0] 	 data_out;
    output 	 decode;
 
    output 	 interrupt;
@@ -77,7 +76,9 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    wire 	 rx_int, tx_int;
    reg 		 rx_int_enable, tx_int_enable;
 
-
+   wire [15:0] 	 reg_in;
+   reg [15:0] 	 reg_out;
+   
    // iopage reads
    always @(clk or decode or iopage_addr or iopage_rd or 
 	    tti_empty or tto_empty or tti_data or tto_data or 
@@ -85,17 +86,24 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
      begin
 	if (iopage_rd && decode)
 	  case (iopage_addr)
-	    13'o17560: data_out = {8'b0, tti_empty, rx_int_enable, 6'b0};
-	    13'o17562: data_out = tti_data;
-	    13'o17564: data_out = {8'b0, tto_empty, tx_int_enable, 6'b0};
-	    13'o17566: data_out = tto_data;
-	    default: data_out = 16'b0;
+	    13'o17560: reg_out = {8'b0, tti_empty, rx_int_enable, 6'b0};
+	    13'o17562: reg_out = tti_data;
+	    13'o17564: reg_out = {8'b0, tto_empty, tx_int_enable, 6'b0};
+	    13'o17566: reg_out = tto_data;
+	    default: reg_out = 16'b0;
 	  endcase
 	else
-	  data_out = 16'b0;
+	  reg_out = 16'b0;
      end
 
-   // iopage writes   
+   assign data_out = iopage_byte_op ?
+		     {8'b0, iopage_addr[0] ? reg_out[15:8] : reg_out[7:0]} :
+		     reg_out;
+
+   // iopage writes
+   assign reg_in = (iopage_byte_op & iopage_addr[0]) ? {8'b0, data_in[15:8]} :
+		   data_in;
+   
    always @(posedge clk)
      if (reset)
        begin
@@ -107,23 +115,23 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
      else
        if (iopage_wr)
 	 case (iopage_addr)
-	   13'o17560: rx_int_enable <= data_in[6];	// tti csr
-   	   //13'o17562: tti_data <= data_in;
+	   13'o17560: rx_int_enable <= reg_in[6];	// tti csr
+   	   //13'o17562: tti_data <= reg_in;
 	   13'o17564:
 	     begin
 `ifdef debug
-		$display("tt: XXX tx_int_enable %b", data_in[6]);
+		$display("tt: XXX tx_int_enable %b", reg_in[6]);
 `endif
-		tx_int_enable <= data_in[6];		// tto csr
+		tx_int_enable <= reg_in[6];		// tto csr
 	     end
 	   13'o17566:
 	     begin
-		tto_data <= data_in;		// tto data
+		tto_data <= reg_in;		// tto data
 `ifdef debug_tt_out
-		if (data_in < 16'o40)
-		  $display("tto_data %o", data_in);
+		if (reg_in < 16'o40)
+		  $display("tto_data %o", reg_in);
 		else
-		  $display("tto_data %o %c", data_in, data_in);
+		  $display("tto_data %o %c", reg_in, reg_in);
 `endif
 	     end
 	 endcase
