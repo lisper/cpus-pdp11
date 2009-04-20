@@ -3,24 +3,29 @@
 // brad@heeltoe.com 2009
 
 module uart(clk, reset,
-	    txclk, ld_tx_req, tx_data, tx_enable, tx_out, tx_empty,
-	    rxclk, uld_rx_req, rx_data, rx_enable, rx_in, rx_empty);
+	    txclk, ld_tx_req, ld_tx_ack, tx_data, tx_enable, tx_out, tx_empty,
+	    rxclk, uld_rx_req, uld_rx_ack, rx_data, rx_enable, rx_in,rx_empty);
    
    input        clk;
    input        reset;
    input        txclk;
    input        ld_tx_req;
+   output 	ld_tx_ack;
    input [7:0] 	tx_data;
    input        tx_enable;
    output       tx_out;
    output       tx_empty;
    input        rxclk;
    input        uld_rx_req;
+   output 	uld_rx_ack;
    output [7:0] rx_data;
    input        rx_enable;
    input        rx_in;
    output       rx_empty;
 
+   reg 		ld_tx_ack;
+   reg 		uld_rx_ack;
+ 		
    reg [7:0] 	tx_reg;
    reg          tx_empty;
    reg          tx_over_run;
@@ -103,6 +108,8 @@ module uart(clk, reset,
        end
      else
        begin
+	  uld_rx_ack <= 0;
+	  
 	  // synchronize the asynch signal
 	  rx_d1 <= rx_in;
 	  rx_d2 <= rx_d1;
@@ -110,8 +117,9 @@ module uart(clk, reset,
 	  // uload the rx data
 	  if (uld_rx_data)
 	    begin
-	     rx_data  <= rx_reg;
-	     rx_empty <= 1;
+	       rx_data <= rx_reg;
+	       rx_empty <= 1;
+	       uld_rx_ack <= 1;
 	  end
 
 	  // receive data only when rx is enabled
@@ -185,6 +193,8 @@ module uart(clk, reset,
 	end
       else
 	begin
+	   ld_tx_ack <= 0;
+
    	   if (ld_tx_data)
 	     begin
 		if (!tx_empty)
@@ -193,6 +203,7 @@ module uart(clk, reset,
 		  begin
 		     tx_reg <= tx_data;
 		     tx_empty <= 0;
+		     ld_tx_ack <= 1;
 		  end
 	     end
 

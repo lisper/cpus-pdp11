@@ -50,8 +50,8 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 			   .tx_baud_clk(uart_tx_clk),
 			   .rx_baud_clk(uart_rx_clk));
 
-   wire 	 ld_tx_req;
-   wire		 uld_rx_req;
+   wire 	 ld_tx_req, ld_rx_ack;
+   wire		 uld_rx_req, uld_rx_ack;
    wire 	 tx_enable, tx_empty;
    wire 	 rx_enable, rx_empty;
    wire [7:0] 	 rx_data;
@@ -60,6 +60,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 
 		.txclk(uart_tx_clk),
 		.ld_tx_req(ld_tx_req),
+		.ld_tx_ack(ld_tx_ack),
 		.tx_data(tto_data[7:0]), 
 		.tx_enable(tx_enable),
 		.tx_out(rs232_tx),
@@ -67,6 +68,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 
 		.rxclk(uart_rx_clk),
 		.uld_rx_req(uld_rx_req),
+		.uld_rx_ack(uld_rx_ack),
 		.rx_data(rx_data),
 		.rx_enable(rx_enable),
 		.rx_in(rs232_rx),
@@ -147,8 +149,9 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
        tto_state <= tto_state_next;
 
    assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
-			   (tto_state == 1 && ~tx_empty) ? 2 :
-			   (tto_state == 2 && tx_empty) ? 0 :
+			   (tto_state == 1 && ld_rx_ack) ? 2 :
+			   (tto_state == 2 && ~ld_rx_ack) ? 3 :
+			   (tto_state == 3 && tx_empty) ? 0 :
 			   tto_state;
 
    assign ld_tx_req = tto_state == 1;
@@ -171,8 +174,9 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
        tti_state <= tti_state_next;
 
    assign tti_state_next = (tti_state == 0 && ~rx_empty) ? 1 :
-			   (tti_state == 1 && rx_empty) ? 2 :
-			   (tti_state == 2 && tti_data_rd) ? 0 :
+			   (tti_state == 1 && uld_rx_ack) ? 2 :
+			   (tti_state == 2 && ~uld_rx_ack) ? 3 :
+			   (tti_state == 3 && tti_data_rd) ? 0 :
 			   tti_state;
 
    assign uld_rx_req = tti_state == 1;
