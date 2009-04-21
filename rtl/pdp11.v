@@ -1454,7 +1454,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	  if (istate == c1 || istate == d4)
 	       dd_data <= dd_data_mux;
 
-	  e1_data <= (istate == e1 || istate == w1) ? e1_data_mux :
+	  e1_data <= (istate == e1/* || istate == w1*/) ? e1_data_mux :
 		     (istate == o3) ? bus_data_in :
 		     e1_data;
 

@@ -29,7 +29,7 @@ module ram_async(addr, data_in, data_out, rd, wr, byte_op,
 		     {8'b0, addr[0] ? ram1_io[15:8] : ram1_io[7:0]};
 
    //
-   assign ram_a = addr;
+   assign ram_a = {1'b0, addr[17:1]};
    assign ram_oe_n = ~rd;
    assign ram_we_n = ~wr;
 
