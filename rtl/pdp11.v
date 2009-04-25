@@ -113,7 +113,6 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    wire 	is_isn_rdd;
    wire 	is_isn_rxx;
    wire 	is_isn_r32;
-   wire 	is_isn_lowbyte;
    wire 	is_isn_byte;
    wire 	is_isn_mfpx;
    wire 	is_isn_mtpx;
@@ -1124,7 +1123,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    assign ok_to_assert_trap =
 			     istate == f1 || istate == c1 || istate == e1 ||
 			     istate == s4 || istate == d4 || istate == w1;
-   
+
    assign ok_to_reset_trap = istate == t1;
 
    assign ok_to_reset_trace_inhibit = istate == f1;
@@ -1182,23 +1181,33 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	       if (assert_trap_bus)
 		    trap_bus <= 1;
 
-	       if (assert_trap_ill)
-		    trap_ill <= 1;
-
-	       if (assert_trap_res)
-		    trap_res <= 1;
-
 `ifdef debug
 	       if (trace)
 		 $display("trace pc %o, addr %o", pc, bus_addr);
 	       if (assert_trap_bus)
 		 $display("buserr pc %o, addr %o", pc, bus_addr);
-	       if (assert_trap_ill)
-	       	 $display("trap_ill pc %o", pc);
-	       if (assert_trap_res)
-		 $display("trap_ill pc %o", pc);
 `endif
 	       
+	       if (istate == c1)
+		 begin
+		    if (assert_trap_ill)
+		      trap_ill <= 1;
+
+		    if (assert_trap_res)
+		      trap_res <= 1;
+
+`ifdef debug
+		    if (assert_trap_ill)
+		      begin
+	       		 $display("trap_ill pc %o", pc);
+			 $display("trap_ill is_illegal %b, isn %o",
+				  is_illegal, isn);
+		      end
+		    if (assert_trap_res)
+		      $display("trap_res pc %o", pc);
+`endif
+		 end
+
                if (istate == e1)
 		 begin
 		    if (assert_trap_priv)
@@ -1218,6 +1227,11 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 
 		    if (assert_trace_inhibit)
 		      trace_inhibit <= 1;
+
+`ifdef debug
+		    if (assert_trap_emt)
+		      $display("trap_emt pc %o", pc);
+`endif
 		 end
 	    end // if (ok_to_assert_trap)
 
@@ -1471,8 +1485,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    	case (istate)
 	  f1:
 	    begin
-	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d",
-			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
+	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o)",
+			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
+			r0, r1, r2, r3, r4, r5, sp, pc);
 	       $display("    trap=%d, interrupt=%d, trace_inhibit=%d",
 			trap, interrupt, trace_inhibit);
 	    end // case: f1
@@ -1486,8 +1501,6 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    	case (istate)
 	  f1:
 	    begin
-//	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d",
-//			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
 	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o)",
 			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
 			r0, r1, r2, r3, r4, r5, sp, pc);

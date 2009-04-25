@@ -60,6 +60,7 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
 	    tx_clk_div  <= tx_clk_div + 1'b1;
 	    tx_baud_clk <= tx_baud_clk;
 	 end
+   
 endmodule
 
 

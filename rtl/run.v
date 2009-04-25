@@ -6,8 +6,10 @@
 `timescale 1ns / 1ns
 
 `define sim_time 1
-//`define minimal_debug 1
-`define debug 1
+
+`define minimal_debug 1
+//`define debug 1
+
 //`define debug_vcd
 //`define debug_log
 `define debug_bus
@@ -15,10 +17,11 @@
 `define debug_ram_low
 `define debug_tt_out
 
-`define use_rk_model 1
-//`define use_ram_pli 1
-//`define use_ram_sync 1
-`define use_ram_async 1
+//`define use_rk_model 1
+//`define use_ram_async 1
+`define use_ram_sync 1
+//`define use_ram_model 1
+`define use_ram_pli 1
 
 `include "pdp11.v"
 `include "bus.v"
@@ -57,13 +60,15 @@ module test;
    wire [15:0] pc;
    wire        halted;
    wire        waited;
+   wire        trapped;
    
    pdp11 cpu(.clk(clk),
 	     .reset(reset),
 	     .initial_pc(starting_pc),
 	     .halted(halted),
 	     .waited(waited),
-
+	     .trapped(trapped),
+	     
 	     .bus_addr(bus_addr),
 	     .bus_data_in(bus_data_out),
 	     .bus_data_out(bus_data_in),
@@ -183,7 +188,11 @@ module test;
 //	starting_pc = 16'o0200;
 //	starting_pc = 16'o0500;
 	
+`ifdef __ICARUS__
+	n = 0;
+`else
  	n = $scan$plusargs("pc=", arg);
+`endif
 	if (n > 0)
 	  begin
 //	     $sformat(arg, "%o", starting_pc);
@@ -194,7 +203,9 @@ module test;
 	
 `ifdef debug_log
 `else
+`ifdef __CVER__
 	$nolog;
+`endif
 `endif
 	
 `ifdef debug_vcd
@@ -240,6 +251,7 @@ module test;
 
    always @(posedge cpu.clk)
      begin
+`ifndef minimal_debug
 	cycle = cycle + 1;
 	#1 begin
 	   if (cpu.istate == 1)
@@ -247,6 +259,7 @@ module test;
 	   $display("cycle %d, pc %o, psw %o, istate %d",
 		    cycle, cpu.pc, cpu.psw, cpu.istate);
 	end
+`endif
 
 	if (cpu.istate == 0)
 	  $finish;

@@ -17,7 +17,9 @@ module psw_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    output 	 psw_io_wr;
 
    //
-   assign decode = (iopage_addr == 13'o17776);
+   assign decode = (iopage_addr == 13'o17776 || iopage_addr == 13'o17777) ||
+		   (iopage_addr == 13'o17774 || iopage_addr == 13'o17775);
+   
    assign psw_io_wr = iopage_wr && decode;
    
    always @(clk or decode or iopage_addr or iopage_rd or psw)

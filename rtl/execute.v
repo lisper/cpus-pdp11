@@ -1082,7 +1082,8 @@ module execute(clk, reset, enable,
 			e1_result = {dd_data[15:8], dd_data[7], dd_data[7:1]};
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
-			new_cc_c = ss_data[0];
+//			new_cc_c = ss_data[0];
+			new_cc_c = dd_data[0];
 			new_cc_v = new_cc_n ^ new_cc_c;
 			latch_cc = 1;
 			//note: byte write of src - rmw to memory word
@@ -1093,7 +1094,8 @@ module execute(clk, reset, enable,
 			e1_result = {dd_data[15:8], dd_data[6:0], 1'b0};
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
-			new_cc_c = ss_data[7];
+//			new_cc_c = ss_data[7];
+			new_cc_c = dd_data[7];
 			new_cc_v = new_cc_n ^ new_cc_c;
 			latch_cc = 1;
 			//note: byte write of src - rmw to memory word
@@ -1166,7 +1168,7 @@ module execute(clk, reset, enable,
 
 	       4'o13:					    /* bitb */
 		 begin
-		    e1_result = ss_data[7:0] & dd_data[7:0];
+		    e1_result = {dd_data[15:8], ss_data[7:0] & dd_data[7:0]};
 		    new_cc_n = e1_result_byte_sign;
 		    new_cc_z = e1_result_zero;
 		    new_cc_v = 0;
@@ -1175,7 +1177,7 @@ module execute(clk, reset, enable,
 
 	       4'o14:					    /* bicb */
 		 begin
-		    e1_result = ~ss_data[7:0] & dd_data[7:0];
+		    e1_result = {dd_data[15:8], ~ss_data[7:0] & dd_data[7:0]};
 		    new_cc_n = e1_result_byte_sign;
 		    new_cc_z = e1_result_zero;
 		    new_cc_v = 0;
@@ -1184,7 +1186,7 @@ module execute(clk, reset, enable,
 
 	       4'o15:					    /* bisb */
 		 begin
-		    e1_result = ss_data[7:0] | dd_data[7:0];
+		    e1_result = {dd_data[15:8], ss_data[7:0] | dd_data[7:0]};
 		    new_cc_n = e1_result_byte_sign;
 		    new_cc_z = e1_result_zero;
 		    new_cc_v = 0;

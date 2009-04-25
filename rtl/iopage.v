@@ -80,7 +80,8 @@ output [4:0] rk_state;
 		     sr_decode ? sr_data_out :
 		     psw_decode ? psw_data_out :
 		     rk_decode ? rk_data_out :
-		     16'b0;
+		     16'h2f;
+//		     16'b0;
 
    assign good_decode = bootrom_decode | mmu_decode | tt_decode | clk_decode |
 			sr_decode | psw_decode | rk_decode;

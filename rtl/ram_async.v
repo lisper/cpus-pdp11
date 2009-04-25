@@ -46,3 +46,4 @@ module ram_async(addr, data_in, data_out, rd, wr, byte_op,
    assign ram2_lb_n = 1'b1;
 
 endmodule
+

@@ -115,11 +115,19 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
      else
        if (iopage_wr)
 	 case (iopage_addr)
-	   13'o17560: rx_int_enable <= reg_in[6];	// tti csr
+	   13'o17560:
+	     begin
+`ifdef debug_tt_int
+		$display("tt: XXX rx_int_enable %b", reg_in[6]);
+`endif
+		rx_int_enable <= reg_in[6];	// tti csr
+	     end
+
    	   //13'o17562: tti_data <= reg_in;
+
 	   13'o17564:
 	     begin
-`ifdef debug
+`ifdef debug_tt_int
 		$display("tt: XXX tx_int_enable %b", reg_in[6]);
 `endif
 		tx_int_enable <= reg_in[6];		// tto csr
@@ -156,11 +164,17 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
      else
        tto_state <= tto_state_next;
 
+`ifdef sim_time
+   assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
+			   (tto_state == 1) ? 0 :
+			   tto_state;
+`else
    assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
 			   (tto_state == 1 && ld_tx_ack) ? 2 :
 			   (tto_state == 2 && ~ld_tx_ack) ? 3 :
 			   (tto_state == 3 && tx_empty) ? 0 :
 			   tto_state;
+`endif
 
    assign ld_tx_req = tto_state == 1;
    assign tto_empty = tto_state == 0;

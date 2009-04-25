@@ -2,8 +2,6 @@
 
 `include "ram.v"
 
-`define use_ram_model 1
-
 module ram_sync (clk, reset, addr, data_in, data_out, rd, wr, byte_op);
 
    input clk;
@@ -36,7 +34,7 @@ module ram_sync (clk, reset, addr, data_in, data_out, rd, wr, byte_op);
 `endif
 
 `ifdef use_ram_pli
-   always @(posedge clk or ram_ce_n or ram_we_n or byte_op or addr)
+   always @(posedge clk or ce_n or we_n or byte_op or addr)
      begin
 	$pli_ram(clk, reset, addr, data_in, data_out, ce_n, we_n, byte_op);
      end

@@ -58,7 +58,11 @@ module ram_16kx16(clk, reset, addr, DI, DO, CE_N, WE_N, byte_op);
 	     ram_l.ram[i] = 7'b0;
 	  end
 
+`ifdef __ICARUS__
+	n = 0;
+`else
  	n = $scan$plusargs("test=", testfilename);
+`endif
 	if (n > 0)
 	  begin
 	     $display("ram: code filename: %s", testfilename);

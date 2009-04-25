@@ -10,16 +10,13 @@ module ram_256kx16(a, io, ce_n, ub_n, lb_n, we_n, oe_n);
    input 	we_n;
    input 	oe_n;
 
-   reg [7:0] ram_h[131071:0];
-   reg [7:0] ram_l[131071:0];
+   reg [7:0] ram_h[262143:0];
+   reg [7:0] ram_l[262143:0];
 
-   wire [16:0] ba;
-   assign      ba = a[17:1];
-   
-   assign    io = { (oe_n | ub_n) ? 8'bz : ram_h[ba],
-		    (oe_n | lb_n) ? 8'bz : ram_l[ba] };
+   assign    io = { (oe_n | ub_n) ? 8'bz : ram_h[a],
+		    (oe_n | lb_n) ? 8'bz : ram_l[a] };
 
-   always @(we_n or ce_n or ub_n or lb_n or a or ba or io)
+   always @(we_n or ce_n or ub_n or lb_n or a or a or io)
      if (~we_n && ~ce_n)
        begin
 	  if (0) $display("ram: ce_n %b ub_n %b lb_n %b we_n %b oe_n %b",
@@ -33,12 +30,12 @@ module ram_256kx16(a, io, ce_n, ub_n, lb_n, we_n, oe_n);
 	      if (~lb_n) $display("ram: writel %o <- %o", a, io);
 `endif
 	  
-	  if (~ub_n) ram_h[ba] = io[15:8];
-	  if (~lb_n) ram_l[ba] = io[7:0];
+	  if (~ub_n) ram_h[a] = io[15:8];
+	  if (~lb_n) ram_l[a] = io[7:0];
        end
 
 `ifdef debug_ram_low
-   always @(we_n or ce_n or ub_n or lb_n or a or ba or io)
+   always @(we_n or ce_n or ub_n or lb_n or a or a or io)
      if (we_n && ~ce_n)
        begin
 	  if (~ub_n && ~lb_n) $display("ram: read %o -> %o", a, io);
@@ -78,7 +75,11 @@ module ram_s3board(ram_a, ram_oe_n, ram_we_n,
 	     ram1.ram_l[i] = 7'b0;
 	  end
 
+`ifdef __ICARUS__
+	n = 0;
+`else
  	n = $scan$plusargs("test=", testfilename);
+`endif
 	if (n > 0)
 	  begin
 	     $display("ram: (s3board) code filename: %s", testfilename);

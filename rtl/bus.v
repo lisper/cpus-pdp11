@@ -135,11 +135,11 @@ output [4:0] rk_state;
        end
 `endif
 
-//`ifdef debug_bus_int
+`ifdef debug_bus_int
    always @(posedge clk)
      if (bus_int)
        $display("bus: XXX bus interrupt, vector %o", bus_int_vector);
-//`endif
+`endif
    
    // simple arbiter
    // wait for dma request and cpu to allow
