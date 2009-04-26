@@ -24,7 +24,7 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
 			    {8'b0, iopage_addr[0] ? fetch[15:8] : fetch[7:0]} :
 			    fetch;
    
-   always @(decode or offset or iopage_addr or iopage_rd or data_out)
+   always @(decode or offset or iopage_addr or iopage_rd or data_out or fetch)
      if (iopage_rd && decode)
        begin
        case (offset)

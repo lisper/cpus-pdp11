@@ -48,7 +48,7 @@ module uart(clk, reset,
    reg [1:0]	tx_ld;
    reg [1:0] 	tx_ld_next;
 
-   // require uld_rx_req to deassert before accepting next char
+   // require uld_rx_req to deassert before sending next char
    always @(posedge rxclk or posedge reset)
      if (reset)
        rx_uld <= 2'b00;
@@ -127,7 +127,7 @@ module uart(clk, reset,
 	  rx_d2 <= rx_d1;
 
 	  // uload the rx data
-	  if (uld_rx_data)
+	  if (uld_rx_data && ~rx_empty)
 	    begin
 	       rx_data <= rx_reg;
 	       rx_empty <= 1;
