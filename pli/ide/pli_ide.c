@@ -1,4 +1,7 @@
 /* pli_ide.c */
+/*
+ * simple IDE/ATA drive bus level emulation
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -8,9 +11,6 @@
 
 #include "vpi_user.h"
 #include "cv_vpi_user.h"
-
-//#define TRUE 1
-//#define FALSE 0
 
 PLI_INT32 pli_ide(void);
 extern void register_my_systfs(void); 
@@ -30,7 +30,7 @@ static struct state_s {
     int fifo_rd;
     int fifo_wr;
     int fifo_depth;
-    unsigned short fifo[256 * 16];
+    unsigned short fifo[256 * 64];
 
     int file_inited;
     int file_fd;
@@ -88,17 +88,17 @@ static void
 do_ide_setup(struct state_s *s)
 {
     s->file_fd = open("rk.dsk", O_RDWR);
+
+    s->status = 1<<IDE_STATUS_DRDY;
+    s->fifo_depth = 0;
+    s->fifo_rd = 0;
+    s->fifo_wr = 0;
 }
 
 static void
 do_ide_read(struct state_s *s)
 {
     int ret;
-
-    if (!s->file_inited) {
-        s->file_inited = 0;
-        do_ide_setup(s);
-    }
 
     s->lba =
         ((s->reg_drvhead & 0x0f) << 24) |
@@ -115,6 +115,10 @@ do_ide_read(struct state_s *s)
         perror("read");
 
     s->fifo_depth = (512 * s->reg_seccnt) / 2;
+    s->fifo_rd = 0;
+    s->fifo_wr = 0;
+
+    s->status = (1<<IDE_STATUS_DRDY) | (1<<IDE_STATUS_DRQ);
 }
 
 /*
@@ -148,6 +152,11 @@ PLI_INT32 pli_ide(void)
 
     //vpi_printf("pli_ide: inst_id %d\n", inst_id);
     s = &state[inst_id];
+
+    if (!s->file_inited) {
+        s->file_inited = 1;
+        do_ide_setup(s);
+    }
 
     iter = vpi_iterate(vpiArgument, href);
 
@@ -243,14 +252,16 @@ PLI_INT32 pli_ide(void)
     last_dior_bit = dior_bit;
     last_diow_bit = diow_bit;
 
-    if (read_start) vpi_printf("pli_ide: read start\n");
-    if (read_stop) vpi_printf("pli_ide: read stop\n");
-    if (write_start) vpi_printf("pli_ide: write start\n");
-    if (write_stop) vpi_printf("pli_ide: write stop\n");
+    if (0) {
+        if (read_start) vpi_printf("pli_ide: read start\n");
+        if (read_stop) vpi_printf("pli_ide: read stop\n");
+        if (write_start) vpi_printf("pli_ide: write start\n");
+        if (write_stop) vpi_printf("pli_ide: write stop\n");
+    }
 
     /* */
     if (write_start) {
-        vpi_printf("pli_ide: write %s %s %d\n", cs_bits, da_bits, da);
+        if (0) vpi_printf("pli_ide: write %s %s %d\n", cs_bits, da_bits, da);
 
         switch (cs << 3 | da) {
         case ATA_ALTER:
@@ -273,13 +284,11 @@ PLI_INT32 pli_ide(void)
             vpi_printf("pli_ide: command %04x %s\n", bus, bus_bits);
             switch (bus) {
             case 0x0020:
-                vpi_printf("pli_ide: READ\n");
-                s->fifo_rd = 0;
-                s->status = 1 << IDE_STATUS_DRQ;
+                vpi_printf("pli_ide: XXX READ\n");
                 do_ide_read(s);
                 break;
             case 0x0030:
-                vpi_printf("pli_ide: WRITE\n");
+                vpi_printf("pli_ide: XXX WRITE\n");
                 break;
             }
             break;
@@ -287,19 +296,19 @@ PLI_INT32 pli_ide(void)
     }
 
     if (read_start) {
-        vpi_printf("pli_ide: read %s %s %d\n", cs_bits, da_bits, da);
+        if (0) vpi_printf("pli_ide: read %s %s %d\n", cs_bits, da_bits, da);
 
         switch (cs << 3 | da) {
         case ATA_DATA:
             bus = s->fifo[s->fifo_rd];
-            vpi_printf("pli_ide: read data [%d/%d] %04x\n",
-                       s->fifo_rd, s->fifo_depth, bus);
+            if (0) vpi_printf("pli_ide: read data [%d/%d] %04x\n",
+                              s->fifo_rd, s->fifo_depth, bus);
             if (s->fifo_rd < s->fifo_depth)
                 s->fifo_rd++;
 
             if (s->fifo_rd >= s->fifo_depth) {
                 vpi_printf("pli_ide: fifo empty\n");
-                s->status = 0;
+                s->status = 1 << IDE_STATUS_DRDY;
             }
             break;
 
