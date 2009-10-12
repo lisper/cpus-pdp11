@@ -130,7 +130,7 @@ PLI_INT32 pli_ide(void)
     vpiHandle busref, diorref, diowref, csref, daref;
     struct state_s *s;
 
-    int numargs, inst_id, vtyp;
+    int numargs, inst_id;
 
     s_vpi_value tmpval, outval;
 
@@ -174,26 +174,6 @@ PLI_INT32 pli_ide(void)
     {
         vpi_printf("**ERR: $pli_ide bad args\n");
         return(0);
-    }
-
-    if (0) {
-        vtyp = vpi_get(vpiType, busref);
-        vpi_printf("busref vtyp %d\n", vtyp);
-
-        tmpval.format = vpiHexStrVal; 
-        vpi_get_value(busref, &tmpval);
-        vpi_printf("vpiHexStrVal %s\n", tmpval.value.str);
-
-        tmpval.format = vpiIntVal; 
-        vpi_get_value(busref, &tmpval);
-        vpi_printf("vpiIntVal 0x%x\n", tmpval.value.integer);
-
-        s->bus_aref = vpi_put_value(busref, NULL, NULL, vpiAddDriver);
-
-        outval.format = vpiIntVal;
-        outval.value.integer = 0;
-
-        vpi_put_value(s->bus_aref, &outval, NULL, vpiNoDelay);
     }
 
     char bus_bits[17], cs_bits[3], da_bits[4], diow_bit, dior_bit;
@@ -318,8 +298,12 @@ PLI_INT32 pli_ide(void)
             break;
         }
 
+#ifdef __CVER__
         if (s->bus_aref == 0)
             s->bus_aref = vpi_put_value(busref, NULL, NULL, vpiAddDriver);
+#else
+        s->bus_aref = busref;
+#endif
 
         outval.format = vpiIntVal;
         outval.value.integer = bus;
@@ -328,7 +312,8 @@ PLI_INT32 pli_ide(void)
 
     if (read_stop) {
         outval.format = vpiBinStrVal;
-        outval.value.str = "zzzzzzzzzzzzzzzz";
+//        outval.value.str = "zzzzzzzzzzzzzzzz";
+        outval.value.str = "0000000000000000";
         if (s->bus_aref)
             vpi_put_value(s->bus_aref, &outval, NULL, vpiNoDelay);
     }
@@ -345,7 +330,7 @@ PLI_INT32 pli_ide(void)
 /* all routines are called to register system tasks */
 /* called just after all PLI 1.0 tf_ veriusertfs table routines are set up */
 /* before source is read */ 
-void (*vlog_startup_routines[]) () =
+static void (*ide_vlog_startup_routines[]) () =
 {
  register_my_systfs, 
  0
@@ -370,20 +355,23 @@ void register_my_systfs(void)
 
 /* dummy +loadvpi= boostrap routine - mimics old style exec all routines */
 /* in standard PLI vlog_startup_routines table */
-void vpi_compat_bootstrap(void)
+void ide_vpi_compat_bootstrap(void)
 {
     int i;
 
     for (i = 0;; i++) 
     {
-        if (vlog_startup_routines[i] == NULL) break; 
-        vlog_startup_routines[i]();
+        if (ide_vlog_startup_routines[i] == NULL) break; 
+        ide_vlog_startup_routines[i]();
     }
 }
 
-void __stack_chk_fail_local(void)
+void vpi_compat_bootstrap(void)
 {
+    ide_vpi_compat_bootstrap();
 }
+
+void __stack_chk_fail_local(void) {}
 
 
 /*
