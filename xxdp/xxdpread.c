@@ -1,4 +1,11 @@
+/* 
+ * xxdpread.c
+ * simple program to extract files from xxdp disk image
+ * brad@heeltoe.com 4/2009
+ */
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
 
@@ -325,13 +332,23 @@ main(int argc, char *argv[])
 {
 	char *image, *file;
 
+	if (argc < 2) {
+		fprintf(stderr, "usage: xxdpread <disk-image-filename> "
+			"{<extract-name>}\n");
+		exit(1);
+	}
+
 	image = argv[1];
-	file = argv[2];
 
 	open_file(image);
 	read_homeblock();
 	read_allocbitmap();
 	show_dir();
 
-	extract_file(file);
+	if (argc > 2) {
+		file = argv[2];
+		extract_file(file);
+	}
+
+	exit(0);
 }
