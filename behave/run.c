@@ -290,6 +290,8 @@ u16 test12[] = {
     000506, 0000000,
 };
 
+#include "diag.h"
+
 u16 boot_code[] = {
     0042113,                        /* "KD" */
     0012706, 0002000,               /* MOV #boot_start, SP */
@@ -317,6 +319,25 @@ u16 boot_code[] = {
     0xffff
 };
 
+#if 0
+bootstrap loader
+
+157744 016701
+157746 000026
+157750 012702
+157752 000352
+157754 005211
+157756 105711
+157760 100376
+157762 116162
+157764 000002
+157766 157400
+157770 005267
+157772 157756
+157774 000765
+157776 yyyyyy  addr of ptr 177550 for hs ptr
+#endif
+
 struct {
     int num;
     int ttype;
@@ -336,6 +357,7 @@ struct {
     { 10, 1, test10, sizeof(test10), 0500 },
     { 11, 1, test11, sizeof(test11), 0500 },
     { 12, 1, test12, sizeof(test12), 0500 },
+    { 100, 1, diag1, sizeof(diag1), 0200 },
     { 0, 0, NULL }
 };
 
@@ -365,13 +387,14 @@ fill_test_code(int testnum)
                 if (0) printf("index %d, type %d\n", i, tests[i].ttype);
                 switch (tests[i].ttype) {
                 case 1:
-                    for (j = 0; cp[j]; j += 2) {
+                    for (j = 0; j < tests[i].size/2; j += 2) {
+                        if (0) printf("%o %o\n", cp[j], cp[j+1]);
                         write_test_code(cp[j], cp[j+1]);
                     }
                     break;
                 case 2:
                     addr = 0500;
-                    for (j = 0; j < tests[i].size; j++) {
+                    for (j = 0; j < tests[i].size/2; j++) {
                         write_test_code(addr, cp[j]);
                         addr += 2;
                     }

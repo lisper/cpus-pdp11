@@ -253,7 +253,7 @@ u16 io_read(u22 addr)
 //    if (addr == 017777460) return 0;  /* rf11 */
 //    if (addr == 017777440) return 0200; /* rk611 */
 
-    support_signals_bus_error();
+    support_signals_bus_error(addr);
 
     return 0xffff;
 }
@@ -294,7 +294,7 @@ void io_write(u22 addr, u16 data, int writeb)
         return;
     }
 
-    support_signals_bus_error();
+    support_signals_bus_error(addr);
 }
 
 void
@@ -325,7 +325,8 @@ u16 io_psw_read(u22 addr)
 void io_psw_write(u22 addr, u16 data, int writeb)
 {
     extern u16 psw;
-    printf("psw: write; data %o, writeb %d\n");
+
+    printf("psw: write; data %o, writeb %d\n", data, writeb);
     if (writeb) {
         if (addr & 1)
             psw = (psw & 0xff) | (data << 8);
@@ -368,7 +369,7 @@ u16 io_read(u22 addr)
 //    if (addr == 017777460) return 0;  /* rf11 */
 //    if (addr == 017777440) return 0200; /* rk611 */
 
-    support_signals_bus_error();
+    support_signals_bus_error(addr);
 
     return 0xffff;
 }
@@ -411,7 +412,7 @@ void io_write(u22 addr, u16 data, int writeb)
         return;
     }
 
-    support_signals_bus_error();
+    support_signals_bus_error(addr);
 }
 
 void reset_support(void)

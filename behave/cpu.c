@@ -105,6 +105,9 @@ wire latch_pc;
 wire new_cc_n, new_cc_z, new_cc_v, new_cc_c;
 wire latch_cc;
 
+wire16 new_psw_prio;
+wire latch_psw_prio;
+
 /* regs */
 u16 isn;
 u22 dd_ea;
@@ -279,6 +282,8 @@ int verbose_data;
 int verbose_psw;
 int verbose_cc;
 
+void check_for_interrupts(void);
+
 void fetch(void)
 {
     assert_trap_odd = 0;
@@ -290,8 +295,12 @@ void fetch(void)
     }
 
     printf("------\n");
-    printf("f1: pc=%o, sp=%o, psw=%o ipl%d n%d z%d v%d c%d\n",
-	   pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c);
+
+    check_for_interrupts();
+
+    printf("f1: pc=%o, sp=%o, psw=%o ipl%d n%d z%d v%d c%d (%o %o %o %o %o %o %o %o)\n",
+	   pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
+           regs[0], regs[1], regs[2], regs[3], regs[4], regs[5], regs[6], regs[7]);
     printf("    trap=%d, interrupt=%d\n", trap, interrupt);
     printf("    regs %6o %6o %6o %6o \n", regs[0], regs[1], regs[2], regs[3]);
     printf("         %6o %6o %6o %6o \n", regs[4], regs[5], regs[6], regs[7]);
@@ -512,6 +521,10 @@ do_psw_mux(void)
     if (psw_mux != psw && verbose_mux) {
         printf(" psw_mux: mux %o\n", psw_mux);
     }
+
+    if (latch_psw_prio) {
+        psw_mux = (psw_mux & (7 << 5)) | (new_psw_prio << 5);
+    }
 }
 
 void
@@ -614,13 +627,15 @@ void decode1(void)
     need_pop_reg =
 	(isn_15_6 == 0002 && (isn_5_0 < 010)) ||	/* rts */
 	(isn_15_6 == 0064) ||				/* mark */
-	(isn_15_6 == 0070);				/* csm */
+	(isn_15_6 == 0070) ||				/* csm */
+	(isn_15_6 == 01065);				/* mtpd */
 
     need_pop_pc_psw =					/* rti, rtt */
 	(isn_15_6 == 0 && (isn_5_0 == 002 || isn_5_0 == 006));
 
     need_push_state =
-	(isn_15_9 == 004);				/* jsr */
+	(isn_15_9 == 004) ||				/* jsr */
+	(isn_15_6 == 01065);				/* mfpd */
 
     assert_trap_ill = is_illegal;
 
@@ -734,7 +749,6 @@ void decode1(void)
 
 wire22 se_addr(wire22 addr)
 {
-//    if (addr & 0x8000) return addr | 0x3f0000;
     if (addr >= 0xe000) return addr | 0x3f0000;
     return addr;
 }
@@ -854,6 +868,7 @@ void execute(void)
     new_cc_v = cc_v;
     new_cc_c = cc_c;
     latch_cc = 0;
+    latch_psw_prio = 0;
 
     if (verbose_data) {
         printf(" ss_data %6o, dd_data %6o\n", ss_data, dd_data);
@@ -918,7 +933,7 @@ void execute(void)
 		break;
 
 	    case 002:					    /* rts */
-                switch(isn_5_0) {
+                switch (isn_5_0) {
                 case 000: case 001: case 002: case 003:
                 case 004: case 005: case 006: case 007:
                     printf("e: RTS\n");
@@ -927,7 +942,8 @@ void execute(void)
                     break;
 
                 case 030:				    /* spl */
-//xxx
+                    new_psw_prio = isn & 7;
+                    latch_psw_prio = 1;
                     break;
 
                     /* ccc	cc	-	000257 */
@@ -944,6 +960,7 @@ void execute(void)
                     if (isn_3_0 & 004) new_cc_z = 0;
                     if (isn_3_0 & 002) new_cc_v = 0;
                     if (isn_3_0 & 001) new_cc_c = 0;
+                    latch_cc = 1;
                     break;
                     /* scc	cc	-	000277 */
                     /* sen	cc	-	000270 */
@@ -1051,7 +1068,8 @@ void execute(void)
 
 	    case 040: case 041: case 042: case 043:	    /* jsr */
 	    case 044: case 045: case 046: case 047:
-		printf(" JSR r%d; dd_data %6o, dd_ea %6o\n", ss_reg, dd_data, dd_ea);
+		printf(" JSR r%d; dd_data %6o, dd_ea %6o\n",
+                       ss_reg, dd_data, dd_ea);
 		e1_result = pc;
 		new_pc = dd_ea;
 		latch_pc = 1;
@@ -1110,11 +1128,11 @@ void execute(void)
 		break;
 
 	    case 056:					    /* sbc */
-		e1_result = dd_data - cc_c;
+		e1_result = dd_data - (cc_c ? 1 : 0);
 		new_cc_n = sign_w(e1_result);
 		new_cc_z = zero_w(e1_result);
-		new_cc_v = (cc_c && (e1_result == 0100000));
-		new_cc_c = cc_c & new_cc_z ? 1 : 0;
+		new_cc_v = (cc_c && (e1_result == 077777));
+		new_cc_c = (cc_c && (e1_result == 0177777));
 		latch_cc = 1;
 		break;
 
@@ -1137,11 +1155,11 @@ void execute(void)
 		break;
 
 	    case 061:					    /* rol */
-		e1_result = (dd_data << 1) | cc_c;
+		e1_result = ((dd_data << 1) | cc_c) & 0xffff;
 		new_cc_n = sign_w(e1_result);
 		new_cc_z = zero_w(e1_result);
-		new_cc_c = sign_w(e1_result);
-		new_cc_v = new_cc_n ^ new_cc_c ? 1 : 0;
+		new_cc_c = sign_w(dd_data);
+		new_cc_v = (new_cc_n ^ new_cc_c) ? 1 : 0;
 		latch_cc = 1;
 		break;
 
@@ -1155,11 +1173,11 @@ void execute(void)
 		break;
 
 	    case 063:					    /* asl */
-		e1_result = dd_data << 1;
+		e1_result = (dd_data << 1) & 0xffff;
 		new_cc_n = sign_w(e1_result);
 		new_cc_z = zero_w(e1_result);
-		new_cc_c = sign_w(e1_result);
-		new_cc_v = new_cc_n ^ new_cc_c ? 1 : 0;
+		new_cc_c = sign_w(dd_data);
+		new_cc_v = (new_cc_n ^ new_cc_c) ? 1 : 0;
 		latch_cc = 1;
 		break;
 
@@ -1614,8 +1632,6 @@ void execute(void)
                 new_cc_z = zero_w(dd_data);
                 new_cc_v = 0;
                 latch_cc = 1;
-// push data
-// sp <= sp - 2
                 break;
 
             case 066:					/* mtpd */
@@ -1636,8 +1652,8 @@ void execute(void)
             break;
 
 	case 011:					    /* movb */
-	    e1_result = /*(dd_data & 0xff00) |*/
-		(ss_data & 0377);
+	    e1_result = (ss_data & 0377);
+            if (ss_data & 0x80) e1_result |= 0xff00;
 	    new_cc_n = sign_b(e1_result);
 	    new_cc_z = zero_b(e1_result);
 	    new_cc_v = 0;
@@ -1663,7 +1679,8 @@ void execute(void)
 	    break;
 
 	case 014:					    /* bicb */
-	    e1_result = (ss_data & 0377) & ~(dd_data & 0377);
+//	    e1_result = (ss_data & 0377) & ~(dd_data & 0377);
+	    e1_result = (~ss_data & dd_data) & 0377;
 	    new_cc_n = sign_b(e1_result);
 	    new_cc_z = zero_w(e1_result);
 	    new_cc_v = 0;
@@ -1714,9 +1731,6 @@ void writeback1(void)
     }
     else if (store_result && dd_dest_reg) {
 	printf(" r%d <- %06o (dd)\n", dd_reg, e1_data);
-//        if (is_isn_byte)
-//            regs[dd_reg] = (regs[dd_reg] & 0xff00) | (e1_data & 0xff);
-//        else
             regs[dd_reg] = e1_data;
     }
     else if (store_ss_reg) {
@@ -1770,6 +1784,9 @@ void trap3(void) {
 void trap4(void) {
     printf("t4: ss_ea %o, ss_ea_mux %o\n", ss_ea, ss_ea_mux);
     psw_mem_data = read_mem(ss_ea_mux);
+
+    //hack
+    interrupt = 0;
 }
 
 void wait1(void) {
@@ -1896,7 +1913,7 @@ void check_for_interrupts(void)
     /* */
     ok_to_assert_int =
         istate == f1 || istate == i1 ||
-        istate == s4 || istate == d4 | istate == w1;
+        istate == s4 || istate == d4 || istate == w1;
 
     if (ok_to_assert_int) {
         if (assert_int & ipl_below(ipl, assert_int_ipl)) {
@@ -1918,7 +1935,6 @@ void
 next_state()
 {
     check_for_traps();
-    check_for_interrupts();
 
     if (halted) {
 	new_istate = h1;
@@ -2158,7 +2174,7 @@ void debug_reset(void)
     int i;
 
     for (i = 0; i < 7; i++)
-	regs[i] = -1;
+	regs[i] = 0/*-1*/;
 
     regs[6] = 0;
     regs[7] = 0;
@@ -2166,9 +2182,9 @@ void debug_reset(void)
 }
 
 void
-support_signals_bus_error(void)
+support_signals_bus_error(u22 addr)
 {
-    printf("assert_trap_bus = 1\n");
+    printf("assert_trap_bus = 1 (pc %o, addr %o)\n", pc, addr);
     assert_trap_bus = 1;
 }
 
