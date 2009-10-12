@@ -166,7 +166,7 @@ output [4:0] rk_state;
    assign track = rkda[13:4];
    
    // (track*12)+sector = 4*(track+track+track) + sector
-   assign lba = {(track + track + track), 2'b0} + sector;
+   assign lba = {(track + track + track), 2'b0} + { 8'b0, sector };
 		
    // register read
    always @(clk or decode or iopage_addr or iopage_rd or iopage_byte_op or
@@ -182,8 +182,11 @@ output [4:0] rk_state;
 		 reg_out = { rkcs_err, 7'b0,
 			      rkcs_done, rkcs_ie, rkcs_mex,
 			      rkcs_cmd };
-		 //if (reg_out != 16'o5)
-		 //$display("rk: XXX read rkcs %o", reg_out);
+//		 if (reg_out != 16'o5)
+//		 $display("rk: XXX read rkcs %o",
+//			  { rkcs_err, 7'b0,
+//			    rkcs_done, rkcs_ie, rkcs_mex,
+//			    rkcs_cmd });
 	      end
 	    13'o17406: reg_out = rkwc;
 	    13'o17410: reg_out = rkba[15:0];

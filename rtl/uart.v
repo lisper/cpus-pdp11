@@ -58,15 +58,15 @@ module uart(clk, reset,
    always @(uld_rx_req or rx_uld)
      begin
 	rx_uld_next = rx_uld;
-	uld_rx_ack <= 0;
+	uld_rx_ack = 0;
 	case (rx_uld)
 	  2'b00: if (uld_rx_req) rx_uld_next = 2'b01;
 	  2'b01: begin
-	     uld_rx_ack <= 1;
+	     uld_rx_ack = 1;
 	     rx_uld_next = 2'b10;
 	    end
 	  2'b10: begin
-	     uld_rx_ack <= 1;
+	     uld_rx_ack = 1;
 	     if (~uld_rx_req) rx_uld_next = 2'b00;
 	    end
 	  default: rx_uld_next = 2'b00;
@@ -86,15 +86,15 @@ module uart(clk, reset,
    always @(ld_tx_req or tx_ld)
      begin
 	tx_ld_next = tx_ld;
-	ld_tx_ack <= 0;
+	ld_tx_ack = 0;
 	case (tx_ld)
 	  2'b00: if (ld_tx_req) tx_ld_next = 2'b01;
 	  2'b01: begin
-	     ld_tx_ack <= 1;
+	     ld_tx_ack = 1;
 	     tx_ld_next = 2'b10;
 	    end
 	  2'b10: begin
-	     ld_tx_ack <= 1;
+	     ld_tx_ack = 1;
 	     if (~ld_tx_req) tx_ld_next = 2'b00;
 	    end
 	  default: tx_ld_next = 2'b00;
@@ -217,7 +217,7 @@ module uart(clk, reset,
 
 	  if (tx_enable && !tx_empty)
 	    begin
-	       tx_cnt <= tx_cnt + 1'b1;
+	       tx_cnt <= tx_cnt + 4'b1;
 
 	       case (tx_cnt)
 		 4'd0: tx_out <= 0;

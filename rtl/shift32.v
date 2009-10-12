@@ -76,7 +76,7 @@ module shift32(clk, reset, ready, done, in, out, shift,
 	   begin
 	      last_bit <= out[31];
 	      out <= { out[30:0], 1'b0 };
-	      count <= count - 1'b1;
+	      count <= count - 6'b1;
 
 	      if (sign_different16)
 		sign_change16 <= 1'b1;
@@ -88,7 +88,7 @@ module shift32(clk, reset, ready, done, in, out, shift,
 	   begin
 	      last_bit <= out[0];
 	      out <= { in[31], out[31:1] };
-	      count <= count + 1'b1;
+	      count <= count + 6'b1;
 	   end
    
 endmodule

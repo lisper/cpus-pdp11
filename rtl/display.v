@@ -24,7 +24,7 @@ module display(clk, reset, pc, led, dots, sevenseg, sevenseg_an);
 		  (anode == 2'b10) ? pc[8:6] :
 		  (anode == 2'b01) ? pc[5:3] :
 		  (anode == 2'b00) ? pc[2:0] :
-		  4'b0;
+		  3'b0;
 
    assign sevenseg_an = (anode == 2'b11) ? 4'b0111 :
 			(anode == 2'b10) ? 4'b1011 :
@@ -39,7 +39,7 @@ module display(clk, reset, pc, led, dots, sevenseg, sevenseg_an);
 
    always @(posedge clk)
      begin
-       divider <= divider + 1'b1;
+       divider <= divider + 11'b1;
        if (divider == 0)
           aclk = ~aclk;
      end

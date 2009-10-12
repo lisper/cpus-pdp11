@@ -102,9 +102,9 @@ module execute(clk, reset, enable,
 
    add8 add8_pc(pc_offset, isn[7:0], isn[7:0]);
    
-   assign new_pc_w = pc + pc_offset;
+   assign new_pc_w = pc + { 8'b0, pc_offset};
    assign new_pc_b = pc + { 8'hff, pc_offset };
-   assign new_pc_sob = pc - {isn[5:0], 1'b0};
+   assign new_pc_sob = pc - {9'b0, isn[5:0], 1'b0};
    
    // cpu modes
    parameter 	mode_kernel = 2'b00;
@@ -181,7 +181,7 @@ module execute(clk, reset, enable,
 		       is_ashx ? (shift_done) : 1'b1;
    
    //
-   always @(clk or enable or isn or pc or psw or ss_data or dd_data or
+   always @(/*clk or*/enable or isn or pc or psw or ss_data or dd_data or
 	    ss_reg or ss_reg_value or ss_rego1_value or
 	    dd_ea or
 	    cc_n or cc_z or cc_v or cc_c or isn or
@@ -337,7 +337,7 @@ module execute(clk, reset, enable,
 
 			6'o30:				    	    /* spl */
 			  begin
-			     new_psw_prio = isn[2:1];
+			     new_psw_prio = isn[2:0];
 			     latch_psw_prio = 1;
 			  end
 
@@ -544,7 +544,7 @@ module execute(clk, reset, enable,
 
 		    6'o55:					    /* adc */
 		      begin
-			 e1_result = dd_data + cc_c;
+			 e1_result = dd_data + {15'b0, cc_c};
 			 new_cc_n = e1_result_sign;
 			 new_cc_z = e1_result_zero;
 			 new_cc_v = (cc_c && (e1_result == 16'o100000));
@@ -554,7 +554,7 @@ module execute(clk, reset, enable,
 
 		    6'o56:					    /* sbc */
 		      begin
-			 e1_result = dd_data - cc_c;
+			 e1_result = dd_data - {15'b0, cc_c};
 			 new_cc_n = e1_result_sign;
 			 new_cc_z = e1_result_zero;
 			 new_cc_v = (cc_c && (e1_result == 16'o77777));
@@ -638,12 +638,6 @@ module execute(clk, reset, enable,
 			 latch_cc = 1;
 		      end
 		    
-		    6'o70,					    /* csm */
-		      6'o72,					    /* tstset */
-		      6'o73:					    /* wrtlck */
-			begin
-			end
-
 		    6'o67:					    /* sxt */
 		      begin
 			 e1_result = cc_n ? 16'hffff : 16'b0;
@@ -652,6 +646,15 @@ module execute(clk, reset, enable,
 			 latch_cc = 1;
 		      end
 		    
+		    6'o70,					    /* csm */
+		      6'o72,					    /* tstset */
+		      6'o73:					    /* wrtlck */
+			begin
+			end
+
+		    default:
+		      begin
+		      end
 
 		  endcase // case(isn[11:6])
 	       end // else: !if(isn[11:6] == 6'o00 && isn[5:0] < 010)
@@ -1014,7 +1017,7 @@ module execute(clk, reset, enable,
 			e1_result = {dd_data[15:8], -dd_data[7:0]};
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
-			new_cc_v = e1_result[7:0] == 16'o200;
+			new_cc_v = e1_result[7:0] == 8'o200;
 			new_cc_c = new_cc_z ^ 1'b1;
 			latch_cc = 1;
 			//note: byte write of src - rmw to memory word
@@ -1022,10 +1025,13 @@ module execute(clk, reset, enable,
 
 		   6'o55:				/* adcb */
 		     begin
-			e1_result = {dd_data[15:8], (dd_data[7:0] + cc_c)};
+			e1_result = {
+				     dd_data[15:8],
+				     dd_data[7:0] + {7'b0, cc_c}
+				     };
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
-			new_cc_v = cc_c && (e1_result[7:0] == 0200);
+			new_cc_v = cc_c && (e1_result[7:0] == 8'o0200);
 			new_cc_c = cc_c & new_cc_z;
 			latch_cc = 1;
 			//note: byte write of src - rmw to memory word
@@ -1033,11 +1039,14 @@ module execute(clk, reset, enable,
 
 		   6'o56:				/* sbcb */
 		     begin
-			e1_result = {dd_data[15:8], (dd_data[7:0] - cc_c)};
+			e1_result = {
+				     dd_data[15:8],
+				     dd_data[7:0] - {7'b0, cc_c}
+				     };
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
-			new_cc_v = cc_c && (e1_result[7:0] == 0177);
-			new_cc_c = cc_c && (e1_result[7:0] == 0377);
+			new_cc_v = cc_c && (e1_result[7:0] == 8'o0177);
+			new_cc_c = cc_c && (e1_result[7:0] == 8'o0377);
 			latch_cc = 1;
 			//note: byte write of src - rmw to memory word
 		     end
@@ -1142,7 +1151,10 @@ module execute(clk, reset, enable,
 			latch_cc = 1;
 			e1_result = psw[7] ? (16'o177400 | psw) : psw;
 		     end
-		   
+
+		   default:
+		     begin
+		     end
 		 endcase // case(isn[11:6])
 		 end
 
@@ -1157,7 +1169,7 @@ module execute(clk, reset, enable,
 
 	       4'o12:					    /* cmpb */
 		 begin
-		    e1_result = ss_data[7:0] - dd_data [7:0];
+		    e1_result = {8'b0, ss_data[7:0] - dd_data [7:0]};
 		    new_cc_n = e1_result_byte_sign;
 		    new_cc_z = e1_result_byte_zero;
 		    new_cc_v = (ss_data[7] ^ dd_data[7]) &

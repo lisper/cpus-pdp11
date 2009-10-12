@@ -3,23 +3,23 @@
 // with byte read/write capability
 //
 
-module ram_16kx8(clk, reset, a, di, do, ce, we);
+module ram_16kx8(clk, reset, a, din, dout, ce, we);
 
    input clk;
    input reset;
    input [14/*12*/:0] a;
-   input [7:0] di;
+   input [7:0] din;
    input ce, we;
-   output [7:0] do;
+   output [7:0] dout;
 
    reg [7:0] ram[32767/*8191*/:0];
 
-   assign do = ram[a];
+   assign dout = ram[a];
 
    always @(posedge clk)
      begin
 	if (we && ce)
-	  ram[a] = di;
+	  ram[a] = din;
      end
 endmodule
 
@@ -50,6 +50,7 @@ module ram_16kx16(clk, reset, addr, DI, DO, CE_N, WE_N, byte_op);
    reg [1023:0]  testfilename;
    integer 	 n;
 
+`ifndef verilator
    initial
      begin
 	for (i = 0; i < 32768/*8192*/; i=i+1)
@@ -59,6 +60,13 @@ module ram_16kx16(clk, reset, addr, DI, DO, CE_N, WE_N, byte_op);
 	  end
 
 `ifdef __ICARUS__
+ `define no_scan
+`endif
+`ifdef verilator
+ `define no_scan
+`endif
+
+`ifdef no_scan
 	n = 0;
 `else
  	n = $scan$plusargs("test=", testfilename);
@@ -98,7 +106,8 @@ module ram_16kx16(clk, reset, addr, DI, DO, CE_N, WE_N, byte_op);
 	       end
 	  end
      end
-
+`endif
+   
    always @(addr or CE_N or WE_N or DO)
      begin
 	if (CE_N == 0 && WE_N == 1)

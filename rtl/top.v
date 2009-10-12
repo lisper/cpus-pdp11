@@ -6,6 +6,7 @@
 `define use_rk_model 1
 
 `include "pdp11.v"
+`include "mmu.v"
 `include "bus.v"
 `include "ram_async.v"
 `include "debounce.v"
@@ -62,6 +63,10 @@ module top(rs232_txd, rs232_rxd,
    wire 	waited;
    wire 	trapped;
 
+   wire 	mmu_fetch_va;
+   wire 	mmu_abort;
+   wire 	mmu_trap;
+
    assign initial_pc = 16'o173000;
 
 `define slower
@@ -71,18 +76,18 @@ module top(rs232_txd, rs232_rxd,
    reg [24:0] clkdiv;
    wire [24:0] clkmax;
 
-   assign clkmax = (slideswitch[3:0] == 3'd0)  ?  1'h1 :
-		   (slideswitch[3:0] == 3'd1)  ?  2'h2 :
-		   (slideswitch[3:0] == 3'd2)  ?  8'h1ff :
-		   (slideswitch[3:0] == 3'd3)  ? 10'h7ff :
-		   (slideswitch[3:0] == 3'd4)  ? 13'h1fff :
-		   (slideswitch[3:0] == 3'd5)  ? 15'h7fff :
-		   (slideswitch[3:0] == 3'd6)  ? 17'h1ffff :
-		   (slideswitch[3:0] == 3'd7)  ? 19'h7ffff :
-		   (slideswitch[3:0] == 3'd8)  ? 21'h1fffff :
-		   (slideswitch[3:0] == 3'd9)  ? 22'h3fffff :
-		   (slideswitch[3:0] == 3'd10) ? 23'h7fffff :
-   		   (slideswitch[3:0] == 3'd11) ? 24'hffffff :
+   assign clkmax = (slideswitch[3:0] == 4'd0)  ? 25'h1 :
+		   (slideswitch[3:0] == 4'd1)  ? 25'h2 :
+		   (slideswitch[3:0] == 4'd2)  ? 25'h1ff :
+		   (slideswitch[3:0] == 4'd3)  ? 25'h7ff :
+		   (slideswitch[3:0] == 4'd4)  ? 25'h1fff :
+		   (slideswitch[3:0] == 4'd5)  ? 25'h7fff :
+		   (slideswitch[3:0] == 4'd6)  ? 25'h1ffff :
+		   (slideswitch[3:0] == 4'd7)  ? 25'h7ffff :
+		   (slideswitch[3:0] == 4'd8)  ? 25'h1fffff :
+		   (slideswitch[3:0] == 4'd9)  ? 25'h3fffff :
+		   (slideswitch[3:0] == 4'd10) ? 25'h7fffff :
+   		   (slideswitch[3:0] == 4'd11) ? 25'hffffff :
 		   25'h1ffffff;
      
    always @(posedge sysclk)
@@ -93,7 +98,7 @@ module top(rs232_txd, rs232_rxd,
              clkdiv <= 0;
 	  end
 	else
-          clkdiv <= clkdiv + 1'b1;
+          clkdiv <= clkdiv + 25'b1;
      end
    //-----------
 `else
@@ -123,7 +128,8 @@ wire [4:0] rk_state;
 //   assign led = {ide_cs, ide_diow, rk_state};
    
    //
-   wire [21:0] bus_addr;
+   wire [15:0] bus_addr_v;
+   wire [21:0] bus_addr_p;
    wire [15:0] bus_data_in, bus_data_out;
    wire        bus_rd, bus_wr, bus_byte_op;
    wire        bus_arbitrate, bus_ack, bus_error;
@@ -132,6 +138,8 @@ wire [4:0] rk_state;
    wire [7:0]  interrupt_ack_ipl;
    wire [15:0] psw;
    wire        psw_io_wr;
+   wire [1:0]  bus_cpu_cm;
+   wire        bus_i_access;
    
    pdp11 cpu(.clk(clk),
 	     .reset(reset),
@@ -140,7 +148,7 @@ wire [4:0] rk_state;
 	     .waited(waited),
 	     .trapped(trapped),
 	     
-	     .bus_addr(bus_addr),
+	     .bus_addr(bus_addr_v),
 	     .bus_data_in(bus_data_out),
 	     .bus_data_out(bus_data_in),
 	     .bus_rd(bus_rd),
@@ -149,7 +157,13 @@ wire [4:0] rk_state;
 	     .bus_arbitrate(bus_arbitrate),
 	     .bus_ack(bus_ack),
 	     .bus_error(bus_error),
+	     .bus_i_access(bus_i_access),
+	     .bus_cpu_cm(bus_cpu_cm),
 
+	     .mmu_fetch_va(mmu_fetch_va),
+	     .mmu_abort(mmu_abort),
+	     .mmu_trap(mmu_trap),
+	     
 	     .bus_int(bus_int),
 	     .bus_int_ipl(bus_int_ipl),
 	     .bus_int_vector(bus_int_vector),
@@ -170,10 +184,18 @@ wire [4:0] rk_state;
    wire [15:0] switches;
    assign switches = {8'b0, slideswitch};
 
+   wire   pxr_wr;
+   wire        pxr_rd;
+   wire [7:0]  pxr_addr;
+   wire [15:0] pxr_data_in;
+   wire [15:0] pxr_data_out;
+   
+   wire        signal_mmu_trap;
+
    bus bus1(.clk(clk),
 	    .brgclk(sysclk),
 	    .reset(reset),
-	    .bus_addr(bus_addr),
+	    .bus_addr(bus_addr_p),
 	    .bus_data_in(bus_data_in),
 	    .bus_data_out(bus_data_out),
 	    .bus_rd(bus_rd),
@@ -195,6 +217,13 @@ wire [4:0] rk_state;
 	    .ram_wr(ram_wr),
 	    .ram_byte_op(ram_byte_op),
 
+	    .pxr_wr(pxr_wr),
+	    .pxr_rd(pxr_rd),
+	    .pxr_addr(pxr_addr),
+	    .pxr_data_in(pxr_data_out),
+	    .pxr_data_out(pxr_data_in),
+	    .pxr_trap(signal_mmu_trap),
+	    
    	    .ide_data_bus(ide_data_bus),
 	    .ide_dior(ide_dior), .ide_diow(ide_diow),
 	    .ide_cs(ide_cs), .ide_da(ide_da),
@@ -202,12 +231,30 @@ wire [4:0] rk_state;
 	    .psw(psw),
 	    .psw_io_wr(psw_io_wr),
 	    .switches(switches),
-.rk_state(rk_state),
+	    .rk_state(rk_state),
 	    .rs232_tx(rs232_txd),
 	    .rs232_rx(rs232_rxd));
 
-   wire        ram_wr_short;
+   mmu mmu1(.clk(clk),
+	    .reset(reset),
+	    .cpu_va(bus_addr_v),
+	    .cpu_cm(bus_cpu_cm),
+	    .cpu_rd(bus_rd),
+	    .cpu_wr(bus_wr),
+	    .cpu_i_access(bus_i_access),
+	    .cpu_pa(bus_addr_p),
+	    .fetch_va(mmu_fetch_va),
+	    .signal_abort(mmu_abort),
+	    .signal_trap(mmu_trap),
+	    .pxr_wr(pxr_wr),
+	    .pxr_rd(pxr_rd),
+	    .pxr_addr(pxr_addr),
+	    .pxr_data_in(pxr_data_in),
+	    .pxr_data_out(pxr_data_out));
 
+
+   // a bit of a hack to make sure ram_wr deasserts
+   wire        ram_wr_short;
    assign ram_wr_short = ram_wr & ~clk;
 
    ram_async ram1(.addr(ram_addr[17:0]),

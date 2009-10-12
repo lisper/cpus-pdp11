@@ -9,6 +9,7 @@ module bus(clk, brgclk, reset, bus_addr, bus_data_in, bus_data_out,
 	   bus_arbitrate, bus_ack, bus_error,
 	   bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl,
 	   ram_addr, ram_data_in, ram_data_out, ram_rd, ram_wr, ram_byte_op,
+	   pxr_wr, pxr_rd, pxr_addr, pxr_data_in, pxr_data_out, pxr_trap,
 	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 	   psw, psw_io_wr, switches, rs232_tx, rs232_rx
 ,rk_state
@@ -35,6 +36,13 @@ output [4:0] rk_state;
    input [15:0]   ram_data_in;
    output [15:0]  ram_data_out;
    output 	  ram_rd, ram_wr, ram_byte_op;
+
+   output 	  pxr_wr;
+   output 	  pxr_rd;
+   output [7:0]	  pxr_addr;
+   input [15:0] pxr_data_in;
+   output [15:0] pxr_data_out;
+   input 	 pxr_trap;
    
    inout [15:0] ide_data_bus;
    output 	ide_dior, ide_diow;
@@ -67,18 +75,25 @@ output [4:0] rk_state;
    wire [2:0] 	grant_state_next;
  	  
    //
+`ifdef xxx
    assign 	ram_access = bus_addr[21:16] == 6'b0 &&
 			     bus_addr[15:13] != 3'b111;
    
    assign 	iopage_access = bus_addr[15:13] == 3'b111;
+`else
+   assign 	iopage_access = (bus_addr[21:13] == 9'o776) ||
+				(bus_addr[21:13] == 9'o777);
 
+   assign 	ram_access = ~iopage_access;
+`endif
+   
    assign 	iopage_rd = bus_rd & iopage_access;
    assign 	iopage_wr = bus_wr & iopage_access;
 
    assign bus_data_out = ram_access ? ram_data_in :
 			 iopage_access ? iopage_out : 16'hffff/*16'b0*/;
 
-   assign ram_addr = grant_cpu ? bus_addr[15:0] : dma_addr[15:0];
+   assign ram_addr = grant_cpu ? bus_addr : {6'b0, dma_addr[15:0]};
    assign ram_data_out = grant_cpu ? bus_data_in : dma_data_out;
    assign ram_rd = grant_cpu ? (bus_rd & ram_access) : dma_rd;
    assign ram_wr = grant_cpu ? (bus_wr & ram_access) : dma_wr;
@@ -95,14 +110,21 @@ output [4:0] rk_state;
 	    $display("     ram_rd %o, ram_wr %o ram_byte_op %o",
 		     ram_rd, ram_wr, ram_byte_op);
        end
+
+//   always @(posedge clk)
+//     if (iopage_access)
+//       begin
+//	  if (bus_wr) $display("bus: io write %o <- %o", bus_addr,bus_data_in);
+//	  if (bus_rd) $display("bus: io read %o -> %o", bus_addr,bus_data_out);
+//       end
 `endif
    
 `ifdef debug_bus_dma
    always @(posedge clk)
      if (dma_ack)
        begin
-//	  if (bus_wr) $display("bus: ram write %o <- %o", bus_addr,bus_data_in);
-//	  if (bus_rd) $display("bus: ram read %o -> %o", bus_addr,bus_data_out);
+	  if (bus_wr) $display("bus: ram write %o <- %o", bus_addr,bus_data_in);
+	  if (bus_rd) $display("bus: ram read %o -> %o", bus_addr,bus_data_out);
 	  if (dma_rd || dma_wr)
 	    $display("     dma_rd %o dma_wr %o ram_data_in %o, dma_data_out %o",
 		     dma_rd, dma_wr, ram_data_in, dma_data_out);
@@ -188,6 +210,14 @@ output [4:0] rk_state;
 		  .vector(bus_int_vector),
 		  .ack_ipl(interrupt_ack_ipl),
 
+		  // mmu_regs
+		  .pxr_wr(pxr_wr),
+		  .pxr_rd(pxr_rd),
+		  .pxr_addr(pxr_addr),
+		  .pxr_data_in(pxr_data_in),
+		  .pxr_data_out(pxr_data_out),
+		  .pxr_trap(pxr_trap),
+		  
 		  // external connection to ide drive
 		  .ide_data_bus(ide_data_bus),
 		  .ide_dior(ide_dior), .ide_diow(ide_diow),
@@ -209,8 +239,8 @@ output [4:0] rk_state;
 		  .dma_data_in(ram_data_in),
 		  .dma_data_out(dma_data_out),
 		  .dma_rd(dma_rd),
-		  .dma_wr(dma_wr)
-,.rk_state(rk_state)
+		  .dma_wr(dma_wr),
+		  .rk_state(rk_state)
 		  );
 
 endmodule

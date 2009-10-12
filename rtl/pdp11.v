@@ -24,6 +24,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	     bus_addr, bus_data_out, bus_data_in,
 	     bus_rd, bus_wr, bus_byte_op,
 	     bus_arbitrate, bus_ack, bus_error,
+	     bus_i_access, bus_cpu_cm,
+	     mmu_fetch_va, mmu_abort, mmu_trap,
 	     bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl, 
 	     pc, psw, psw_io_wr);
 
@@ -33,7 +35,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    output 	waited;
    output 	trapped;
    
-   output [21:0] bus_addr;
+   output [15:0] bus_addr;
    input [15:0]  bus_data_in;
    output [15:0] bus_data_out;
    output 	 bus_rd, bus_wr, bus_byte_op;
@@ -49,6 +51,13 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    reg 		 interrupt;
    reg [7:0] 	 interrupt_ack_ipl;
 
+   output 	 bus_i_access;
+   output [1:0]  bus_cpu_cm;
+
+   output 	 mmu_fetch_va;
+   input 	 mmu_abort;
+   input 	 mmu_trap;
+   
    // state
    reg 		halted;
    reg 		waited;
@@ -104,7 +113,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 
    wire [3:0] 	isn_15_12;
    wire [6:0] 	isn_15_9;
-   wire [10:0] 	isn_15_6;
+   wire [9:0] 	isn_15_6;
    wire [5:0] 	isn_11_6;
    wire [2:0] 	isn_11_9;
    wire [5:0] 	isn_5_0;
@@ -143,10 +152,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 		need_d2,
 		need_d4;
 
-   wire [15/*21*/:0] 	dd_ea_mux;
-   wire [15/*21*/:0] 	ss_ea_mux;
+   wire [15:0] 	dd_ea_mux;
+   wire [15:0] 	ss_ea_mux;
 
-   wire [15/*21*/:0] 	new_pc;
+   wire [15:0] 	new_pc;
    wire 	latch_pc;
 
    wire 	latch_sp;
@@ -160,8 +169,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 
    // regs
    reg [15:0] 	isn;
-   reg [15/*21*/:0] 	dd_ea;
-   reg [15/*21*/:0] 	ss_ea;
+   reg [15:0] 	dd_ea;
+   reg [15:0] 	ss_ea;
 
    wire [2:0] 	dd_mode, dd_reg;
 
@@ -431,6 +440,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 		     
      istate == s3 ? bus_data_in :
 
+     // assert trap vector during t1
      istate == t1 ? ((odd_pc |
 		      trap_odd | trap_oflo | trap_bus | trap_res) ? 16'o4 :
 		     trap_ill ? 16'o10 :
@@ -486,7 +496,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	       16'b0;
 
    assign dd_data_mux =
-	       (istate == c1 && (isn_15_6 == 10'o1067)) ? psw[7:0] : // mfps 
+	       (istate == c1 && (isn_15_6 == 10'o1067)) ? {8'b0, psw[7:0]} : // mfps 
 	       (istate == c1 && dd_mode == 0) ? dd_reg_value :
 	       (istate == d4) ? bus_data_in :
 	       16'b0;
@@ -552,8 +562,11 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 		     psw[4],
 		     latch_cc ? new_psw_cc : psw[3:0]};
 	  else
-            if (istate == o2 || istate == t4)
+            if (istate == o2)
 	      psw <= bus_data_in;
+            if (istate == t4)
+	      // on exception, save old current mode in previous mode
+	      psw <= { bus_data_in[15:14], psw[15:14], bus_data_in[11:0] };
 	    else
 	      if (istate == w1 && psw_io_wr)
 		begin
@@ -592,7 +605,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    assign need_destspec_dd_byte =				// xxxb
 	(isn_15_12 == 4'o10 && (isn_11_6 >= 6'o50 && isn_11_6 <= 6'o64))||
 	(isn_15_12 == 4'o10 && (isn_11_6 == 6'o67)) ||		// mfps
-	(isn_15_12 >= 4'o11 && isn_15_12 < 10'o0016);		// xxxb
+	(isn_15_12 >= 4'o11 && isn_15_12 < 4'o16);		// xxxb
 
    assign need_destspec_dd = need_destspec_dd_word | need_destspec_dd_byte;
 
@@ -851,6 +864,14 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    assign bus_byte_op = (istate == w1 || istate == s4 || istate == d4) ?
 			is_isn_byte: 1'b0;
 
+   assign bus_i_access = istate == f1 ||
+			 (istate == s1 && (ss_mode == 6 || ss_mode == 7)) ||
+			 (istate == d1 && (dd_mode == 6 || dd_mode == 7));
+   
+   assign bus_cpu_cm = current_mode;
+
+   assign mmu_fetch_va = istate == f1;
+   
    //
    // clock data
    //
@@ -1109,6 +1130,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	  i1:
 	    begin
 	    end
+
+	 default:
+	    begin
+	    end
 	endcase // case(istate)
        end
    
@@ -1260,7 +1285,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 
              $display("trap: %d", trap);
 	  end // if (trap)
-     end // always @ (posedge clk)
+     end
 
    //
    // halt & wait entry
@@ -1317,10 +1342,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
                interrupt <= 1;
 	       interrupt_ack_ipl <= bus_int_ipl;
                vector <= bus_int_vector;
-//`ifdef debug
+`ifdef debug_cpu_int
                $display("cpu: XXX interrupt asserts; vector %o",
 			bus_int_vector);
-//`endif
+`endif
             end
 	  else
 	    begin
@@ -1344,7 +1369,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 `endif
 
    
-//`ifdef debug_cpu_int
+`ifdef debug_cpu_int
    always @(posedge clk)
      if (interrupt)
        $display("cpu: XXX cpu int; vector %o, istate %o, interrupt_ack_ipl %o",
@@ -1354,7 +1379,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
      if (interrupt_ack_ipl)
        $display("cpu: XXX cpu int_ack; interrupt_ack_ipl %b, istate %o",
 		interrupt_ack_ipl, istate);
-//`endif   
+`endif   
 
    //
    // calculate next state
@@ -1659,6 +1684,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	    begin
 	    end
 
+	  default:
+	    being
+	    end
+   
 	endcase // case(istate)
 
 	if (istate == f1)

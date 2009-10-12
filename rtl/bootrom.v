@@ -12,8 +12,8 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
    output [15:0] data_out;
    output 	 decode;
 
-   assign 	 decode = (iopage_addr >= 16'o13000) &&
-			  (iopage_addr <= 16'o13776);
+   assign 	 decode = (iopage_addr >= 13'o13000) &&
+			  (iopage_addr <= 13'o13776);
 
    wire [7:0] 	 offset;
    assign 	 offset = {iopage_addr[7:1], 1'b0};

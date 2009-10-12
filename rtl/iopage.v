@@ -13,6 +13,7 @@
 module iopage(clk, brgclk, reset, address, data_in, data_out,
 	      iopage_rd, iopage_wr, iopage_byte_op,
 	      no_decode, interrupt, interrupt_ipl, ack_ipl, vector,
+	      pxr_wr, pxr_rd, pxr_addr, pxr_data_in, pxr_data_out, pxr_trap,
 	      ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 	      psw, psw_io_wr,
 	      switches,
@@ -36,6 +37,13 @@ output [4:0] rk_state;
    output [7:0]	 interrupt_ipl;
    output [7:0]  vector;
    input [7:0] 	 ack_ipl;
+
+   output 	 pxr_wr;
+   output 	 pxr_rd;
+   output [7:0]  pxr_addr;
+   input [15:0]  pxr_data_in;
+   output [15:0] pxr_data_out;
+   input 	 pxr_trap;
 
    inout [15:0] ide_data_bus;
    output 	ide_dior, ide_diow;
@@ -80,7 +88,7 @@ output [4:0] rk_state;
 		     sr_decode ? sr_data_out :
 		     psw_decode ? psw_data_out :
 		     rk_decode ? rk_data_out :
-		     16'h2f;
+		     16'h002f;
 //		     16'b0;
 
    assign good_decode = bootrom_decode | mmu_decode | tt_decode | clk_decode |
@@ -91,8 +99,10 @@ output [4:0] rk_state;
 
    wire clk_interrupt, tt_interrupt, rk_interrupt;
    wire clk_interrupt_ack, tt_interrupt_ack, rk_interrupt_ack;
-   
-   wire [7:0] tt_vector, clk_vector, rk_vector;
+
+   wire mmu_trap;
+
+   wire [7:0] tt_vector, clk_vector, rk_vector, mmu_vector;
 
    assign interrupt = tt_interrupt | clk_interrupt | rk_interrupt;
 
@@ -126,9 +136,17 @@ output [4:0] rk_state;
 		      .data_in(data_in),
 		      .data_out(mmu_data_out),
 		      .decode(mmu_decode),
+		      .trap(mmu_trap),
+		      .vector(mmu_vector),
 		      .iopage_rd(iopage_rd),
 		      .iopage_wr(iopage_wr),
-		      .iopage_byte_op(iopage_byte_op));
+		      .iopage_byte_op(iopage_byte_op),
+		      .pxr_wr(pxr_wr),
+		      .pxr_rd(pxr_rd),
+		      .pxr_addr(pxr_addr),
+		      .pxr_data_in(pxr_data_in),
+		      .pxr_data_out(pxr_data_out),
+		      .pxr_trap(pxr_trap));
 
    tt_regs tt_regs1(.clk(clk),
 		    .brgclk(brgclk),
@@ -210,8 +228,9 @@ output [4:0] rk_state;
 		    .dma_addr(dma_addr),
 		    .dma_data_in(dma_data_in),
 		    .dma_data_out(dma_data_out),
-		    .dma_rd(dma_rd), .dma_wr(dma_wr)
-,.rk_state(rk_state)
+		    .dma_rd(dma_rd), .dma_wr(dma_wr),
+
+		    .rk_state(rk_state)
 		    );
 `else
    always @(posedge clk or iopage_addr)

@@ -22,7 +22,7 @@ module debounce(clk, in, out);
 		
    always @(posedge clk)
      begin
-       clkdiv <= clkdiv + 1'b1;
+       clkdiv <= clkdiv + 15'b1;
        if (clkdiv == 0)
          slowclk <= ~slowclk;
      end

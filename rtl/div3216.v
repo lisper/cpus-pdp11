@@ -45,16 +45,16 @@ module div3216(clk, reset, ready, done,
        state <= next_state;
 
    assign next_state = (state == idle && ready) ? running :
-		       (state == running) ? (bitnum == 5'd1 ? last : running) :
+		       (state == running) ? (bitnum == 6'd1 ? last : running) :
 		       (state == last) ? (ready ? last : idle) : idle;
 
    assign diff = dividend_copy - divider_copy;
 
    assign quotient = ~negative_output ?
-		     quotient_temp[15:0] : ~quotient_temp[15:0] + 1'b1;
+		     quotient_temp[15:0] : ~quotient_temp[15:0] + 16'b1;
 
    assign remainder = ~dividend[31]/*quotient[15]*/ ?
-		      dividend_copy[15:0] : ~dividend_copy[15:0] + 1'b1;
+		      dividend_copy[15:0] : ~dividend_copy[15:0] + 16'b1;
 
 //   assign overflow = ($signed(quotient_temp) > 32'sh00007fff) ||
 //		     ($signed(quotient_temp) < 32'shffff8000);
@@ -77,10 +77,10 @@ module div3216(clk, reset, ready, done,
             quotient_temp <= 0;
             dividend_copy <= !dividend[31] ? 
                              {32'd0, dividend} : 
-                             {32'd0, ~dividend + 1'b1};
+                             {32'd0, ~dividend + 32'b1};
             divider_copy <= !divider[15] ? 
 			    {17'b0, divider, 31'd0} : 
-			    {17'b0, ~divider + 1'b1, 31'd0};
+			    {17'b0, ~divider + 16'b1, 31'd0};
 
             negative_output <= (divider[15] && !dividend[31]) ||
 			       (!divider[15] && dividend[31]);
@@ -94,7 +94,7 @@ module div3216(clk, reset, ready, done,
 		dividend_copy <= diff;
 
               divider_copy <= { 1'b0, divider_copy[63:1] };
-              bitnum <= bitnum - 1'b1;
+              bitnum <= bitnum - 6'b1;
 	   end
    
 endmodule

@@ -33,7 +33,7 @@ module ram_async(addr, data_in, data_out, rd, wr, byte_op,
    assign ram_oe_n = ~rd;
    assign ram_we_n = ~wr;
 
-   assign ram1_io = ~ram_oe_n ? 16'bz :
+   assign ram1_io = ~ram_oe_n ? /*16'bz*/16'b0 :
 		    (byte_op ? {data_in[7:0],data_in[7:0]} : data_in);
 
    assign ram1_ce_n = 1'b0;

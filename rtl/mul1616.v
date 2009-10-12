@@ -66,9 +66,9 @@ module mul1616(clk, reset, ready, done, multiplier, multiplicand,
           product_temp      <= 0;
           multiplicand_copy <= !multiplicand[15] ? 
                                { 16'd0, multiplicand } : 
-                               { 16'd0, ~multiplicand + 1'b1};
+                               { 16'd0, ~multiplicand + 16'b1};
           multiplier_copy   <= !multiplier[15] ?
-                              multiplier : ~multiplier + 1'b1; 
+                              multiplier : ~multiplier + 16'b1; 
 
 	  negative_output <= multiplier[15] ^ multiplicand[15];
        end 
@@ -79,11 +79,11 @@ module mul1616(clk, reset, ready, done, multiplier, multiplicand,
 	      product_temp <= product_temp + multiplicand_copy;
 
             product <= !negative_output ? 
-		       product_temp : ~product_temp + 1'b1;
+		       product_temp : ~product_temp + 32'b1;
 
             multiplier_copy <= multiplier_copy >> 1;
             multiplicand_copy <= multiplicand_copy << 1;
-            bitnum <= bitnum - 1'b1;
+            bitnum <= bitnum - 5'b1;
 	 end
    
 endmodule

@@ -13,8 +13,8 @@ module ram_256kx16(a, io, ce_n, ub_n, lb_n, we_n, oe_n);
    reg [7:0] ram_h[262143:0];
    reg [7:0] ram_l[262143:0];
 
-   assign    io = { (oe_n | ub_n) ? 8'bz : ram_h[a],
-		    (oe_n | lb_n) ? 8'bz : ram_l[a] };
+   assign    io = { (oe_n | ub_n) ? 8'b0/*8'bz*/ : ram_h[a],
+		    (oe_n | lb_n) ? 8'b0/*8'bz*/ : ram_l[a] };
 
    always @(we_n or ce_n or ub_n or lb_n or a or a or io)
      if (~we_n && ~ce_n)
@@ -40,9 +40,9 @@ module ram_256kx16(a, io, ce_n, ub_n, lb_n, we_n, oe_n);
        begin
 	  if (~ub_n && ~lb_n) $display("ram: read %o -> %o", a, io);
 	  else
-	    if (~ub_n) $display("ram: readh %o <- %o", a, io[7:0]);
+	    if (~ub_n) $display("ram: readh %o -> %o", a, io[7:0]);
 	    else
-	      if (~lb_n) $display("ram: readl %o <- %o", a, io[7:0]);
+	      if (~lb_n) $display("ram: readl %o -> %o", a, io[7:0]);
        end
 `endif
 
@@ -76,6 +76,13 @@ module ram_s3board(ram_a, ram_oe_n, ram_we_n,
 	  end
 
 `ifdef __ICARUS__
+ `define no_scan
+`endif
+`ifdef verilator
+ `define no_scan
+`endif
+
+`ifdef no_scan
 	n = 0;
 `else
  	n = $scan$plusargs("test=", testfilename);

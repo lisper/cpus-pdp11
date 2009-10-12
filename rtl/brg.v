@@ -8,12 +8,12 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
    output tx_baud_clk;
    output rx_baud_clk;
 
-   parameter SYS_CLK = 50000000;
-   parameter BAUD = 9600;
+   parameter SYS_CLK = 13'd50000000;
+   parameter BAUD = 13'd9600;
 
 `ifdef sim_time
-   parameter RX_CLK_DIV = 2;
-   parameter TX_CLK_DIV = 2;
+   parameter RX_CLK_DIV = 13'd2;
+   parameter TX_CLK_DIV = 13'd2;
 `else
    parameter RX_CLK_DIV = SYS_CLK / (BAUD * 16 * 2);
    parameter TX_CLK_DIV = SYS_CLK / (BAUD * 2);
@@ -39,7 +39,7 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
 	 end
        else
 	 begin
-	    rx_clk_div  <= rx_clk_div + 1'b1;
+	    rx_clk_div  <= rx_clk_div + 13'b1;
 	    rx_baud_clk <= rx_baud_clk;
 	 end
 
@@ -57,7 +57,7 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
 	 end
        else
 	 begin
-	    tx_clk_div  <= tx_clk_div + 1'b1;
+	    tx_clk_div  <= tx_clk_div + 13'b1;
 	    tx_baud_clk <= tx_baud_clk;
 	 end
    
