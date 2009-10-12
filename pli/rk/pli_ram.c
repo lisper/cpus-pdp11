@@ -108,6 +108,10 @@ PLI_INT32 pli_ram(void)
     weref = vpi_scan(iter);
     byteopref = vpi_scan(iter);
 
+    vpi_free_object(mhref);
+    vpi_free_object(href);
+    vpi_free_object(iter);
+
     if (clkref == NULL || resetref == NULL || aref == NULL ||
 	diref == NULL || doref == NULL || ceref == NULL ||
 	weref == NULL || byteopref == NULL)
@@ -224,8 +228,12 @@ PLI_INT32 pli_ram(void)
 
         vpi_printf("pli_ram: read %o -> %o\n", a, value);
 
+#ifdef __CVER__
         if (do_aref == 0)
             do_aref = vpi_put_value(doref, NULL, NULL, vpiAddDriver);
+#else
+        do_aref = doref;
+#endif
 
         outval.format = vpiIntVal;
         outval.value.integer = value;
@@ -235,7 +243,8 @@ PLI_INT32 pli_ram(void)
 
     if (read_stop) {
         outval.format = vpiBinStrVal;
-        outval.value.str = "16'bzzzzzzzzzzzzzzzz";
+//        outval.value.str = "16'bzzzzzzzzzzzzzzzz";
+        outval.value.str = "16'b0000000000000000";
         if (do_aref)
             vpi_put_value(do_aref, &outval, NULL, vpiNoDelay);
     }

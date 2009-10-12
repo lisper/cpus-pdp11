@@ -15,6 +15,8 @@
 #include "vpi_user.h"
 #include "cv_vpi_user.h"
 
+#define USE_DMA
+
 //typedef int int32;
 typedef unsigned short u16;
 typedef unsigned int u22;
@@ -192,8 +194,12 @@ static void set_output_str(int ord, char *str)
 {
     s_vpi_value outval;
 
+#ifdef __CVER__
     if (argl[ord].aref == 0)
         argl[ord].aref = vpi_put_value(argl[ord].ref, NULL, NULL, vpiAddDriver);
+#else
+    argl[ord].aref = argl[ord].ref;
+#endif
 
     outval.format = vpiBinStrVal;
     outval.value.str = str;
@@ -207,8 +213,12 @@ static void set_output_int(int ord, int val)
 {
     s_vpi_value outval;
 
+#ifdef __CVER__
     if (argl[ord].aref == 0)
         argl[ord].aref = vpi_put_value(argl[ord].ref, NULL, NULL, vpiAddDriver);
+#else
+    argl[ord].aref = argl[ord].ref;
+#endif
 
     outval.format = vpiIntVal;
     outval.value.integer = val;
@@ -222,31 +232,31 @@ static void set_output_int(int ord, int val)
 static void dma_start_write(struct rk_context_s *rk,
                     unsigned int ma, unsigned int wc)
 {
-    vpi_printf("rk: dma write ma=%o, wc=%o\n", ma, wc);
+    vpi_printf("rk: dma start write ma=%o, wc=%o\n", ma, wc);
     rk->dma_cycle++;
     rk->dma_addr = ma;
     rk->dma_write = 1;
     rk->dma_wc = wc;
     rk->dma_index = 0;
 
-    set_output_int(A_DMA_DATA_IN, rk->rkxb[rk->dma_index]);
+    set_output_int(A_DMA_DATA_OUT, rk->rkxb[rk->dma_index]);
     set_output_int(A_DMA_ADDR, rk->dma_addr);
-    set_output_int(A_DMA_WR, 1);
-    set_output_int(A_DMA_REQ, 1);
+    set_output_str(A_DMA_WR, "1");
+    set_output_str(A_DMA_REQ, "1");
 }
 
 static void dma_start_read(struct rk_context_s *rk,
                     unsigned int ma, unsigned int wc)
 {
-    vpi_printf("rk: dma read ma=%o, wc=%o\n", ma, wc);
+    vpi_printf("rk: dma start read ma=%o, wc=%o\n", ma, wc);
     rk->dma_cycle++;
     rk->dma_addr = ma;
     rk->dma_read = 1;
     rk->dma_wc = wc;
 
     set_output_int(A_DMA_ADDR, rk->dma_addr);
-    set_output_int(A_DMA_RD, 1);
-    set_output_int(A_DMA_REQ, 1);
+    set_output_str(A_DMA_RD, "1");
+    set_output_str(A_DMA_REQ, "1");
 }
 
 static void dma_next(struct rk_context_s *rk)
@@ -257,33 +267,69 @@ static void dma_next(struct rk_context_s *rk)
     if (!(rk->rkcs & RKCS_INH))
         rk->dma_addr += 2;
 
-    if (rk->dma_write) {
-        set_output_int(A_DMA_DATA_IN, rk->rkxb[rk->dma_index]);
-    }
-
     if (rk->dma_read) {
         if (rk->rk_func == RKCS_WCHK) {
-            if (rk->rkxb[rk->dma_index] != argl[A_DMA_DATA_OUT].value) {
+            if (rk->rkxb[rk->dma_index] != argl[A_DMA_DATA_IN].value) {
                 rk->rker |= 1;
             }
         } else {
-            rk->rkxb[rk->dma_index] = argl[A_DMA_DATA_OUT].value;
+            rk->rkxb[rk->dma_index] = argl[A_DMA_DATA_IN].value;
         }
     }
 
     rk->dma_wc--;
     rk->dma_index++;
 
+    if (rk->dma_write) {
+        set_output_int(A_DMA_DATA_OUT, rk->rkxb[rk->dma_index]);
+    }
+
     set_output_int(A_DMA_ADDR, rk->dma_addr);
 
     if (rk->dma_read) {
-        set_output_int(A_DMA_RD, 1);
+        set_output_str(A_DMA_RD, "1");
     }
     if (rk->dma_write) {
-        set_output_int(A_DMA_WR, 1);
+        set_output_str(A_DMA_WR, "1");
     }
 
-    set_output_int(A_DMA_REQ, 1);
+    set_output_str(A_DMA_REQ, "1");
+}
+
+static void rk_set_done(struct rk_context_s *rk, int error);
+
+static void dma_done(struct rk_context_s *rk)
+{
+    int wc, track, sector, da;
+
+    vpi_printf("rk: XXX dma done\n");
+
+    wc = 0200000 - rk->rkwc;
+
+    track = (rk->rkda >> 4) & 0777;
+    sector = rk->rkda & 017;
+    da = ((track * 12) + sector) * 256;
+
+    rk->rkwc = 0;
+    rk->rkba = rk->dma_addr & 0xffff;
+    rk->rkcs = (rk->rkcs & ~RKCS_MEX) | ((rk->dma_addr >> (16 - 4)) & RKCS_MEX);
+
+    if ((rk->rk_func == RKCS_READ) && (rk->rkcs & RKCS_FMT))
+        da = da + (wc * 256);
+    else
+        da = da + wc + (256 - 1);
+
+    rk->track = (da / 256) / 12;
+    rk->sect = (da / 256) % 12;
+
+    rk->rkda = (rk->track << 4) | rk->sect;
+
+    rk_set_done(rk, 0);
+
+    rk->dma_cycle = 0;
+    rk->dma_read = 0;
+    rk->dma_write = 0;
+    set_output_str(A_DMA_REQ, "0");
 }
 #endif
 
@@ -383,10 +429,14 @@ static void rk_clr_done(struct rk_context_s *rk)
 
 void rk_service(struct rk_context_s *rk)
 {
-    int i, err, awc, wc, cma, cda;
-    int da, cyl, track, sector, ret;
+    int i, err, wc, cda;
+    int da, cyl, track, sector;
     unsigned int ma;
+
+#ifndef USE_DMA
+    int awc, cma, ret;
     unsigned short comp;
+#endif
 
     vpi_printf("rk_service; func %o\n", rk->rk_func);
 
@@ -451,7 +501,10 @@ void rk_service(struct rk_context_s *rk)
 
 #ifdef USE_DMA
             vpi_printf("rk: read(), dma ma=%o, wc=%d\n", ma, wc);
-            dma_start_read(rk, ma, wc);
+            vpi_printf("rk: buffer %06o %06o %06o %06o\n",
+                       rk->rkxb[0], rk->rkxb[1], rk->rkxb[2], rk->rkxb[3]);
+            dma_start_write(rk, ma, wc);
+            return;
 #else
             if (rk->rkcs & RKCS_INH) {
                 rk_raw_write_memory(rk, ma, rk->rkxb[wc - 1]);
@@ -472,12 +525,11 @@ void rk_service(struct rk_context_s *rk)
         case RKCS_WRITE:
 #ifdef USE_DMA
             if (rk->rkcs & RKCS_INH) {
-                dma_read_start(rk, ma, 1);
-                return;
+                dma_start_read(rk, ma, 1);
             } else {
-                dma_read_start(rk, ma, wc);
-                return;
+                dma_start_read(rk, ma, wc);
             }
+            return;
 #else
             if (rk->rkcs & RKCS_INH) {
                 comp = rk_raw_read_memory(rk, ma);
@@ -491,7 +543,7 @@ void rk_service(struct rk_context_s *rk)
             }
 
             awc = (wc + (256 - 1)) & ~(256 - 1);
-            vpi_printf("rk: write()\n");
+            vpi_printf("rk: write(), wc=%d\n", awc*2);
 	    ret = write(rk->rk_fd, rk->rkxb, awc*2);
 #endif
             break;
@@ -511,6 +563,7 @@ void rk_service(struct rk_context_s *rk)
 
 #ifdef USE_DMA
             dma_start_read(rk, 0, wc);
+            return;
 #else
             awc = wc;
             for (wc = 0, cma = ma; wc < awc; wc++)  {
@@ -676,7 +729,7 @@ void _io_rk_write(struct rk_context_s *rk, u22 addr, u16 data, int writeb)
                 (rk->rkda & ~0377) | data;
         }
         rk->rkda = data;
-        vpi_printf("rk: rkda <- %o\n", rk->rkda);
+        vpi_printf("rk: XXX rkda <- %o\n", rk->rkda);
         return;
 
     default:
@@ -758,6 +811,10 @@ PLI_INT32 pli_rk(void)
         }
     }
 
+    vpi_free_object(mhref);
+    vpi_free_object(href);
+    vpi_free_object(iter);
+
     if (badarg)
     {
         vpi_printf("**ERR: $pli_rk bad args\n");
@@ -834,10 +891,13 @@ PLI_INT32 pli_rk(void)
     }
 
 #ifdef USE_DMA
-    if (dma_ack_start) {
+    if (!dma_ack_start && !dma_ack_stop) {
+        if (0) vpi_printf("pli_rk: dma waiting\n");
     }
 
     if (dma_ack_stop) {
+        vpi_printf("pli_rk: dma ack stop (func=%o)\n", rk->rk_func);
+
         if (rk->dma_read) {
 
             switch (rk->rk_func) {
@@ -845,7 +905,10 @@ PLI_INT32 pli_rk(void)
                 dma_next(rk);
 
                 if (rk->dma_wc == 0) {
-                    vpi_printf("rk: done, write()\n");
+                    int wc, awc, ret;
+                    wc = 0200000 - rk->rkwc;
+                    awc = (wc + (256 - 1)) & ~(256 - 1);
+                    vpi_printf("rk: XXX wc=0, write() %d\n", awc*2);
                     ret = write(rk->rk_fd, rk->rkxb, awc*2);
                 }
                 break;
@@ -861,9 +924,7 @@ PLI_INT32 pli_rk(void)
         }
 
         if (rk->dma_wc == 0) {
-            rk->dma_cycle = 0;
-            rk->dma_read = 0;
-            rk->dma_write = 0;
+            dma_done(rk);
         }
     }
 #endif
@@ -894,7 +955,8 @@ PLI_INT32 pli_rk(void)
     }
 
     if (read_stop && decode) {
-        set_output_str(A_DATA_OUT, "16'bzzzzzzzzzzzzzzzz");
+//        set_output_str(A_DATA_OUT, "16'bzzzzzzzzzzzzzzzz");
+        set_output_str(A_DATA_OUT, "16'b0000000000000000");
     }
 
     return(0);
@@ -931,7 +993,7 @@ static void (*rk_vlog_startup_routines[]) () =
 
 /* dummy +loadvpi= boostrap routine - mimics old style exec all routines */
 /* in standard PLI vlog_startup_routines table */
-void vpi_compat_bootstrap(void)
+void rk_vpi_compat_bootstrap(void)
 {
     int i;
 
@@ -943,6 +1005,13 @@ void vpi_compat_bootstrap(void)
         rk_vlog_startup_routines[i]();
     }
 }
+
+void vpi_compat_bootstrap(void)
+{
+    rk_vpi_compat_bootstrap();
+}
+
+void __stack_chk_fail_local() {}
 
 
 /*
