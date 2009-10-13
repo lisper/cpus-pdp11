@@ -6,11 +6,25 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <fcntl.h>
 
+#ifdef unix
+#include <unistd.h>
+#endif
+
+#ifdef _WIN32
+typedef int off_t;
+#endif
+
 #include "vpi_user.h"
+
+#ifdef __CVER__
 #include "cv_vpi_user.h"
+#endif
+
+#ifdef __MODELSIM__
+#include "veriuser.h"
+#endif
 
 PLI_INT32 pli_ide(void);
 extern void register_my_systfs(void); 
@@ -134,6 +148,11 @@ PLI_INT32 pli_ide(void)
 
     s_vpi_value tmpval, outval;
 
+    char bus_bits[17], cs_bits[3], da_bits[4], diow_bit, dior_bit;
+    unsigned int cs, da, bus;
+
+    int read_start, read_stop, write_start, write_stop;
+
 
     //vpi_printf("pli_ide:\n");
 
@@ -145,7 +164,7 @@ PLI_INT32 pli_ide(void)
 
     mhref = vpi_handle(vpiScope, href);
 
-    if (vpi_get(vpiType, mhref) != vpiModule)
+    if (vpi_get(vpiType,` mhref) != vpiModule)
         mhref = vpi_handle(vpiModule, mhref); 
 
     inst_id = getadd_inst_id(mhref);
@@ -175,9 +194,6 @@ PLI_INT32 pli_ide(void)
         vpi_printf("**ERR: $pli_ide bad args\n");
         return(0);
     }
-
-    char bus_bits[17], cs_bits[3], da_bits[4], diow_bit, dior_bit;
-    unsigned int cs, da, bus;
 
     tmpval.format = vpiBinStrVal; 
     vpi_get_value(busref, &tmpval);
@@ -212,8 +228,6 @@ PLI_INT32 pli_ide(void)
     diow_bit =  tmpval.value.str[0];
 
     /* */
-    int read_start, read_stop, write_start, write_stop;
-
     read_start = 0;
     read_stop = 0;
     write_start = 0;
@@ -321,21 +335,6 @@ PLI_INT32 pli_ide(void)
     return(0);
 }
 
-/* Template functin table for added user systf tasks and functions.
-   See file vpi_user.h for structure definition
-   Note only vpi_register_systf and vpi_ or tf_ utility routines that 
-   do not access the simulation data base may be called from these routines
-*/ 
-
-/* all routines are called to register system tasks */
-/* called just after all PLI 1.0 tf_ veriusertfs table routines are set up */
-/* before source is read */ 
-static void (*ide_vlog_startup_routines[]) () =
-{
- register_my_systfs, 
- 0
-};
-
 /*
  * register all vpi_ PLI 2.0 style user system tasks and functions
  */
@@ -352,6 +351,13 @@ void register_my_systfs(void)
     systf_data_p = &(systf_data_list[0]);
     while (systf_data_p->type != 0) vpi_register_systf(systf_data_p++);
 }
+
+#ifdef __CVER__
+static void (*ide_vlog_startup_routines[]) () =
+{
+ register_my_systfs, 
+ 0
+};
 
 /* dummy +loadvpi= boostrap routine - mimics old style exec all routines */
 /* in standard PLI vlog_startup_routines table */
@@ -372,6 +378,15 @@ void vpi_compat_bootstrap(void)
 }
 
 void __stack_chk_fail_local(void) {}
+#endif
+
+#ifdef __MODELSIM__
+static void (*vlog_startup_routines[]) () =
+{
+ register_my_systfs, 
+ 0
+};
+#endif
 
 
 /*
