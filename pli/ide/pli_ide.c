@@ -164,7 +164,7 @@ PLI_INT32 pli_ide(void)
 
     mhref = vpi_handle(vpiScope, href);
 
-    if (vpi_get(vpiType,` mhref) != vpiModule)
+    if (vpi_get(vpiType, mhref) != vpiModule)
         mhref = vpi_handle(vpiModule, mhref); 
 
     inst_id = getadd_inst_id(mhref);
