@@ -9,11 +9,24 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <fcntl.h>
 
+#ifdef unix
+#include <unistd.h>
+#endif
+
+#ifdef _WIN32
+#endif
+
 #include "vpi_user.h"
+
+#ifdef __CVER__
 #include "cv_vpi_user.h"
+#endif
+
+#ifdef __MODELSIM__
+#include "veriuser.h"
+#endif
 
 #define USE_DMA
 
@@ -773,6 +786,9 @@ PLI_INT32 pli_rk(void)
     struct rk_context_s *rk;
     unsigned int addr, decode;
 
+    int read_start, read_stop, write_start, write_stop;
+    int dma_ack_start, dma_ack_stop;
+
     //vpi_printf("pli_rk:\n");
 
     href = vpi_handle(vpiSysTfCall, NULL); 
@@ -833,9 +849,6 @@ PLI_INT32 pli_rk(void)
     }
 
     /* */
-    int read_start, read_stop, write_start, write_stop;
-    int dma_ack_start, dma_ack_stop;
-
     read_start = 0;
     read_stop = 0;
     write_start = 0;
@@ -982,6 +995,7 @@ static void register_my_systfs(void)
     }
 }
 
+#ifdef unix
 /* all routines are called to register system tasks */
 /* called just after all PLI 1.0 tf_ veriusertfs table routines are set up */
 /* before source is read */ 
@@ -1012,6 +1026,15 @@ void vpi_compat_bootstrap(void)
 }
 
 void __stack_chk_fail_local() {}
+#endif
+
+#ifdef __MODELSIM__
+static void (*vlog_startup_routines[]) () =
+{
+ register_my_systfs, 
+ 0
+};
+#endif
 
 
 /*

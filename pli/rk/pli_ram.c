@@ -3,11 +3,21 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <fcntl.h>
 
+#ifdef unix
+#include <unistd.h>
+#endif
+
 #include "vpi_user.h"
+
+#ifdef __CVER__
 #include "cv_vpi_user.h"
+#endif
+
+#ifdef __MODELSIM__
+#include "veriuser.h"
+#endif
 
 typedef unsigned short u16;
 
@@ -75,6 +85,13 @@ PLI_INT32 pli_ram(void)
     s_vpi_value tmpval, outval;
     int numargs, inst_id;
 
+    char clk_bit, reset_bit;
+    char di_bits[17], do_bits[17];
+    char ce_bit, we_bit, byteop_bit;
+    unsigned int a, datai;
+
+    int read_start, read_stop, write_start, write_stop, addr_change;
+
     if (!mem_init) {
         do_mem_init();
     }
@@ -121,11 +138,6 @@ PLI_INT32 pli_ram(void)
     }
 
     /* */
-    char clk_bit, reset_bit;
-    char di_bits[17], do_bits[17];
-    char ce_bit, we_bit, byteop_bit;
-    unsigned int a, datai;
-
     tmpval.format = vpiBinStrVal; 
     vpi_get_value(clkref, &tmpval);
     clk_bit = tmpval.value.str[0];
@@ -164,8 +176,6 @@ PLI_INT32 pli_ram(void)
 
 
     /* */
-    int read_start, read_stop, write_start, write_stop, addr_change;
-
     read_start = 0;
     read_stop = 0;
     write_start = 0;
