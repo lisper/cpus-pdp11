@@ -45,6 +45,7 @@ static char last_iopw_bit;
 static char last_dma_ack_bit;
 
 static int io_rk_debug = 0;
+static int rk_debug = 0;
 
 static struct rk_context_s {
     u16 rkds;
@@ -274,8 +275,9 @@ static void dma_start_read(struct rk_context_s *rk,
 
 static void dma_next(struct rk_context_s *rk)
 {
-    vpi_printf("rk: dma next dma_addr=%o, dma_wc=%o\n",
-               rk->dma_addr, rk->dma_wc);
+    if (rk_debug > 1)
+        vpi_printf("rk: dma next dma_addr=%o, dma_wc=%o\n",
+                   rk->dma_addr, rk->dma_wc);
 
     if (!(rk->rkcs & RKCS_INH))
         rk->dma_addr += 2;
@@ -433,7 +435,7 @@ static void rk_set_done(struct rk_context_s *rk, int error)
 
 static void rk_clr_done(struct rk_context_s *rk)
 {
-    if (1) vpi_printf("rk: not done\n");
+    if (rk_debug > 1) vpi_printf("rk: not done\n");
 
     rk->rkcs &= ~CSR_DONE;
     rk->rkintq &= ~1;
@@ -622,7 +624,7 @@ void rk_service(struct rk_context_s *rk)
 
 static void rk_go(struct rk_context_s *rk)
 {
-    vpi_printf("rk_go!\n");
+    if (rk_debug > 1) vpi_printf("rk_go!\n");
 
     rk->rk_func = (rk->rkcs >> 1) & 7;
     if (rk->rk_func == RKCS_CTLRESET) {
@@ -909,7 +911,8 @@ PLI_INT32 pli_rk(void)
     }
 
     if (dma_ack_stop) {
-        vpi_printf("pli_rk: dma ack stop (func=%o)\n", rk->rk_func);
+        if (rk_debug > 1)
+            vpi_printf("pli_rk: dma ack stop (func=%o)\n", rk->rk_func);
 
         if (rk->dma_read) {
 
@@ -960,7 +963,7 @@ PLI_INT32 pli_rk(void)
 
         addr = argl[A_IOPAGE_ADDR].value;
 
-        vpi_printf("pli_rk: read %o\n", addr);
+        if (rk_debug > 1) vpi_printf("pli_rk: read %o\n", addr);
 
         value = _io_rk_read(rk, addr);
 
@@ -1011,7 +1014,8 @@ void rk_vpi_compat_bootstrap(void)
 {
     int i;
 
-    io_rk_debug = 1;
+    io_rk_debug = 0;
+    rk_debug = 1;
 
     for (i = 0;; i++) {
         if (rk_vlog_startup_routines[i] == NULL)

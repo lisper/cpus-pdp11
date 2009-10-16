@@ -212,7 +212,7 @@ PLI_INT32 pli_ram(void)
 
     /* */
     if (write_start) {
-        vpi_printf("pli_ram: write %o <- %o\n", a, datai);
+        //vpi_printf("pli_ram: write %o <- %o\n", a, datai);
 
 	if (byteop_bit != '1') {
             M[a/2] = datai;
@@ -236,7 +236,7 @@ PLI_INT32 pli_ram(void)
                 value = (M[a/2] >> 0) & 0x00ff;
         }
 
-        vpi_printf("pli_ram: read %o -> %o\n", a, value);
+        //vpi_printf("pli_ram: read %o -> %o\n", a, value);
 
 #ifdef __CVER__
         if (do_aref == 0)
