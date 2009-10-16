@@ -8,8 +8,8 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
    output tx_baud_clk;
    output rx_baud_clk;
 
-   parameter SYS_CLK = 13'd50000000;
-   parameter BAUD = 13'd9600;
+   parameter SYS_CLK = 26'd50000000;
+   parameter BAUD = 16'd9600;
 
 `ifdef sim_time
    parameter RX_CLK_DIV = 13'd2;

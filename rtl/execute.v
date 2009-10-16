@@ -298,7 +298,7 @@ module execute(clk, reset, enable,
 
 		    2:					    /* rti */
 		      begin
-			 $display("e: RTI");
+			 if (0) $display("e: RTI");
 		      end
 
 		    6:					    /* rtt */
@@ -319,7 +319,7 @@ module execute(clk, reset, enable,
 
 		    6'o01:					    /* jmp */
 		      begin
-			 $display("e: JMP; dest_ea %o", dd_ea);
+			 if (0) $display("e: JMP; dest_ea %o", dd_ea);
 			 new_pc = dd_ea;
 			 // don't latch if illegal jmp rx
 			 latch_pc = isn[5:3] != 3'b000;
@@ -330,7 +330,7 @@ module execute(clk, reset, enable,
 			6'o00, 6'o01, 6'o02, 6'o03,
 			  6'o04, 6'o05, 6'o06, 6'o07:
 			    begin
-			       $display("e: RTS");
+			       if (0) $display("e: RTS");
 			       new_pc = dd_data;
 			       latch_pc = 1;
 			    end
@@ -384,7 +384,7 @@ module execute(clk, reset, enable,
 
 		    6'o03:					    /* swab */
 		      begin
-			 $display("e: SWAB");
+			 if (0) $display("e: SWAB");
 			 e1_result = {dd_data[7:0],dd_data[15:8]};
 			 new_cc_n = e1_result_byte_sign;
 			 new_cc_z = e1_result_byte_zero;
@@ -397,8 +397,8 @@ module execute(clk, reset, enable,
 		      begin
 			 new_pc = new_pc_w;
 			 latch_pc = 1;
-			 $display("e: br; isn %o, pc %o, new_pc %o",
-				  isn, pc, new_pc);
+			 if (0) $display("e: br; isn %o, pc %o, new_pc %o",
+					 isn, pc, new_pc);
 		      end
 
 		    6'o06, 6'o07:				    /* br */
@@ -486,8 +486,8 @@ module execute(clk, reset, enable,
 		    6'o40, 6'o41, 6'o42, 6'o43,	    /* jsr */
 		      6'o44, 6'o45, 6'o46, 6'o47:
 			begin
-			   $display(" JSR r%d; dd_data %o, dd_ea %o",
-				    ss_reg, dd_data, dd_ea);
+			   if (0) $display(" JSR r%d; dd_data %o, dd_ea %o",
+					   ss_reg, dd_data, dd_ea);
 			   e1_result = pc;
 			   new_pc = dd_ea;
 			   // don't latch if illegal jsr rx
@@ -722,7 +722,7 @@ module execute(clk, reset, enable,
 			       (ss_data[15] ^ e1_result[15]);
 		    new_cc_c = (e1_result < ss_data);
 		    latch_cc = 1;
-		    $display("e1: add, new_cc_z %o", new_cc_z);
+		    if (0) $display("e1: add, new_cc_z %o", new_cc_z);
 		 end
 
 	       04'o7:
@@ -730,7 +730,8 @@ module execute(clk, reset, enable,
 
 		   0:					    /* mul */
 		     begin
-			$display(" MUL %o %o %o", ss_data, dd_data, mul_result);
+			if (0) $display(" MUL %o %o %o",
+					ss_data, dd_data, mul_result);
 
 			mul_ready = 1;
 			e32_result = mul_result[31:16];
@@ -1207,7 +1208,7 @@ module execute(clk, reset, enable,
 
 	       4'o16:					    /* sub */
 		 begin
-		    if (1) $display(" SUB %o %o", ss_data, dd_data);
+		    if (0) $display(" SUB %o %o", ss_data, dd_data);
 		    e1_result = dd_data - ss_data;
 		    new_cc_n = e1_result_sign;
 		    new_cc_z = e1_result_zero;

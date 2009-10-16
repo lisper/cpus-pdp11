@@ -95,7 +95,8 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
  `endif
 	 
        endcase // case(offset)
-	  #2 $display("rom fetch %o %o", iopage_addr, fetch);
+
+	  //#2 $display("rom fetch %o %o", iopage_addr, fetch);
 	  
        end // if (iopage_rd)
      else

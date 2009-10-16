@@ -1013,7 +1013,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	       else
 		 if (store_result && dd_dest_reg)
 		   begin
+`ifdef debug
 		      $display(" r%d <- %0o (dd)", dd_reg, e1_data);
+`endif
 		      case (dd_reg)
 			0: r0 <= e1_data;
 			1: r1 <= e1_data;
@@ -1034,7 +1036,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 		 else
 		   if (store_ss_reg)
 		     begin
-			$display(" r%d <- %0o (ss)", ss_reg, e1_data);
+			if (0) $display(" r%d <- %0o (ss)", ss_reg, e1_data);
 			case (ss_reg)
 			  0: r0 <= e1_data;
 			  1: r1 <= e1_data;
@@ -1049,10 +1051,13 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 		   else
 		     if (store_result32)
 		       begin
-			  $display(" r%0d <- %0o (e32)",
-				   ss_reg, e32_data);
-			  $display(" r%0d <- %0o (e32)",
-				   ss_reg|1, e1_data);
+			  if (0)
+			    begin
+			       $display(" r%0d <- %0o (e32)",
+					ss_reg, e32_data);
+			       $display(" r%0d <- %0o (e32)",
+					ss_reg|1, e1_data);
+			    end
 
 			  //regs[ss_reg    ] <= e32_data;
 			  //regs[ss_reg | 1] <= e1_data;
@@ -1504,7 +1509,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    //debug
    //
 
-`ifdef minimal_debug
+`ifdef minimal_debug_xx
    always @(posedge clk)
      #2 begin
    	case (istate)

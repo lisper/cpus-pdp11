@@ -27,8 +27,8 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
  		 
    assign 	 decode = (iopage_addr == 13'o17546);
 
-   parameter SYS_CLK = 20'd50000000;
-   parameter CLK_RATE = 20'd60;
+   parameter SYS_CLK = 26'd50000000;
+   parameter CLK_RATE = 26'd60;
    parameter CLK_DIV = SYS_CLK / CLK_RATE;
 
    // register read

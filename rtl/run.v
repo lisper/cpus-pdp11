@@ -19,14 +19,14 @@
 `define debug_tt_out
 //`define debug_cpu_int
 
-`define use_rk_model 1
-`define use_ram_async 1
+//`define use_rk_model 1
+//`define use_ram_async 1
 //`define use_ram_model 1
 
 //`define use_ide_pli
 
-//`define use_ram_sync 1
-//`define use_ram_pli 1
+`define use_ram_sync 1
+`define use_ram_pli 1
 
 `include "pdp11.v"
 `include "mmu.v"
@@ -76,6 +76,8 @@ module test;
    wire        mmu_abort;
    wire        mmu_trap;
 
+   reg 	       tracing;
+   
    
    pdp11 cpu(.clk(clk),
 	     .reset(reset),
@@ -320,8 +322,10 @@ module test;
    always @(posedge cpu.clk)
      begin
 `ifdef minimal_debug
-//	if (cpu.istate == 1) //f1
-//	  $pli_pdp11dis(cpu.pc, cpu.isn, 0, 0);
+	if (cpu.istate == 1 && cpu.pc == 16'o137046) tracing = 1;
+	
+	if (cpu.istate == 1 && tracing) //f1
+	  $pli_pdp11dis(cpu.pc, cpu.isn, 0, 0);
 `endif
 `ifdef debug
 	cycle = cycle + 1;

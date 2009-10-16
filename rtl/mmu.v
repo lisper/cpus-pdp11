@@ -83,7 +83,7 @@ module mmu(clk, reset, cpu_va, cpu_cm, cpu_rd, cpu_wr, cpu_i_access, cpu_pa,
 
    assign va_is_iopage = cpu_va[15:13] == 3'b111;	/* 8k io page */
    
-`ifdef debug
+`ifdef debug_mmu
    always @(posedge clk)
      if (cpu_va != 0 && mmr0[0])
        $display("ZZZ: va %o, pa %o, cm %o, i %o, pxr_index %o",
@@ -118,7 +118,7 @@ module mmu(clk, reset, cpu_va, cpu_cm, cpu_rd, cpu_wr, cpu_i_access, cpu_pa,
    // check bn against page length
    assign 	pg_len_err = pdr_ed ?  cpu_bn < pdr_plf : cpu_bn > pdr_plf;
 
-   //
+   // debug - clear registers
    integer 	i;
    initial
      begin
