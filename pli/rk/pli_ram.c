@@ -48,6 +48,9 @@ void do_mem_preload(char *fn)
 void do_mem_init(void)
 {
     int i;
+
+    vpi_printf("pli_ram: allocate memory array\n");
+
     M = (u16 *)malloc(1024*1024*2);
     mem_init = 1;
 
@@ -92,7 +95,7 @@ PLI_INT32 pli_ram(void)
 
     int read_start, read_stop, write_start, write_stop, addr_change;
 
-    if (!mem_init) {
+    if (M == 0/*!mem_init*/) {
         do_mem_init();
     }
 
@@ -102,12 +105,19 @@ PLI_INT32 pli_ram(void)
         return(0);
     }
 
+#if 0
     mhref = vpi_handle(vpiScope, href);
 
-    if (vpi_get(vpiType, mhref) != vpiModule)
+    if (vpi_get(vpiType, mhref) != vpiModule) {
+        vpiHandle old_mhref = mhref;
         mhref = vpi_handle(vpiModule, mhref); 
+//        vpi_free_object(old_mhref);
+    }
 
     inst_id = getadd_inst_id(mhref);
+#else
+    inst_id = 1;
+#endif
 
     //vpi_printf("pli_ram: inst_id %d\n", inst_id);
 
@@ -125,9 +135,8 @@ PLI_INT32 pli_ram(void)
     weref = vpi_scan(iter);
     byteopref = vpi_scan(iter);
 
-    vpi_free_object(mhref);
-    vpi_free_object(href);
     vpi_free_object(iter);
+    vpi_free_object(href);
 
     if (clkref == NULL || resetref == NULL || aref == NULL ||
 	diref == NULL || doref == NULL || ceref == NULL ||
@@ -214,6 +223,11 @@ PLI_INT32 pli_ram(void)
     if (write_start) {
         //vpi_printf("pli_ram: write %o <- %o\n", a, datai);
 
+        if (a > 1024*1024) {
+            vpi_printf("pli_ram: write, address error %x\n", a);
+            while (1);
+        }
+
 	if (byteop_bit != '1') {
             M[a/2] = datai;
 	} else {
@@ -226,6 +240,11 @@ PLI_INT32 pli_ram(void)
 
     if (read_start) {
         u16 value;
+
+        if (a > 1024*1024) {
+            vpi_printf("pli_ram: write, address error %x\n", a);
+            while (1);
+        }
 
 	if (byteop_bit != '1') {
             value = M[a/2];
@@ -258,6 +277,15 @@ PLI_INT32 pli_ram(void)
         if (do_aref)
             vpi_put_value(do_aref, &outval, NULL, vpiNoDelay);
     }
+
+    vpi_free_object(clkref);
+    vpi_free_object(resetref);
+    vpi_free_object(aref);
+    vpi_free_object(diref);
+    vpi_free_object(doref);
+    vpi_free_object(ceref);
+    vpi_free_object(weref);
+    vpi_free_object(byteopref);
 
     return(0);
 }

@@ -193,12 +193,24 @@ void rk_raw_write_memory(struct rk_context_s *rk, int ma, u16 data)
 {
     extern u16 *M;
     vpi_printf("dma %06o <- %06o\n", ma, data);
+
+    if (ma > 1024*1024) {
+        vpi_printf("pli_rk: dma write, address error %x\n", ma);
+        while (1);
+    }
+
     M[ma >> 1] = data;
 }
 
 u16 rk_raw_read_memory(struct rk_context_s *rk, int ma)
 {
     extern u16 *M;
+
+    if (ma > 1024*1024) {
+        vpi_printf("pli_rk: dma read, address error %x\n", ma);
+        while (1);
+    }
+
     return M[ma >> 1];
 }
 
@@ -357,6 +369,8 @@ io_rk_reset(struct rk_context_s *rk)
         close(rk->rk_fd);
         rk->rk_fd = 0;
     }
+
+    vpi_printf("io_rk_reset() opening file\n");
 
     rk->rk_fd = open("rk.dsk", O_RDONLY);
     rk->has_init = 1;
@@ -799,12 +813,19 @@ PLI_INT32 pli_rk(void)
         return(0);
     }
 
+#if 0
     mhref = vpi_handle(vpiScope, href);
 
-    if (vpi_get(vpiType, mhref) != vpiModule)
+    if (vpi_get(vpiType, mhref) != vpiModule) {
+        vpiHandle old_mhref = mhref;
         mhref = vpi_handle(vpiModule, mhref); 
+//        vpi_free_object(old_mhref);
+    }
 
     inst_id = getadd_inst_id(mhref);
+#else
+    inst_id = 1;
+#endif
     rk = &rk_context[inst_id];
 
     //vpi_printf("pli_rk: inst_id %d\n", inst_id);
@@ -829,12 +850,12 @@ PLI_INT32 pli_rk(void)
         }
     }
 
-    vpi_free_object(mhref);
-    vpi_free_object(href);
     vpi_free_object(iter);
+    vpi_free_object(href);
 
     if (badarg)
     {
+        vpi_free_object(iter);
         vpi_printf("**ERR: $pli_rk bad args\n");
         return(0);
     }
@@ -973,6 +994,14 @@ PLI_INT32 pli_rk(void)
     if (read_stop && decode) {
 //        set_output_str(A_DATA_OUT, "16'bzzzzzzzzzzzzzzzz");
         set_output_str(A_DATA_OUT, "16'b0000000000000000");
+    }
+
+    /* free argument handles */
+    for (i = 0; argl[i].ord; i++) {
+        if (argl[i].ref != NULL)
+            vpi_free_object(argl[i].ref);
+        argl[i].ref = NULL;
+        argl[i].aref = NULL;
     }
 
     return(0);
