@@ -1,0 +1,57 @@
+[size] 1000 826
+[pos] -1 -1
+*-15.132575 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] test.
+[treeopen] test.tt.
+@28
+test.tt.clk
+test.tt.reset
+@22
+test.tt.data_in[15:0]
+test.tt.data_out[15:0]
+@28
+test.tt.decode
+test.tt.interrupt
+test.tt.vector[7:0]
+@22
+test.tt.iopage_addr[12:0]
+test.tt.iopage_byte_op
+test.tt.iopage_rd
+test.tt.iopage_wr
+test.tt.ld_tx_data
+@28
+test.tt.rs232_rx
+test.tt.rs232_tx
+@22
+test.tt.rx_data[7:0]
+@28
+test.tt.tt_uart.txclk
+test.tt.tt_uart.rxclk
+test.tt.tt_uart.rx_d1
+test.tt.tt_uart.rx_d2
+test.tt.tt_uart.rx_busy
+test.tt.tt_uart.rx_sample_cnt[3:0]
+test.tt.tt_uart.rx_cnt[3:0]
+test.tt.tt_uart.rx_reg[7:0]
+@28
+test.tt.rx_empty
+test.tt.rx_enable
+test.tt.rx_int
+test.tt.rx_int_enable
+@22
+test.tt.tti_data[15:0]
+test.tt.tto_data[15:0]
+test.tt.tti_empty
+test.tt.tti_state[1:0]
+test.tt.tto_empty
+test.tt.tto_state[1:0]
+@28
+test.tt.tx_empty
+test.tt.tx_enable
+test.tt.tx_int
+test.tt.tx_int_enable
+test.tt.uart_clk
+test.tt.uld_rx_data
+@22
+test.tt.interrupt
+test.tt.vector[15:0]
