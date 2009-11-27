@@ -1058,7 +1058,10 @@ void vpi_compat_bootstrap(void)
     rk_vpi_compat_bootstrap();
 }
 
+#ifndef BUILD_ALL
 void __stack_chk_fail_local() {}
+#endif
+
 #endif
 
 #ifdef __MODELSIM__

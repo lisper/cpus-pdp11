@@ -20,3 +20,5 @@ vhello2.o:	vhello2.c
 vhello2.so:	vhello2.o
 	$(LD) $(LFLAGS) vhello2.o -o vhello2.so
 
+clean:
+	rm -f *.so

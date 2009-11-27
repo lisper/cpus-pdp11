@@ -2,7 +2,7 @@
 
 INCS = -I../../cver/gplcver-2.12a.src/pli_incs
 
-CFLAGS= -fPIC -Wall -g $(INCS)
+CFLAGS= -fPIC -Wall -g $(INCS) -DBUILD_ALL
 LFLAGS= -G -shared -export-dynamic
 
 all: pli_all.so pli_all.vpi
