@@ -1,0 +1,8 @@
+extract diagnostics from XXDP rl02 image
+
+EKBAD0.BIC
+FKACA0.BIC
+FKAAC0.BIC
+FKKAB0.BIN
+FKABD0.BIC
+FKTGC0.BIC
