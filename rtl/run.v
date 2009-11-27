@@ -357,7 +357,10 @@ module test;
 `endif
 
 	if (cpu.istate == 0)
-	  $finish;
+	  begin
+	     $display("CPU HALTED!\n");
+	     $finish;
+	  end
      end
 
 endmodule
