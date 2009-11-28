@@ -1,9 +1,15 @@
+// test_rk.v
+// simple testbench for rk_regs.v RK05 interface
+// reads a block
+// brad@heeltoe.com 2009
+//
 
 `timescale 1ns / 1ns
 
-`include "rk_regs.v"
+`include "../rtl/rk_regs.v"
+`include "../rtl/ide.v"
 
-module test;
+module test_rk;
 
    reg clk, reset;
 
@@ -20,6 +26,11 @@ module test;
    reg dma_ack;
    wire [17:0] 	dma_addr;
 
+   wire 	interrupt;
+   wire 	interrupt_ack;
+   wire [7:0] 	vector;
+   wire [4:0] 	rk_state;
+
    rk_regs rk(.clk(clk),
 	      .reset(reset),
 	      .iopage_addr(iopage_addr),
@@ -30,17 +41,26 @@ module test;
 	      .iopage_wr(iopage_wr),
 	      .iopage_byte_op(iopage_byte_op),
 
+	      .interrupt(interrupt),
+	      .interrupt_ack(interrupt_ack),
+	      .vector(vector),
+	      
 	      // connection to ide drive
 	      .ide_data_bus(ide_data_bus),
-	      .ide_dior(ide_dior), .ide_diow(ide_diow),
-	      .ide_cs(ide_cs), .ide_da(ide_da),
+	      .ide_dior(ide_dior),
+	      .ide_diow(ide_diow),
+	      .ide_cs(ide_cs),
+	      .ide_da(ide_da),
 
 	      // dma upward to memory
-	      .dma_req(dma_req), .dma_ack(dma_ack),
+	      .dma_req(dma_req),
+	      .dma_ack(dma_ack),
 	      .dma_addr(dma_addr),
 	      .dma_data_in(dma_data_in),
 	      .dma_data_out(dma_data_out),
-	      .dma_rd(dma_rd), .dma_wr(dma_wr)
+	      .dma_rd(dma_rd),
+	      .dma_wr(dma_wr),
+	      .rk_state(rk_state)
 	      );
 
    //
@@ -61,32 +81,65 @@ module test;
       end
    endtask
 
+   task wait_for_rk_busy;
+      begin
+	 $display("waiting for rk busy");
+	 while (rk.rk_state == 0) #10;
+	 #20;
+      end
+   endtask
+   
+   task wait_for_rk_idle;
+      begin
+	 $display("waiting for rk idle");
+	 while (rk.rk_state != 0) #10;
+	 #20;
+	 $display("rk controller idle");
+      end
+   endtask
+   
   initial
     begin
       $timeformat(-9, 0, "ns", 7);
 
-      $dumpfile("rk.vcd");
-       $dumpvars(0, test.rk);
+      $dumpfile("test_rk.vcd");
+       $dumpvars(0, test_rk);
     end
 
   initial
     begin
        clk = 0;
        reset = 0;
-
+       data_in = 0;
+		  
        #1 reset = 1;
-       #20 reset = 0;
+       #50 reset = 0;
 
        dma_ack = 1;
-       
+
+       // read sector
        write_rk_reg(13'o17400, 0); // rkda
        write_rk_reg(13'o17402, 0); // rker
-       write_rk_reg(13'o17406, 16'hfffc); // rkwc;
+       write_rk_reg(13'o17406, 16'hfe00); // rkwc;
        write_rk_reg(13'o17410, 0); // rkba;
        write_rk_reg(13'o17412, 0); // rkda;
        write_rk_reg(13'o17404, 5); // rkcs
+
+       wait_for_rk_busy;
+       wait_for_rk_idle;
        
-       #5000 $finish;
+       // read sector
+       write_rk_reg(13'o17400, 0); // rkda
+       write_rk_reg(13'o17402, 0); // rker
+       write_rk_reg(13'o17406, 16'hfe00); // rkwc;
+       write_rk_reg(13'o17410, 0); // rkba;
+       write_rk_reg(13'o17412, 2); // rkda;
+       write_rk_reg(13'o17404, 5); // rkcs
+
+       wait_for_rk_busy;
+       wait_for_rk_idle;
+       
+       $finish;
     end
 
   always
@@ -116,8 +169,6 @@ module test;
 	$display("            ata_state %d ata_rd %d ata_done %o ide_data_bus %o ata_out %o",
 		 rk.ide1.ata_state, rk.ide1.ata_rd, rk.ide1.ata_done,
 		 rk.ide1.ide_data_bus, rk.ide1.ata_out);
-//		 rk.ide1.ata_in, rk.ide1.ata_out);
-
 
      end
    
