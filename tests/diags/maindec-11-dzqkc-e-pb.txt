@@ -1,0 +1,3439 @@
+
+maindec-11-dzqkc-e-pb.bin:     file format binary
+
+Disassembly of section .data:
+
+00000000 <.data>:
+	...
+       8:	0100           	br	0xa
+       a:	6400           	add	(r0)+, r0
+       c:	0001           	wait
+       e:	0000           	halt
+      10:	0000           	halt
+      12:	0600           	bgt	0x14
+      14:	0000           	halt
+      16:	0a00           	clr	r0
+      18:	0000           	halt
+      1a:	0e00           	csm	r0
+      1c:	0000           	halt
+      1e:	1200           	mov	(r0), r0
+      20:	0000           	halt
+      22:	1600           	mov	*(r0)+, r0
+      24:	0000           	halt
+      26:	1a00           	mov	*-(r0), r0
+      28:	0000           	halt
+      2a:	1e00 0000      	mov	*0(r0), r0
+      2e:	2200           	cmp	(r0), r0
+      30:	0000           	halt
+      32:	2600           	cmp	*(r0)+, r0
+      34:	0000           	halt
+      36:	2a00           	cmp	*-(r0), r0
+      38:	0000           	halt
+      3a:	2e00 0000      	cmp	*0(r0), r0
+      3e:	3200           	bit	(r0), r0
+      40:	0000           	halt
+      42:	3600           	bit	*(r0)+, r0
+      44:	0000           	halt
+      46:	3a00           	bit	*-(r0), r0
+      48:	0000           	halt
+      4a:	3e00 0000      	bit	*0(r0), r0
+      4e:	4200           	bic	(r0), r0
+      50:	0000           	halt
+      52:	4600           	bic	*(r0)+, r0
+      54:	0000           	halt
+      56:	4a00           	bic	*-(r0), r0
+      58:	0000           	halt
+      5a:	4e00 0000      	bic	*0(r0), r0
+      5e:	5200           	bis	(r0), r0
+      60:	0000           	halt
+      62:	5600           	bis	*(r0)+, r0
+      64:	0000           	halt
+      66:	5a00           	bis	*-(r0), r0
+      68:	0000           	halt
+      6a:	5e00 0000      	bis	*0(r0), r0
+      6e:	6200           	add	(r0), r0
+      70:	0000           	halt
+      72:	6600           	add	*(r0)+, r0
+      74:	0000           	halt
+      76:	6a00           	add	*-(r0), r0
+      78:	0000           	halt
+      7a:	6e00 0000      	add	*0(r0), r0
+      7e:	7200           	div	r0, r0
+      80:	0000           	halt
+      82:	7600           	ashc	r0, r0
+      84:	0000           	halt
+      86:	7a00           	fadd	r0
+      88:	0000           	halt
+      8a:	7e00           	sob	r0, 0x8c
+      8c:	0000           	halt
+      8e:	8200           	bhi	0x90
+      90:	0000           	halt
+      92:	8600           	bcc	0x94
+      94:	0000           	halt
+      96:	8a00           	clrb	r0
+      98:	0000           	halt
+      9a:	8e00           	.word	107000
+      9c:	0000           	halt
+      9e:	9200           	movb	(r0), r0
+      a0:	0000           	halt
+      a2:	9600           	movb	*(r0)+, r0
+      a4:	0000           	halt
+      a6:	9a00           	movb	*-(r0), r0
+      a8:	0000           	halt
+      aa:	9e00 0000      	movb	*0(r0), r0
+      ae:	a200           	cmpb	(r0), r0
+      b0:	0000           	halt
+      b2:	a600           	cmpb	*(r0)+, r0
+      b4:	0000           	halt
+      b6:	aa00           	cmpb	*-(r0), r0
+      b8:	0000           	halt
+      ba:	ae00 0000      	cmpb	*0(r0), r0
+      be:	b200           	bitb	(r0), r0
+      c0:	0000           	halt
+      c2:	b600           	bitb	*(r0)+, r0
+      c4:	0000           	halt
+      c6:	ba00           	bitb	*-(r0), r0
+      c8:	0000           	halt
+      ca:	be00 0000      	bitb	*0(r0), r0
+      ce:	c200           	bicb	(r0), r0
+      d0:	0000           	halt
+      d2:	c600           	bicb	*(r0)+, r0
+      d4:	0000           	halt
+      d6:	ca00           	bicb	*-(r0), r0
+      d8:	0000           	halt
+      da:	ce00 0000      	bicb	*0(r0), r0
+      de:	d200           	bisb	(r0), r0
+      e0:	0000           	halt
+      e2:	d600           	bisb	*(r0)+, r0
+      e4:	0000           	halt
+      e6:	da00           	bisb	*-(r0), r0
+      e8:	0000           	halt
+      ea:	de00 0000      	bisb	*0(r0), r0
+      ee:	e200           	sub	(r0), r0
+      f0:	0000           	halt
+      f2:	e600           	sub	*(r0)+, r0
+      f4:	0000           	halt
+      f6:	ea00           	sub	*-(r0), r0
+      f8:	0000           	halt
+      fa:	ee00 0000      	sub	*0(r0), r0
+      fe:	f200           	mulf	fr0, fr0
+     100:	0000           	halt
+     102:	f600           	subf	fr0, fr0
+     104:	0000           	halt
+     106:	fa00           	stexp	fr0, r0
+     108:	0000           	halt
+     10a:	fe00           	ldcif	r0, fr0
+     10c:	0000           	halt
+     10e:	0200           	bne	0x110
+     110:	0001           	wait
+     112:	0600           	bgt	0x114
+     114:	0001           	wait
+     116:	0a00           	clr	r0
+     118:	0001           	wait
+     11a:	0e00           	csm	r0
+     11c:	0001           	wait
+     11e:	1200           	mov	(r0), r0
+     120:	0001           	wait
+     122:	1600           	mov	*(r0)+, r0
+     124:	0001           	wait
+     126:	1a00           	mov	*-(r0), r0
+     128:	0001           	wait
+     12a:	1e00 0001      	mov	*1(r0), r0
+     12e:	2200           	cmp	(r0), r0
+     130:	0001           	wait
+     132:	2600           	cmp	*(r0)+, r0
+     134:	0001           	wait
+     136:	2a00           	cmp	*-(r0), r0
+     138:	0001           	wait
+     13a:	2e00 0001      	cmp	*1(r0), r0
+     13e:	3200           	bit	(r0), r0
+     140:	0001           	wait
+     142:	3600           	bit	*(r0)+, r0
+     144:	0001           	wait
+     146:	3a00           	bit	*-(r0), r0
+     148:	0001           	wait
+     14a:	3e00 0001      	bit	*1(r0), r0
+     14e:	4200           	bic	(r0), r0
+     150:	0001           	wait
+     152:	4600           	bic	*(r0)+, r0
+     154:	0001           	wait
+     156:	4a00           	bic	*-(r0), r0
+     158:	0001           	wait
+     15a:	4e00 0001      	bic	*1(r0), r0
+     15e:	5200           	bis	(r0), r0
+     160:	0001           	wait
+     162:	5600           	bis	*(r0)+, r0
+     164:	0001           	wait
+     166:	5a00           	bis	*-(r0), r0
+     168:	0001           	wait
+     16a:	5e00 0401      	bis	*2001(r0), r0
+     16e:	0000           	halt
+     170:	0000           	halt
+     172:	0000           	halt
+     174:	0001           	wait
+     176:	009c           	spl	4
+     178:	015e           	br	0x236
+     17a:	0000           	halt
+     17c:	0162           	br	0x242
+     17e:	0000           	halt
+     180:	0166           	br	0x24e
+     182:	0000           	halt
+     184:	016a           	br	0x25a
+     186:	0000           	halt
+     188:	016e           	br	0x266
+     18a:	0000           	halt
+     18c:	0172           	br	0x272
+     18e:	0000           	halt
+     190:	0176           	br	0x27e
+     192:	0000           	halt
+     194:	017a           	br	0x28a
+     196:	0000           	halt
+     198:	017e           	br	0x296
+     19a:	0000           	halt
+     19c:	0182           	br	0xa2
+     19e:	0000           	halt
+     1a0:	0186           	br	0xae
+     1a2:	0000           	halt
+     1a4:	018a           	br	0xba
+     1a6:	0000           	halt
+     1a8:	018e           	br	0xc6
+     1aa:	0000           	halt
+     1ac:	0192           	br	0xd2
+     1ae:	0000           	halt
+     1b0:	0196           	br	0xde
+     1b2:	0000           	halt
+     1b4:	019a           	br	0xea
+     1b6:	0000           	halt
+     1b8:	019e           	br	0xf6
+     1ba:	0000           	halt
+     1bc:	01a2           	br	0x102
+     1be:	0000           	halt
+     1c0:	01a6           	br	0x10e
+     1c2:	0000           	halt
+     1c4:	01aa           	br	0x11a
+     1c6:	0000           	halt
+     1c8:	01ae           	br	0x126
+     1ca:	0000           	halt
+     1cc:	01b2           	br	0x132
+     1ce:	0000           	halt
+     1d0:	01b6           	br	0x13e
+     1d2:	0000           	halt
+     1d4:	01ba           	br	0x14a
+     1d6:	0000           	halt
+     1d8:	01be           	br	0x156
+     1da:	0000           	halt
+     1dc:	01c2           	br	0x162
+     1de:	0000           	halt
+     1e0:	01c6           	br	0x16e
+     1e2:	0000           	halt
+     1e4:	01ca           	br	0x17a
+     1e6:	0000           	halt
+     1e8:	01ce           	br	0x186
+     1ea:	0000           	halt
+     1ec:	01d2           	br	0x192
+     1ee:	0000           	halt
+     1f0:	01d6           	br	0x19e
+     1f2:	0000           	halt
+     1f4:	01da           	br	0x1aa
+     1f6:	0000           	halt
+     1f8:	01de           	br	0x1b6
+     1fa:	0000           	halt
+     1fc:	01e2           	br	0x1c2
+     1fe:	0000           	halt
+     200:	01e6           	br	0x1ce
+     202:	0000           	halt
+     204:	01ea           	br	0x1da
+     206:	0000           	halt
+     208:	01ee           	br	0x1e6
+     20a:	0000           	halt
+     20c:	01f2           	br	0x1f2
+     20e:	0000           	halt
+     210:	004d           	jmp	(r5)
+     212:	0000           	halt
+     214:	0000           	halt
+     216:	0100           	br	0x218
+     218:	0800           	jsr	r0, r0
+     21a:	2600           	cmp	*(r0)+, r0
+     21c:	6200           	add	(r0), r0
+     21e:	521d           	bis	(r0), *(r5)+
+     220:	0000           	halt
+     222:	0000           	halt
+     224:	0000           	halt
+     226:	0001           	wait
+     228:	0008           	.word	10
+     22a:	002a           	.word	52
+     22c:	4000           	bic	r0, r0
+     22e:	008d           	.word	215
+     230:	0000           	halt
+     232:	0000           	halt
+     234:	0100           	br	0x236
+     236:	3a00           	bit	*-(r0), r0
+     238:	8000           	bpl	0x23a
+     23a:	c700           	bicb	*(r4)+, r0
+     23c:	3615           	bit	*(r0)+, (r5)+
+     23e:	c704           	bicb	*(r4)+, r4
+     240:	7015           	mul	(r5)+, r0
+     242:	c704           	bicb	*(r4)+, r4
+     244:	9415           	movb	(r0)+, (r5)+
+     246:	b704           	bitb	*(r4)+, r4
+     248:	0e15           	csm	(r5)+
+     24a:	6600           	add	*(r0)+, r0
+     24c:	2611           	cmp	*(r0)+, (r1)+
+     24e:	e611           	sub	*(r0)+, (r1)+
+     250:	a610           	cmpb	*(r0)+, (r0)+
+     252:	6610           	add	*(r0)+, (r0)+
+     254:	2610           	cmp	*(r0)+, (r0)+
+     256:	c710           	bicb	*(r4)+, (r0)+
+     258:	0015           	.word	25
+     25a:	b700           	bitb	*(r4)+, r0
+     25c:	0e15           	csm	(r5)+
+     25e:	8000           	bpl	0x260
+     260:	8115           	bmi	0x28c
+     262:	8215           	bhi	0x28e
+     264:	8315           	blos	0x290
+     266:	8415           	bvc	0x292
+     268:	8515           	bvs	0x294
+     26a:	c715           	bicb	*(r4)+, (r5)+
+     26c:	0015           	.word	25
+     26e:	6c00 0000      	add	0(r0), r0
+     272:	0000           	halt
+     274:	0000           	halt
+     276:	0001           	wait
+     278:	003d           	.word	75
+     27a:	0188           	br	0x18c
+     27c:	15df 0190 0014 	mov	$620, *$24
+     282:	0000           	halt
+     284:	15df 0188 0014 	mov	$610, *$24
+     28a:	15c6 0180      	mov	$600, sp
+     28e:	0a17 0000      	clr	$0
+     292:	0ab7 fffa      	inc	$0x290
+     296:	02fd           	bne	0x292
+     298:	09f7 00f2      	jsr	pc, 0x38e
+     29c:	01ae           	br	0x1fa
+     29e:	005f 0436      	jmp	*$2066
+     2a2:	0a0d           	clr	(r5)
+     2a4:	4f50 4557      	bic	*42527(r5), (r0)+
+     2a8:	2052           	cmp	r1, (r2)+
+     2aa:	4146           	bic	r5, sp
+     2ac:	4c49 4445      	bic	42105(r1), (r1)
+     2b0:	0a0d           	clr	(r5)
+     2b2:	1f00 0000      	mov	*0(r4), r0
+     2b6:	0000           	halt
+     2b8:	0000           	halt
+     2ba:	0001           	wait
+     2bc:	0020           	.word	40
+     2be:	01e0           	br	0x280
+     2c0:	15df 0002 0006 	mov	$2, *$6
+     2c6:	00b1           	.word	261
+     2c8:	0bdf fe30      	tst	*$177060
+     2cc:	8701           	bcs	0x2d0
+     2ce:	1381           	mov	(sp), r1
+     2d0:	0a1f 0006      	clr	*$6
+     2d4:	104e           	mov	r1, (sp)
+     2d6:	00a0           	nop
+     2d8:	0002           	rti
+     2da:	00ee           	swab	*-(sp)
+     2dc:	0000           	halt
+     2de:	0000           	halt
+     2e0:	0100           	br	0x2e2
+     2e2:	0800           	jsr	r0, r0
+     2e4:	fe00           	ldcif	r0, fr0
+     2e6:	0001           	wait
+     2e8:	f800           	stf	fr0, fr0
+     2ea:	0000           	halt
+     2ec:	0000           	halt
+     2ee:	0000           	halt
+     2f0:	0001           	wait
+     2f2:	0164           	br	0x3bc
+     2f4:	0200           	bne	0x2f6
+	...
+     302:	01e9           	br	0x2d6
+     304:	00a0           	nop
+     306:	35f6 0800 0002 	bit	$4000, 2(sp)
+     30c:	0303           	beq	0x314
+     30e:	55df 0800 fffe 	bis	$4000, *$177776
+     314:	35df 4000 ff78 	bit	$40000, *$177570
+     31a:	030e           	beq	0x338
+     31c:	104e           	mov	r1, (sp)
+     31e:	105f 0206      	mov	r1, *$1006
+     322:	e7df 0204 0206 	sub	*$1004, *$1006
+     328:	35df 0100 ff78 	bit	$400, *$177570
+     32e:	0303           	beq	0x336
+     330:	97df ff78 fff8 	movb	*$177570, *$177770
+     336:	0002           	rti
+     338:	35df 0800 ff78 	bit	$4000, *$177570
+     33e:	0206           	bne	0x34c
+     340:	0ad7 0020      	dec	$40
+     344:	02eb           	bne	0x31c
+     346:	15f7 0020 fff6 	mov	$40, $0x342
+     34c:	1381           	mov	(sp), r1
+     34e:	01e6           	br	0x31c
+     350:	35df 1000 ff78 	bit	$10000, *$177570
+     356:	0219           	bne	0x38a
+     358:	17c0 0208      	mov	*$1010, r0
+     35c:	1005           	mov	r0, r5
+     35e:	1084           	mov	r2, r4
+     360:	e144           	sub	r5, r4
+     362:	1083           	mov	r2, r3
+     364:	0bdf 0204      	tst	*$1004
+     368:	0204           	bne	0x372
+     36a:	109f 0298      	mov	r2, *$1230
+     36e:	17c2 020a      	mov	*$1012, r2
+     372:	6084           	add	r2, r4
+     374:	211f 0460      	cmp	r4, *$2140
+     378:	8209           	bhi	0x38c
+     37a:	1412           	mov	(r0)+, (r2)+
+     37c:	2003           	cmp	r0, r3
+     37e:	02fd           	bne	0x37a
+     380:	2822           	cmp	-(r0), -(r2)
+     382:	0301           	beq	0x386
+     384:	8900           	sys	0
+     386:	2005           	cmp	r0, r5
+     388:	02fb           	bne	0x380
+     38a:	1087           	mov	r2, pc
+     38c:	13c7           	mov	(pc), pc
+     38e:	0000           	halt
+     390:	1026           	mov	r0, -(sp)
+     392:	1f80 0002      	mov	*2(sp), r0
+     396:	65f6 0002 0002 	add	$2, 2(sp)
+     39c:	9426           	movb	(r0)+, -(sp)
+     39e:	0203           	bne	0x3a6
+     3a0:	0bd6           	tst	(sp)+
+     3a2:	1580           	mov	(sp)+, r0
+     3a4:	0087           	rts	pc
+     3a6:	09f7 0016      	jsr	pc, 0x3c0
+     3aa:	a5d6 000a      	cmpb	$12, (sp)+
+     3ae:	02f6           	bne	0x39c
+     3b0:	1de6 ff44      	mov	$0x2f8, -(sp)
+     3b4:	8af6 0001      	decb	1(sp)
+     3b8:	05f8           	blt	0x3aa
+     3ba:	09f7 0002      	jsr	pc, 0x3c0
+     3be:	01fa           	br	0x3b4
+     3c0:	8bdf ff74      	tstb	*$177564
+     3c4:	80fd           	bpl	0x3c0
+     3c6:	9d9f 0002 ff76 	movb	2(sp), *$177566
+     3cc:	0087           	rts	pc
+     3ce:	09f7 fdb0      	jsr	pc, 0x182
+     3d2:	15c4 03b2      	mov	$1662, r4
+     3d6:	0a03           	clr	r3
+     3d8:	1081           	mov	r2, r1
+     3da:	0cc2           	asl	r2
+     3dc:	0c43           	rol	r3
+     3de:	15c0 0006      	mov	$6, r0
+     3e2:	0104           	br	0x3ec
+     3e4:	0cc2           	asl	r2
+     3e6:	0c43           	rol	r3
+     3e8:	0ac1           	dec	r1
+     3ea:	02fc           	bne	0x3e4
+     3ec:	15c1 0003      	mov	$3, r1
+     3f0:	9cd4 03aa      	movb	1652(r3), (r4)+
+     3f4:	0a03           	clr	r3
+     3f6:	0ac0           	dec	r0
+     3f8:	02f5           	bne	0x3e4
+     3fa:	09f7 fd98      	jsr	pc, 0x196
+     3fe:	0087           	rts	pc
+     400:	0bdf ff78      	tst	*$177570
+     404:	8002           	bpl	0x40a
+     406:	0000           	halt
+     408:	0002           	rti
+     40a:	35df 2000 ff78 	bit	$20000, *$177570
+     410:	023b           	bne	0x488
+     412:	1397 0000      	mov	(sp), $0
+     416:	1d97 0002 0000 	mov	2(sp), $0
+     41c:	09f7 fd62      	jsr	pc, 0x182
+     420:	17c2 0200      	mov	*$1000, r2
+     424:	09f7 ffa6      	jsr	pc, 0x3ce
+     428:	1df7 007e 008a 	mov	$0x4aa, $0x4b8
+     42e:	1df7 007a 0086 	mov	$0x4ac, $0x4ba
+     434:	09f7 ff58      	jsr	pc, 0x390
+     438:	03ba           	beq	0x3ae
+     43a:	1dc2 ffd6      	mov	$0x414, r2
+     43e:	0be2           	tst	-(r2)
+     440:	09f7 ff8a      	jsr	pc, 0x3ce
+     444:	09f7 ff48      	jsr	pc, 0x390
+     448:	03c7           	beq	0x3d8
+     44a:	09f7 ff42      	jsr	pc, 0x390
+     44e:	03b2           	beq	0x3b4
+     450:	09f7 ff3c      	jsr	pc, 0x390
+     454:	0065           	jmp	-(r5)
+     456:	0000           	halt
+     458:	0000           	halt
+     45a:	0100           	br	0x45c
+     45c:	9100           	movb	r4, r0
+     45e:	5e00 cc03      	bis	*-31775(r0), r0
+     462:	c203           	bicb	(r0), r3
+     464:	c01d           	bicb	r0, *(r5)+
+     466:	f7ff 7009      	cmpf	*$0x7473, fr3
+     46a:	f7ff 2e09      	cmpf	*$0x3277, fr3
+     46e:	b2ff c203      	bitb	(r3), *$0xffffc675
+     472:	ac1d e2ff      	cmpb	-16401(r0), *(r5)+
+     476:	df0b 040b      	bisb	*2013(r4), (r3)
+     47a:	0a02           	clr	r2
+     47c:	c203           	bicb	(r0), r3
+     47e:	04e7           	bge	0x44e
+     480:	f702           	cmpf	fr2, fr0
+     482:	5609           	bis	*(r0)+, (r1)
+     484:	f7ff 1409      	cmpf	*$0x1891, fr3
+     488:	d1ff f703      	bisb	pc, *$0xfffffb8f
+     48c:	0e09           	csm	(r1)
+     48e:	b2ff f703      	bitb	(r3), *$0xfffffb95
+     492:	0e09           	csm	(r1)
+     494:	dffd 0035 7804 	bisb	*$0x4cd, *74004(r5)
+     49a:	03ff           	beq	0x49a
+     49c:	f703           	cmpf	fr3, fr0
+     49e:	fc09           	stcff	fr0, (r1)
+     4a0:	e7fe df03 780b 	sub	*$157403, *74013(sp)
+     4a6:	01ff           	br	0x4a6
+     4a8:	0080           	rts	r0
+     4aa:	0200           	bne	0x4ac
+     4ac:	3000           	bit	r0, r0
+     4ae:	3231 3433      	bit	(r0), 32063(r1)
+     4b2:	3635 3037      	bit	*(r0)+, 30067(r5)
+     4b6:	3030 3030      	bit	r0, 30060(r0)
+     4ba:	2030 0d00      	cmp	r0, 6400(r0)
+     4be:	200a           	cmp	r0, (r2)
+     4c0:	4349           	bic	(r5), (r1)
+     4c2:	544e           	bis	(r1)+, (sp)
+     4c4:	303d 3030      	bit	r0, *30060(r5)
+     4c8:	0030           	.word	60
+     4ca:	5020           	bis	r0, -(r0)
+     4cc:	3d43 5000      	bit	50000(r5), r3
+     4d0:	5753           	bis	*(r5)+, (r3)+
+     4d2:	003d           	.word	75
+     4d4:	4350           	bic	(r5), (r0)+
+     4d6:	5220           	bis	(r0), -(r0)
+     4d8:	4c45 434f      	bic	41517(r1), r5
+     4dc:	5441           	bis	(r1)+, r1
+     4de:	4445           	bic	(r1)+, r5
+     4e0:	4620           	bic	*(r0)+, -(r0)
+     4e2:	4f52 204d      	bic	*20115(r5), (r2)+
+     4e6:	0d00           	mark	0
+     4e8:	000a           	.word	12
+     4ea:	0007           	mfpt
+     4ec:	0089           	.word	211
+     4ee:	0000           	halt
+     4f0:	0000           	halt
+     4f2:	0100           	br	0x4f4
+     4f4:	6400           	add	(r0)+, r0
+     4f6:	ea01           	sub	*-(r0), r1
+     4f8:	2603           	cmp	*(r0)+, r3
+     4fa:	0d10           	mark	20
+     4fc:	df0a 708b      	bisb	*70213(r4), (r2)
+     500:	fdff c080      	ldexp	*$0xffffc584, fr3
+     504:	7297 c0ff      	div	$-37401, r2
+     508:	8045           	bpl	0x594
+     50a:	c000           	bicb	r0, r0
+     50c:	7fa5           	sob	sp, 0x4d8
+     50e:	0800           	jsr	r0, r0
+     510:	df02 5c95      	bisb	*56225(r4), r2
+     514:	7600           	ashc	r0, r0
+     516:	a1ff 0d00      	cmpb	pc, *$0x121a
+     51a:	8d0c           	mtps	(r4)
+     51c:	8d0c           	mtps	(r4)
+     51e:	ee0c 1f01      	sub	*17401(r0), (r4)
+     522:	7690           	ashc	(r0)+, r2
+     524:	c0ff 0da5      	bicb	r3, *$0x12cd
+     528:	0500           	blt	0x52a
+     52a:	f702           	cmpf	fr2, fr0
+     52c:	7a09           	fsub	r1
+     52e:	e4fe d503      	sub	(r3)+, *-25375(sp)
+     532:	850b           	bvs	0x54a
+     534:	c000           	bicb	r0, r0
+     536:	f845           	stf	fr1, fr5
+     538:	cdff cd0c cd0c 	bicb	$0xffffd248, *$0xffffd24a
+     53e:	0d0c           	mark	14
+     540:	dd50 0201      	bisb	1001(r5), (r0)+
+     544:	1f00 fe0a      	mov	*-766(r4), r0
+     548:	00ff 010a      	swab	*$0x656
+     54c:	020a           	bne	0x562
+     54e:	030a           	beq	0x564
+     550:	040a           	bge	0x566
+     552:	050a           	blt	0x568
+     554:	c60a           	bicb	*(r0)+, (r2)
+     556:	8015           	bpl	0x582
+     558:	df01 5a15      	bisb	*55025(r4), r1
+     55c:	0404           	bge	0x566
+     55e:	1f00 060a      	mov	*3012(r4), r0
+     562:	0000           	halt
+     564:	d00a           	bisb	r0, (r2)
+     566:	fe0b           	ldcif	(r3), fr0
+     568:	c001           	bicb	r0, r1
+     56a:	02e5           	bne	0x536
+     56c:	1700           	mov	*(r4)+, r0
+     56e:	0010           	.word	20
+     570:	df00 00e5      	bisb	*345(r4), r0
+     574:	6008           	add	r0, (r0)
+     576:	df04 0015      	bisb	*25(r4), r4
+     57a:	0a20           	clr	-(r0)
+     57c:	1202           	mov	(r0), r2
+     57e:	f701           	cmpf	fr1, fr0
+     580:	2609           	cmp	*(r0)+, (r1)
+     582:	7efe           	sob	r3, 0x580
+     584:	771d           	ashc	*(r5)+, r4
+     586:	7009           	mul	(r1), r0
+     588:	00ff df00      	swab	*$0xffffe48c
+     58c:	fa1d           	stexp	fr0, *(r5)+
+     58e:	0aff f702      	dec	*$0xfffffc94
+     592:	1409           	mov	(r0)+, (r1)
+     594:	8bfe 771d      	tstb	*73435(sp)
+     598:	5e09 00ff      	bis	*377(r0), (r1)
+     59c:	df00 fa1d      	bisb	*-2743(r4), r0
+     5a0:	60ff 1f04      	add	r3, *$0x24a8
+     5a4:	000a           	.word	12
+     5a6:	df02 0615      	bisb	*3025(r4), r2
+     5aa:	0400           	bge	0x5ac
+     5ac:	c600           	bicb	*(r0)+, r0
+     5ae:	4015           	bic	r0, (r5)+
+     5b0:	df01 0017      	bisb	*27(r4), r1
+     5b4:	7802           	xor	r0, r2
+     5b6:	dfff 0e15 1802 	bisb	*$0x13cf, *$0x1dbe
+     5bc:	df00 0a15      	bisb	*5025(r4), r0
+     5c0:	1c03 df00      	mov	-20400(r0), r3
+     5c4:	8015           	bpl	0x5f0
+     5c6:	1e00 c000      	mov	*-40000(r0), r0
+     5ca:	e011           	sub	r0, (r1)+
+     5cc:	1f0b 0810      	mov	*4020(r4), (r3)
+     5d0:	c002           	bicb	r0, r2
+     5d2:	c011           	bicb	r0, (r1)+
+     5d4:	c4e5           	bicb	(r3)+, -(r5)
+     5d6:	1f04 0410      	mov	*2020(r4), r4
+     5da:	c102           	bicb	r4, r2
+     5dc:	af11 0700      	cmpb	*3400(r4), (r1)+
+     5e0:	0687           	bgt	0x4f0
+     5e2:	0585           	blt	0x4ee
+     5e4:	0403           	bge	0x5ec
+     5e6:	0381           	beq	0x4ea
+     5e8:	0205           	bne	0x5f4
+     5ea:	0107           	br	0x5fa
+     5ec:	0183           	br	0x4f4
+     5ee:	0082           	rts	r2
+     5f0:	b889           	bitb	-(r2), (r1)
+     5f2:	0300           	beq	0x5f4
+     5f4:	0280           	bne	0x4f6
+     5f6:	0104           	br	0x600
+     5f8:	0106           	br	0x606
+     5fa:	0005           	reset
+     5fc:	b289           	bitb	(r2), (r1)
+     5fe:	0300           	beq	0x600
+     600:	0284           	bne	0x50a
+     602:	0105           	br	0x60e
+     604:	0107           	br	0x614
+     606:	0004           	iot
+     608:	b189           	bitb	sp, (r1)
+     60a:	0200           	bne	0x60c
+     60c:	0186           	br	0x51a
+     60e:	0182           	br	0x514
+     610:	0006           	rtt
+     612:	b489           	bitb	(r2)+, (r1)
+     614:	0300           	beq	0x616
+     616:	0202           	bne	0x61c
+     618:	0106           	br	0x626
+     61a:	0182           	br	0x520
+     61c:	0007           	mfpt
+     61e:	0089           	.word	211
+     620:	bf88 a400      	bitb	*-56000(sp), (r0)
+     624:	0000           	halt
+     626:	040a           	bge	0x63c
+     628:	0387           	beq	0x538
+     62a:	0285           	bne	0x536
+     62c:	0102           	br	0x632
+     62e:	0181           	br	0x532
+     630:	0007           	mfpt
+     632:	bf89 a400      	bitb	*-56000(sp), (r1)
+     636:	c000           	bicb	r0, r0
+     638:	040b           	bge	0x650
+     63a:	0387           	beq	0x54a
+     63c:	0285           	bne	0x548
+     63e:	0102           	br	0x644
+     640:	0181           	br	0x544
+     642:	0083           	rts	r3
+     644:	af89 b600      	cmpb	*-45000(sp), (r1)
+     648:	4000           	bic	r0, r0
+     64a:	040a           	bge	0x660
+     64c:	0386           	beq	0x55a
+     64e:	0285           	bne	0x55a
+     650:	0103           	br	0x658
+     652:	0180           	br	0x554
+     654:	0005           	reset
+     656:	3e89 0000      	bit	*0(r2), (r1)
+     65a:	0000           	halt
+     65c:	0000           	halt
+     65e:	0001           	wait
+     660:	0164           	br	0x72a
+     662:	0548           	blt	0x6f4
+     664:	00b1           	.word	261
+     666:	0b40           	adc	r0
+     668:	8603           	bcc	0x670
+     66a:	8502           	bvs	0x670
+     66c:	0201           	bne	0x670
+     66e:	0401           	bge	0x672
+     670:	8900           	sys	0
+     672:	00b1           	.word	261
+     674:	0c00           	ror	r0
+     676:	8704           	bcs	0x680
+     678:	8403           	bvc	0x680
+     67a:	0302           	beq	0x680
+     67c:	8001           	bpl	0x680
+     67e:	0601           	bgt	0x682
+     680:	8900           	sys	0
+     682:	00bf           	scc
+     684:	00a2           	clv
+     686:	0ac0           	dec	r0
+     688:	8604           	bcc	0x692
+     68a:	8403           	bvc	0x692
+     68c:	0302           	beq	0x692
+     68e:	8101           	bmi	0x692
+     690:	0701           	ble	0x694
+     692:	8900           	sys	0
+     694:	00af           	ccc
+     696:	0a80           	inc	r0
+     698:	8704           	bcs	0x6a2
+     69a:	8403           	bvc	0x6a2
+     69c:	0302           	beq	0x6a2
+     69e:	8001           	bpl	0x6a2
+     6a0:	0601           	bgt	0x6a4
+     6a2:	8900           	sys	0
+     6a4:	00bf           	scc
+     6a6:	00a2           	clv
+     6a8:	0b00           	neg	r0
+     6aa:	8603           	bcc	0x6b2
+     6ac:	8402           	bvc	0x6b2
+     6ae:	0301           	beq	0x6b2
+     6b0:	0401           	bge	0x6b4
+     6b2:	8900           	sys	0
+     6b4:	00b1           	.word	261
+     6b6:	0cc0           	asl	r0
+     6b8:	8604           	bcc	0x6c2
+     6ba:	8403           	bvc	0x6c2
+     6bc:	0202           	bne	0x6c2
+     6be:	8101           	bmi	0x6c2
+     6c0:	8301           	blos	0x6c4
+     6c2:	8900           	sys	0
+     6c4:	0c40           	rol	r0
+     6c6:	8702           	bcs	0x6cc
+     6c8:	0701           	ble	0x6cc
+     6ca:	0401           	bge	0x6ce
+     6cc:	8900           	sys	0
+     6ce:	0c80           	asr	r0
+     6d0:	8603           	bcc	0x6d8
+     6d2:	8402           	bvc	0x6d8
+     6d4:	0201           	bne	0x6d8
+     6d6:	0501           	blt	0x6da
+     6d8:	8900           	sys	0
+     6da:	00bf           	scc
+     6dc:	0b80           	sbc	r0
+     6de:	8602           	bcc	0x6e4
+     6e0:	8501           	bvs	0x6e4
+     6e2:	0701           	ble	0x6e6
+     6e4:	8900           	sys	0
+     6e6:	0b00           	neg	r0
+     6e8:	00c0           	swab	r0
+     6ea:	8703           	bcs	0x6f2
+     6ec:	8502           	bvs	0x6f2
+     6ee:	0201           	bne	0x6f2
+     6f0:	0401           	bge	0x6f4
+     6f2:	8900           	sys	0
+     6f4:	8800           	emt	0
+     6f6:	0a00           	clr	r0
+     6f8:	00bf           	scc
+     6fa:	0c40           	rol	r0
+     6fc:	1002           	mov	r0, r2
+     6fe:	0cc2           	asl	r2
+     700:	1083           	mov	r2, r3
+     702:	0cc3           	asl	r3
+     704:	10c4           	mov	r3, r4
+     706:	0cc4           	asl	r4
+     708:	1105           	mov	r4, r5
+     70a:	0cc5           	asl	r5
+     70c:	1166           	mov	r5, -(sp)
+     70e:	510e           	bis	r4, (sp)
+     710:	50ce           	bis	r3, (sp)
+     712:	508e           	bis	r2, (sp)
+     714:	500e           	bis	r0, (sp)
+     716:	25d6 001f      	cmp	$37, (sp)+
+     71a:	0301           	beq	0x71e
+     71c:	8900           	sys	0
+     71e:	00af           	ccc
+     720:	95c0 00ff      	movb	$377, r0
+     724:	0c40           	rol	r0
+     726:	87fe           	bcs	0x724
+     728:	0a80           	inc	r0
+     72a:	0301           	beq	0x72e
+     72c:	8900           	sys	0
+     72e:	15c0 0010      	mov	$20, r0
+     732:	0a02           	clr	r2
+     734:	00b1           	.word	261
+     736:	0c02           	ror	r2
+     738:	0ac0           	dec	r0
+     73a:	02fc           	bne	0x734
+     73c:	0a42           	com	r2
+     73e:	0301           	beq	0x742
+     740:	8900           	sys	0
+     742:	15c3 8000      	mov	$-100000, r3
+     746:	0c83           	asr	r3
+     748:	86fe           	bcc	0x746
+     74a:	0a83           	inc	r3
+     74c:	0301           	beq	0x750
+     74e:	8900           	sys	0
+     750:	95c4 ff01      	movb	$-377, r4
+     754:	6104           	add	r4, r4
+     756:	86fe           	bcc	0x754
+     758:	0bc4           	tst	r4
+     75a:	0301           	beq	0x75e
+     75c:	8900           	sys	0
+     75e:	15c5 0001      	mov	$1, r5
+     762:	0cc5           	asl	r5
+     764:	84fe           	bvc	0x762
+     766:	0cc5           	asl	r5
+     768:	8602           	bcc	0x76e
+     76a:	0bc5           	tst	r5
+     76c:	0301           	beq	0x770
+     76e:	8900           	sys	0
+     770:	0a02           	clr	r2
+     772:	0a42           	com	r2
+     774:	1083           	mov	r2, r3
+     776:	00af           	ccc
+     778:	0c02           	ror	r2
+     77a:	0c82           	asr	r2
+     77c:	10c4           	mov	r3, r4
+     77e:	0ac2           	dec	r2
+     780:	02fd           	bne	0x77c
+     782:	0a83           	inc	r3
+     784:	0202           	bne	0x78a
+     786:	0a84           	inc	r4
+     788:	0301           	beq	0x78c
+     78a:	8900           	sys	0
+     78c:	35df 0010 fffe 	bit	$20, *$177776
+     792:	022a           	bne	0x7e8
+     794:	1066           	mov	r1, -(sp)
+     796:	1197 0000      	mov	sp, $0
+     79a:	11d7 0000      	mov	pc, $0
+     79e:	0ab7 fffa      	inc	$0x79c
+     7a2:	1dc0 fff6      	mov	$0x79c, r0
+     7a6:	1001           	mov	r0, r1
+     7a8:	1042           	mov	r1, r2
+     7aa:	1083           	mov	r2, r3
+     7ac:	10c4           	mov	r3, r4
+     7ae:	1105           	mov	r4, r5
+     7b0:	d5df 00e0 fffe 	bisb	$340, *$177776
+     7b6:	1146           	mov	r5, sp
+     7b8:	1197 0000      	mov	sp, $0
+     7bc:	1dc6 ffd8      	mov	$0x798, sp
+     7c0:	c5df 0048 0000 	bicb	$110, *$0
+     7c6:	0000           	halt
+     7c8:	0100           	br	0x7ca
+     7ca:	6400           	add	(r0)+, r0
+     7cc:	a601           	cmpb	*(r0)+, r1
+     7ce:	e006           	sub	r0, sp
+     7d0:	fe00           	ldcif	r0, fr0
+     7d2:	c0ff f02d      	bicb	r3, *$0xfffff803
+     7d6:	04ff           	bge	0x7d6
+     7d8:	f702           	cmpf	fr2, fr0
+     7da:	cc0c e8ff      	bicb	-13401(r0), (r4)
+     7de:	0902           	jsr	r4, r2
+     7e0:	2601           	cmp	*(r0)+, r1
+     7e2:	6610           	add	*(r0)+, (r0)+
+     7e4:	a610           	cmpb	*(r0)+, (r0)+
+     7e6:	e610           	sub	*(r0)+, (r0)+
+     7e8:	2610           	cmp	*(r0)+, (r0)+
+     7ea:	6611           	add	*(r0)+, (r1)+
+     7ec:	0011           	.word	21
+     7ee:	c689           	bicb	*(r2)+, (r1)
+     7f0:	b21d           	bitb	(r0), *(r5)+
+     7f2:	81ff           	bmi	0x7f2
+     7f4:	0015           	.word	25
+     7f6:	0188           	br	0x708
+     7f8:	0001           	wait
+     7fa:	c200           	bicb	(r0), r0
+     7fc:	c211           	bicb	(r0), (r1)+
+     7fe:	04e5           	bge	0x7ca
+     800:	0a00           	clr	r0
+     802:	b10a           	bitb	r4, (r2)
+     804:	0a00           	clr	r0
+     806:	020c           	bne	0x820
+     808:	0183           	br	0x710
+     80a:	0180           	br	0x70c
+     80c:	0004           	iot
+     80e:	af89 b100      	cmpb	*-47400(sp), (r1)
+     812:	ca00           	bicb	*-(r0), r0
+     814:	010a           	br	0x82a
+     816:	0186           	br	0x724
+     818:	0007           	mfpt
+     81a:	af89 b100      	cmpb	*-47400(sp), (r1)
+     81e:	4a00           	bic	*-(r0), r0
+     820:	030b           	beq	0x838
+     822:	0287           	bne	0x732
+     824:	0184           	br	0x72e
+     826:	0180           	br	0x728
+     828:	0002           	rti
+     82a:	4a89           	bic	*-(r2), (r1)
+     82c:	030c           	beq	0x846
+     82e:	0286           	bne	0x73c
+     830:	0184           	br	0x73a
+     832:	0102           	br	0x838
+     834:	0080           	rts	r0
+     836:	4a89           	bic	*-(r2), (r1)
+     838:	020c           	bne	0x852
+     83a:	0183           	br	0x742
+     83c:	0185           	br	0x748
+     83e:	0080           	rts	r0
+     840:	8a89           	incb	(r1)
+     842:	030c           	beq	0x85c
+     844:	0286           	bne	0x752
+     846:	0184           	br	0x750
+     848:	0102           	br	0x84e
+     84a:	0080           	rts	r0
+     84c:	0a89           	inc	(r1)
+     84e:	030c           	beq	0x868
+     850:	0287           	bne	0x760
+     852:	0184           	br	0x75c
+     854:	0103           	br	0x85c
+     856:	0081           	rts	r1
+     858:	b189           	bitb	sp, (r1)
+     85a:	8a00           	clrb	r0
+     85c:	030a           	beq	0x872
+     85e:	0286           	bne	0x76c
+     860:	0185           	br	0x76c
+     862:	0103           	br	0x86a
+     864:	0081           	rts	r1
+     866:	8a89           	incb	(r1)
+     868:	030b           	beq	0x880
+     86a:	0287           	bne	0x77a
+     86c:	0185           	br	0x778
+     86e:	0103           	br	0x876
+     870:	0081           	rts	r1
+     872:	b189           	bitb	sp, (r1)
+     874:	8a00           	clrb	r0
+     876:	030b           	beq	0x88e
+     878:	0287           	bne	0x788
+     87a:	0184           	br	0x784
+     87c:	0103           	br	0x884
+     87e:	0080           	rts	r0
+     880:	b189           	bitb	sp, (r1)
+     882:	4a00           	bic	*-(r0), r0
+     884:	010b           	br	0x89c
+     886:	0081           	rts	r1
+     888:	b189           	bitb	sp, (r1)
+     88a:	ca00           	bicb	*-(r0), r0
+     88c:	030c           	beq	0x8a6
+     88e:	0286           	bne	0x79c
+     890:	0184           	br	0x79a
+     892:	0102           	br	0x898
+     894:	0080           	rts	r0
+     896:	4a89           	bic	*-(r2), (r1)
+     898:	020a           	bne	0x8ae
+     89a:	0186           	br	0x7a8
+     89c:	0185           	br	0x7a8
+     89e:	0081           	rts	r1
+     8a0:	a889           	cmpb	-(r2), (r1)
+     8a2:	ca00           	bicb	*-(r0), r0
+     8a4:	030b           	beq	0x8bc
+     8a6:	0287           	bne	0x7b6
+     8a8:	0185           	br	0x7b4
+     8aa:	0180           	br	0x7ac
+     8ac:	0002           	rti
+     8ae:	b289           	bitb	(r2), (r1)
+     8b0:	0a00           	clr	r0
+     8b2:	020b           	bne	0x8ca
+     8b4:	0186           	br	0x7c2
+     8b6:	0185           	br	0x7c2
+     8b8:	0002           	rti
+     8ba:	ca89           	bicb	*-(r2), (r1)
+     8bc:	010a           	br	0x8d2
+     8be:	0186           	br	0x7cc
+     8c0:	0003           	bpt
+     8c2:	0089           	.word	211
+     8c4:	0188           	br	0x7d6
+     8c6:	0001           	wait
+     8c8:	c300           	bicb	(r4), r0
+     8ca:	c311           	bicb	(r4), (r1)+
+     8cc:	04e5           	bge	0x898
+     8ce:	c400           	bicb	(r0)+, r0
+     8d0:	8410           	bvc	0x8f2
+     8d2:	0b0a           	neg	(r2)
+     8d4:	b10a           	bitb	r4, (r2)
+     8d6:	4b00           	bic	*-(r4), r0
+     8d8:	028b           	bne	0x7f0
+     8da:	8c81           	asrb	r1
+     8dc:	fb8a           	stcfi	fr2, (r2)
+     8de:	0101           	br	0x8e2
+     8e0:	0085           	rts	r5
+     8e2:	a289           	cmpb	(r2), (r1)
+     8e4:	8c00           	rorb	r0
+     8e6:	028a           	bne	0x7fc
+     8e8:	0187           	br	0x7f8
+     8ea:	0184           	br	0x7f4
+     8ec:	0081           	rts	r1
+     8ee:	4c89 028c      	bic	1214(r2), (r1)
+     8f2:	0186           	br	0x800
+     8f4:	0184           	br	0x7fe
+     8f6:	0003           	bpt
+     8f8:	8c89           	asrb	(r1)
+     8fa:	028b           	bne	0x812
+     8fc:	0186           	br	0x80a
+     8fe:	0185           	br	0x80a
+     900:	0081           	rts	r1
+     902:	cb89           	bicb	*-(sp), (r1)
+     904:	028c           	bne	0x81e
+     906:	0186           	br	0x814
+     908:	0184           	br	0x812
+     90a:	0003           	bpt
+     90c:	0b89           	sbc	(r1)
+     90e:	028b           	bne	0x826
+     910:	0187           	br	0x820
+     912:	0185           	br	0x81e
+     914:	0003           	bpt
+     916:	bf89 cb00      	bitb	*-32400(sp), (r1)
+     91a:	028a           	bne	0x830
+     91c:	0186           	br	0x82a
+     91e:	0185           	br	0x82a
+     920:	0002           	rti
+     922:	a189           	cmpb	sp, (r1)
+     924:	0b00           	neg	r0
+     926:	028c           	bne	0x840
+     928:	0186           	br	0x836
+     92a:	0184           	br	0x834
+     92c:	2380           	cmp	(sp), r0
+     92e:	0000           	halt
+     930:	0000           	halt
+     932:	0000           	halt
+     934:	0001           	wait
+     936:	0164           	br	0xa00
+     938:	0804           	jsr	r0, r4
+     93a:	8900           	sys	0
+     93c:	00a1           	clc
+     93e:	8a4c           	comb	(r4)
+     940:	8602           	bcc	0x946
+     942:	8501           	bvs	0x946
+     944:	0301           	beq	0x948
+     946:	8900           	sys	0
+     948:	8c8b           	asrb	(r3)
+     94a:	8402           	bvc	0x950
+     94c:	8b4c           	adcb	(r4)
+     94e:	01fc           	br	0x948
+     950:	8701           	bcs	0x954
+     952:	0301           	beq	0x956
+     954:	8900           	sys	0
+     956:	8c8c           	asrb	(r4)
+     958:	8c8c           	asrb	(r4)
+     95a:	8602           	bcc	0x960
+     95c:	8401           	bvc	0x960
+     95e:	0201           	bne	0x962
+     960:	8900           	sys	0
+     962:	8acc           	decb	(r4)
+     964:	0301           	beq	0x968
+     966:	8900           	sys	0
+     968:	00b1           	.word	261
+     96a:	8c0c           	rorb	(r4)
+     96c:	8702           	bcs	0x972
+     96e:	8401           	bvc	0x972
+     970:	8101           	bmi	0x974
+     972:	8900           	sys	0
+     974:	00a2           	clv
+     976:	8acc           	decb	(r4)
+     978:	8501           	bvs	0x97c
+     97a:	8900           	sys	0
+     97c:	00b1           	.word	261
+     97e:	8acb           	decb	(r3)
+     980:	8602           	bcc	0x986
+     982:	8501           	bvs	0x986
+     984:	8101           	bmi	0x988
+     986:	8900           	sys	0
+     988:	00bf           	scc
+     98a:	00cb           	swab	(r3)
+     98c:	8702           	bcs	0x992
+     98e:	8501           	bvs	0x992
+     990:	8001           	bpl	0x994
+     992:	8900           	sys	0
+     994:	8bcc           	tstb	(r4)
+     996:	8702           	bcs	0x99c
+     998:	8501           	bvs	0x99c
+     99a:	8101           	bmi	0x99e
+     99c:	8900           	sys	0
+     99e:	8a0c           	clrb	(r4)
+     9a0:	0301           	beq	0x9a4
+     9a2:	8900           	sys	0
+     9a4:	8ccb           	aslb	(r3)
+     9a6:	8702           	bcs	0x9ac
+     9a8:	8401           	bvc	0x9ac
+     9aa:	8101           	bmi	0x9ae
+     9ac:	8900           	sys	0
+     9ae:	8a4b           	comb	(r3)
+     9b0:	8602           	bcc	0x9b6
+     9b2:	8501           	bvs	0x9b6
+     9b4:	8001           	bpl	0x9b8
+     9b6:	8900           	sys	0
+     9b8:	00cb           	swab	(r3)
+     9ba:	0301           	beq	0x9be
+     9bc:	8900           	sys	0
+     9be:	8a8b           	incb	(r3)
+     9c0:	00b1           	.word	261
+     9c2:	8b8b           	sbcb	(r3)
+     9c4:	0301           	beq	0x9c8
+     9c6:	8900           	sys	0
+     9c8:	25cb 0100      	cmp	$400, (r3)
+     9cc:	0301           	beq	0x9d0
+     9ce:	8900           	sys	0
+     9d0:	8800           	emt	0
+     9d2:	0101           	br	0x9d6
+     9d4:	0000           	halt
+     9d6:	11c4           	mov	pc, r4
+     9d8:	e5c4 0004      	sub	$4, r4
+     9dc:	1105           	mov	r4, r5
+     9de:	0a0d           	clr	(r5)
+     9e0:	00bf           	scc
+     9e2:	00a4           	clz
+     9e4:	0bd5           	tst	(r5)+
+     9e6:	8702           	bcs	0x9ec
+     9e8:	8501           	bvs	0x9ec
+     9ea:	0301           	beq	0x9ee
+     9ec:	8900           	sys	0
+     9ee:	0a65           	com	-(r5)
+     9f0:	8601           	bcc	0x9f4
+     9f2:	8101           	bmi	0x9f6
+     9f4:	8900           	sys	0
+     9f6:	00a1           	clc
+     9f8:	0c14           	ror	(r4)+
+     9fa:	8602           	bcc	0xa00
+     9fc:	8401           	bvc	0xa00
+     9fe:	8001           	bpl	0xa02
+     a00:	8900           	sys	0
+     a02:	00af           	ccc
+     a04:	0aa4           	inc	-(r4)
+     a06:	8402           	bvc	0xa0c
+     a08:	0301           	beq	0xa0c
+     a0a:	8101           	bmi	0xa0e
+     a0c:	8900           	sys	0
+     a0e:	00b1           	.word	261
+     a10:	00d4           	swab	(r4)+
+     a12:	8701           	bcs	0xa16
+     a14:	8101           	bmi	0xa18
+     a16:	8900           	sys	0
+     a18:	0b15           	neg	(r5)+
+     a1a:	8601           	bcc	0xa1e
+     a1c:	8101           	bmi	0xa20
+     a1e:	8900           	sys	0
+     a20:	0a24           	clr	-(r4)
+     a22:	0301           	beq	0xa26
+     a24:	8900           	sys	0
+     a26:	00b1           	.word	261
+     a28:	0c25           	ror	-(r5)
+     a2a:	00b1           	.word	261
+     a2c:	0b55           	adc	(r5)+
+     a2e:	8501           	bvs	0xa32
+     a30:	8101           	bmi	0xa34
+     a32:	8900           	sys	0
+     a34:	00b2           	sev
+     a36:	0c94           	asr	(r4)+
+     a38:	8602           	bcc	0xa3e
+     a3a:	8501           	bvs	0xa3e
+     a3c:	8101           	bmi	0xa40
+     a3e:	8900           	sys	0
+     a40:	00b2           	sev
+     a42:	0c64           	rol	-(r4)
+     a44:	8602           	bcc	0xa4a
+     a46:	8501           	bvs	0xa4a
+     a48:	8101           	bmi	0xa4c
+     a4a:	8900           	sys	0
+     a4c:	0ba5           	sbc	-(r5)
+     a4e:	8601           	bcc	0xa52
+     a50:	8900           	sys	0
+     a52:	0ad5           	dec	(r5)+
+     a54:	8702           	bcs	0xa5a
+     a56:	8401           	bvc	0xa5a
+     a58:	8001           	bpl	0xa5c
+     a5a:	8900           	sys	0
+     a5c:	0cd4           	asl	(r4)+
+     a5e:	8501           	bvs	0xa62
+     a60:	8900           	sys	0
+     a62:	0ce4           	asl	-(r4)
+     a64:	8603           	bcc	0xa6c
+     a66:	8502           	bvs	0xa6c
+     a68:	0301           	beq	0xa6c
+     a6a:	8101           	bmi	0xa6e
+     a6c:	8900           	sys	0
+     a6e:	25d4 fffc      	cmp	$-4, (r4)+
+     a72:	0301           	beq	0xa76
+     a74:	8900           	sys	0
+     a76:	2105           	cmp	r4, r5
+     a78:	0301           	beq	0xa7c
+     a7a:	8900           	sys	0
+     a7c:	8800           	emt	0
+     a7e:	0101           	br	0xa82
+     a80:	0000           	halt
+     a82:	11c5           	mov	pc, r5
+     a84:	e5c5 0004      	sub	$4, r5
+     a88:	1140           	mov	r5, r0
+     a8a:	1002           	mov	r0, r2
+     a8c:	0a82           	inc	r2
+     a8e:	0a08           	clr	(r0)
+     a90:	00bf           	scc
+     a92:	00a1           	clc
+     a94:	8a55           	comb	(r5)+
+     a96:	8602           	bcc	0xa9c
+     a98:	0015           	.word	25
+     a9a:	0000           	halt
+     a9c:	0000           	halt
+     a9e:	0100           	br	0xaa0
+     aa0:	6400           	add	(r0)+, r0
+     aa2:	6201           	add	(r0), r1
+     aa4:	0109           	br	0xab8
+     aa6:	0185           	br	0x9b2
+     aa8:	0081           	rts	r1
+     aaa:	6289           	add	(r2), (r1)
+     aac:	018b           	br	0x9c4
+     aae:	0003           	bpt
+     ab0:	5589           	bis	(sp)+, (r1)
+     ab2:	018b           	br	0x9ca
+     ab4:	0187           	br	0x9c4
+     ab6:	0002           	rti
+     ab8:	b389           	bitb	(sp), (r1)
+     aba:	2500           	cmp	(r4)+, r0
+     abc:	038c           	beq	0x9d6
+     abe:	0286           	bne	0x9cc
+     ac0:	0185           	br	0x9cc
+     ac2:	0103           	br	0xaca
+     ac4:	0081           	rts	r1
+     ac6:	bf89 5200      	bitb	*51000(sp), (r1)
+     aca:	038c           	beq	0x9e4
+     acc:	0287           	bne	0x9dc
+     ace:	0185           	br	0x9da
+     ad0:	0103           	br	0xad8
+     ad2:	0080           	rts	r0
+     ad4:	af89 9500      	cmpb	*-65400(sp), (r1)
+     ad8:	028c           	bne	0x9f2
+     ada:	0187           	br	0x9ea
+     adc:	0184           	br	0x9e6
+     ade:	0081           	rts	r1
+     ae0:	a289           	cmpb	(r2), (r1)
+     ae2:	bf8a 9200      	bitb	*-67000(sp), (r2)
+     ae6:	028c           	bne	0xa00
+     ae8:	0187           	br	0x9f8
+     aea:	0185           	br	0x9f6
+     aec:	0080           	rts	r0
+     aee:	b689           	bitb	*(r2)+, (r1)
+     af0:	e500           	sub	(r4)+, r0
+     af2:	038c           	beq	0xa0c
+     af4:	0286           	bne	0xa02
+     af6:	0185           	br	0xa02
+     af8:	0103           	br	0xb00
+     afa:	0081           	rts	r1
+     afc:	d289           	bisb	(r2), (r1)
+     afe:	028a           	bne	0xa14
+     b00:	0186           	br	0xa0e
+     b02:	0184           	br	0xa0c
+     b04:	0080           	rts	r0
+     b06:	a589           	cmpb	(sp)+, (r1)
+     b08:	028b           	bne	0xa20
+     b0a:	0187           	br	0xa1a
+     b0c:	0185           	br	0xa18
+     b0e:	0003           	bpt
+     b10:	2289           	cmp	(r2), (r1)
+     b12:	028b           	bne	0xa2a
+     b14:	0186           	br	0xa22
+     b16:	0185           	br	0xa22
+     b18:	0081           	rts	r1
+     b1a:	d589           	bisb	(sp)+, (r1)
+     b1c:	018b           	br	0xa34
+     b1e:	0187           	br	0xa2e
+     b20:	0003           	bpt
+     b22:	d289           	bisb	(r2), (r1)
+     b24:	018b           	br	0xa3c
+     b26:	0103           	br	0xb2e
+     b28:	0081           	rts	r1
+     b2a:	b189           	bitb	sp, (r1)
+     b2c:	e200           	sub	(r0), r0
+     b2e:	0100           	br	0xb30
+     b30:	0187           	br	0xa40
+     b32:	0081           	rts	r1
+     b34:	bf89 9500      	bitb	*-65400(sp), (r1)
+     b38:	038a           	beq	0xa4e
+     b3a:	0286           	bne	0xa48
+     b3c:	0185           	br	0xa48
+     b3e:	0103           	br	0xb46
+     b40:	0080           	rts	r0
+     b42:	9789           	movb	*(sp)+, (r1)
+     b44:	8124           	bmi	0xb8e
+     b46:	0101           	br	0xb4a
+     b48:	0003           	bpt
+     b4a:	8589           	bvs	0xa5e
+     b4c:	0120           	br	0xb8e
+     b4e:	0003           	bpt
+     b50:	0089           	.word	211
+     b52:	0288           	bne	0xa64
+     b54:	0001           	wait
+     b56:	0000           	halt
+     b58:	c300           	bicb	(r4), r0
+     b5a:	c311           	bicb	(r4), (r1)+
+     b5c:	04e5           	bge	0xb28
+     b5e:	0b00           	neg	r0
+     b60:	c00a           	bicb	r0, (r2)
+     b62:	e310           	sub	(r4), (r0)+
+     b64:	0b0b           	neg	(r3)
+     b66:	c410           	bicb	(r0)+, (r0)+
+     b68:	af10 db00      	cmpb	*-22400(r4), (r0)+
+     b6c:	010b           	br	0xb84
+     b6e:	0003           	bpt
+     b70:	b189           	bitb	sp, (r1)
+     b72:	2b00           	cmp	*-(r4), r0
+     b74:	020c           	bne	0xb8e
+     b76:	0187           	br	0xa86
+     b78:	0184           	br	0xa82
+     b7a:	0081           	rts	r1
+     b7c:	af89 9c00      	cmpb	*-62000(sp), (r1)
+     b80:	010c           	br	0xb9a
+     b82:	0184           	br	0xa8c
+     b84:	0081           	rts	r1
+     b86:	a889           	cmpb	-(r2), (r1)
+     b88:	db00           	bisb	*-(r4), r0
+     b8a:	020c           	bne	0xba4
+     b8c:	0186           	br	0xa9a
+     b8e:	0185           	br	0xa9a
+     b90:	0081           	rts	r1
+     b92:	bf89 ec00      	bitb	*-12000(sp), (r1)
+     b96:	030a           	beq	0xbac
+     b98:	0286           	bne	0xaa6
+     b9a:	0184           	br	0xaa4
+     b9c:	0103           	br	0xba4
+     b9e:	0080           	rts	r0
+     ba0:	2b89           	cmp	*-(sp), (r1)
+     ba2:	020b           	bne	0xbba
+     ba4:	0186           	br	0xab2
+     ba6:	0185           	br	0xab2
+     ba8:	0081           	rts	r1
+     baa:	b289           	bitb	(r2), (r1)
+     bac:	5c00 010a      	bis	412(r0), r0
+     bb0:	0186           	br	0xabe
+     bb2:	0084           	rts	r4
+     bb4:	9b89           	movb	*-(sp), (r1)
+     bb6:	010a           	br	0xbcc
+     bb8:	0186           	br	0xac6
+     bba:	0080           	rts	r0
+     bbc:	6c89 020b      	add	1013(r2), (r1)
+     bc0:	0187           	br	0xad0
+     bc2:	0184           	br	0xacc
+     bc4:	0081           	rts	r1
+     bc6:	af89 5c00      	cmpb	*56000(sp), (r1)
+     bca:	020c           	bne	0xbe4
+     bcc:	0186           	br	0xada
+     bce:	0184           	br	0xad8
+     bd0:	0003           	bpt
+     bd2:	ab89           	cmpb	*-(sp), (r1)
+     bd4:	ac0a 010b      	cmpb	413(r0), (r2)
+     bd8:	0187           	br	0xae8
+     bda:	0003           	bpt
+     bdc:	0089           	.word	211
+     bde:	0388           	beq	0xaf0
+     be0:	0001           	wait
+     be2:	0000           	halt
+     be4:	0000           	halt
+     be6:	c200           	bicb	(r0), r0
+     be8:	e211           	sub	(r0), (r1)+
+     bea:	e20b           	sub	(r0), (r3)
+     bec:	800b           	bpl	0xc04
+     bee:	0810           	jsr	r0, (r0)+
+     bf0:	e20a           	sub	(r0), (r2)
+     bf2:	e20b           	sub	(r0), (r3)
+     bf4:	120b           	mov	(r0), (r3)
+     bf6:	8010           	bpl	0xc18
+     bf8:	120a           	mov	(r0), (r2)
+     bfa:	8010           	bpl	0xc1c
+     bfc:	8510           	bvs	0xc1e
+     bfe:	6a10           	add	*-(r0), (r0)+
+     c00:	018a           	br	0xb16
+     c02:	3486           	bit	(r2)+, sp
+     c04:	0000           	halt
+     c06:	0000           	halt
+     c08:	0000           	halt
+     c0a:	0001           	wait
+     c0c:	0164           	br	0xcd6
+     c0e:	0ac0           	dec	r0
+     c10:	8101           	bmi	0xc14
+     c12:	8900           	sys	0
+     c14:	8bea           	tstb	*-(r2)
+     c16:	0301           	beq	0xc1a
+     c18:	8900           	sys	0
+     c1a:	00b2           	sev
+     c1c:	8cad           	asrb	*-(r5)
+     c1e:	8602           	bcc	0xc24
+     c20:	8501           	bvs	0xc24
+     c22:	8101           	bmi	0xc26
+     c24:	8900           	sys	0
+     c26:	8a9a           	incb	*(r2)+
+     c28:	8601           	bcc	0xc2c
+     c2a:	8001           	bpl	0xc2e
+     c2c:	8900           	sys	0
+     c2e:	00a1           	clc
+     c30:	8c2d           	rorb	*-(r5)
+     c32:	8603           	bcc	0xc3a
+     c34:	8402           	bvc	0xc3a
+     c36:	0201           	bne	0xc3a
+     c38:	8001           	bpl	0xc3c
+     c3a:	8900           	sys	0
+     c3c:	8cda           	aslb	*(r2)+
+     c3e:	8602           	bcc	0xc44
+     c40:	8501           	bvs	0xc44
+     c42:	8101           	bmi	0xc46
+     c44:	8900           	sys	0
+     c46:	8b6a           	adcb	*-(r2)
+     c48:	8701           	bcs	0xc4c
+     c4a:	8101           	bmi	0xc4e
+     c4c:	8900           	sys	0
+     c4e:	00bf           	scc
+     c50:	8c5d           	rolb	*(r5)+
+     c52:	8302           	blos	0xc58
+     c54:	8501           	bvs	0xc58
+     c56:	8001           	bpl	0xc5a
+     c58:	8900           	sys	0
+     c5a:	00ea           	swab	*-(r2)
+     c5c:	8101           	bmi	0xc60
+     c5e:	8900           	sys	0
+     c60:	00b1           	.word	261
+     c62:	8b9d           	sbcb	*(r5)+
+     c64:	8701           	bcs	0xc68
+     c66:	0301           	beq	0xc6a
+     c68:	8900           	sys	0
+     c6a:	8b1a           	negb	*(r2)+
+     c6c:	8aea           	decb	*-(r2)
+     c6e:	8601           	bcc	0xc72
+     c70:	0301           	beq	0xc74
+     c72:	8900           	sys	0
+     c74:	8800           	emt	0
+     c76:	0a17 0000      	clr	$0
+     c7a:	11c0           	mov	pc, r0
+     c7c:	2820           	cmp	-(r0), -(r0)
+     c7e:	00bf           	scc
+     c80:	0c77 fff4      	rol	$0xc78
+     c84:	8703           	bcs	0xc8c
+     c86:	8502           	bvs	0xc8c
+     c88:	0301           	beq	0xc8c
+     c8a:	8001           	bpl	0xc8e
+     c8c:	8900           	sys	0
+     c8e:	0a77 ffe6      	com	$0xc78
+     c92:	8602           	bcc	0xc98
+     c94:	8501           	bvs	0xc98
+     c96:	8101           	bmi	0xc9a
+     c98:	8900           	sys	0
+     c9a:	0cb7 ffda      	asr	$0xc78
+     c9e:	8702           	bcs	0xca4
+     ca0:	8401           	bvc	0xca4
+     ca2:	8101           	bmi	0xca6
+     ca4:	8900           	sys	0
+     ca6:	00bf           	scc
+     ca8:	0b37 ffcc      	neg	$0xc78
+     cac:	8603           	bcc	0xcb4
+     cae:	8502           	bvs	0xcb4
+     cb0:	0301           	beq	0xcb4
+     cb2:	8001           	bpl	0xcb6
+     cb4:	8900           	sys	0
+     cb6:	00bf           	scc
+     cb8:	0c37 ffbc      	ror	$0xc78
+     cbc:	8603           	bcc	0xcc4
+     cbe:	8502           	bvs	0xcc4
+     cc0:	0301           	beq	0xcc4
+     cc2:	8101           	bmi	0xcc6
+     cc4:	8900           	sys	0
+     cc6:	0bb7 ffae      	sbc	$0xc78
+     cca:	8702           	bcs	0xcd0
+     ccc:	8401           	bvc	0xcd0
+     cce:	8001           	bpl	0xcd2
+     cd0:	8900           	sys	0
+     cd2:	00a2           	clv
+     cd4:	0ab7 ffa0      	inc	$0xc78
+     cd8:	8703           	bcs	0xce0
+     cda:	8402           	bvc	0xce0
+     cdc:	0301           	beq	0xce0
+     cde:	8101           	bmi	0xce2
+     ce0:	8900           	sys	0
+     ce2:	0cb7 ff92      	asr	$0xc78
+     ce6:	00b1           	.word	261
+     ce8:	0cf7 ff8c      	asl	$0xc78
+     cec:	8602           	bcc	0xcf2
+     cee:	8501           	bvs	0xcf2
+     cf0:	8101           	bmi	0xcf4
+     cf2:	8900           	sys	0
+     cf4:	0af7 ff80      	dec	$0xc78
+     cf8:	8602           	bcc	0xcfe
+     cfa:	8401           	bvc	0xcfe
+     cfc:	8001           	bpl	0xd00
+     cfe:	8900           	sys	0
+     d00:	0b77 ff74      	adc	$0xc78
+     d04:	8702           	bcs	0xd0a
+     d06:	8401           	bvc	0xd0a
+     d08:	8101           	bmi	0xd0c
+     d0a:	8900           	sys	0
+     d0c:	00a2           	clv
+     d0e:	00f7 ff66      	swab	$0xc78
+     d12:	8101           	bmi	0xd16
+     d14:	8900           	sys	0
+     d16:	25c8 0080      	cmp	$200, (r0)
+     d1a:	0301           	beq	0xd1e
+     d1c:	8900           	sys	0
+     d1e:	8800           	emt	0
+     d20:	15c0 0cb2      	mov	$6262, r0
+     d24:	67c0 0204      	add	*$1004, r0
+     d28:	0a37 00d6      	clr	$0xe02
+     d2c:	00bf           	scc
+     d2e:	00a4           	clz
+     d30:	8bf7 00ce      	tstb	$0xe02
+     d34:	8703           	bcs	0xd3c
+     d36:	8502           	bvs	0xd3c
+     d38:	0201           	bne	0xd3c
+     d3a:	8001           	bpl	0xd3e
+     d3c:	8900           	sys	0
+     d3e:	00af           	ccc
+     d40:	8bf7 00bf      	tstb	$0xe03
+     d44:	0301           	beq	0xd48
+     d46:	8900           	sys	0
+     d48:	8bb7 00b6      	sbcb	$0xe02
+     d4c:	8702           	bcs	0xd52
+     d4e:	8501           	bvs	0xd52
+     d50:	0301           	beq	0xd54
+     d52:	8900           	sys	0
+     d54:	00b1           	.word	261
+     d56:	8ab7 00a8      	incb	$0xe02
+     d5a:	8103           	bmi	0xd62
+     d5c:	8b77 00a3      	adcb	$0xe03
+     d60:	01f9           	br	0xd54
+     d62:	8601           	bcc	0xd66
+     d64:	8501           	bvs	0xd68
+     d66:	8900           	sys	0
+     d68:	8cf7 0096      	aslb	$0xe02
+     d6c:	8603           	bcc	0xd74
+     d6e:	007e 0000      	jmp	*0(sp)
+     d72:	0000           	halt
+     d74:	0100           	br	0xd76
+     d76:	6400           	add	(r0)+, r0
+     d78:	1e01 020c      	mov	*1014(r0), r1
+     d7c:	0184           	br	0xc86
+     d7e:	0102           	br	0xd84
+     d80:	0080           	rts	r0
+     d82:	a289           	cmpb	(r2), (r1)
+     d84:	7700           	ashc	r0, r4
+     d86:	878b           	bcs	0xc9e
+     d88:	0200           	bne	0xd8a
+     d8a:	0187           	br	0xc9a
+     d8c:	0184           	br	0xc96
+     d8e:	0081           	rts	r1
+     d90:	b189           	bitb	sp, (r1)
+     d92:	3700           	bit	*(r4)+, r0
+     d94:	798c           	xor	sp, (r4)
+     d96:	0200           	bne	0xd98
+     d98:	0187           	br	0xca8
+     d9a:	0184           	br	0xca4
+     d9c:	0081           	rts	r1
+     d9e:	7789           	ashc	(r1), sp
+     da0:	6c8a 0200      	add	1000(r2), (r2)
+     da4:	0186           	br	0xcb2
+     da6:	0185           	br	0xcb2
+     da8:	0081           	rts	r1
+     daa:	b289           	bitb	(r2), (r1)
+     dac:	3700           	bit	*(r4)+, r0
+     dae:	5f8b 0200      	bis	*1000(sp), (r3)
+     db2:	0186           	br	0xcc0
+     db4:	0185           	br	0xcc0
+     db6:	0080           	rts	r0
+     db8:	7789           	ashc	(r1), sp
+     dba:	538c           	bis	(sp), (r4)
+     dbc:	0200           	bne	0xdbe
+     dbe:	0187           	br	0xcce
+     dc0:	0184           	br	0xcca
+     dc2:	0081           	rts	r1
+     dc4:	b789           	bitb	*(sp)+, (r1)
+     dc6:	468c           	bic	*(r2)+, (r4)
+     dc8:	0200           	bne	0xdca
+     dca:	0186           	br	0xcd8
+     dcc:	0185           	br	0xcd8
+     dce:	0081           	rts	r1
+     dd0:	b789           	bitb	*(sp)+, (r1)
+     dd2:	3a8a           	bit	*-(r2), (r2)
+     dd4:	0200           	bne	0xdd6
+     dd6:	0186           	br	0xce4
+     dd8:	0185           	br	0xce4
+     dda:	0003           	bpt
+     ddc:	f789           	cmpf	(r1), fr2
+     dde:	2f8a 0300      	cmp	*1400(sp), (r2)
+     de2:	0286           	bne	0xcf0
+     de4:	0185           	br	0xcf0
+     de6:	0103           	br	0xdee
+     de8:	0081           	rts	r1
+     dea:	f789           	cmpf	(r1), fr2
+     dec:	2000           	cmp	r0, r0
+     dee:	0100           	br	0xdf0
+     df0:	0187           	br	0xd00
+     df2:	0081           	rts	r1
+     df4:	7789           	ashc	(r1), sp
+     df6:	168c           	mov	*(r2)+, (r4)
+     df8:	0200           	bne	0xdfa
+     dfa:	0186           	br	0xd08
+     dfc:	0184           	br	0xd06
+     dfe:	0003           	bpt
+     e00:	f789           	cmpf	(r1), fr2
+     e02:	0a0b           	clr	(r3)
+     e04:	0200           	bne	0xe06
+     e06:	0187           	br	0xd16
+     e08:	0185           	br	0xd14
+     e0a:	0003           	bpt
+     e0c:	0189           	br	0xd20
+     e0e:	0001           	wait
+     e10:	0000           	halt
+     e12:	c288           	bicb	(r2), (r0)
+     e14:	c211           	bicb	(r0), (r1)+
+     e16:	0a65           	com	-(r5)
+     e18:	c700           	bicb	*(r4)+, r0
+     e1a:	5a15           	bis	*-(r0), (r5)+
+     e1c:	a002           	cmpb	r0, r2
+     e1e:	c000           	bicb	r0, r0
+     e20:	e011           	sub	r0, (r1)+
+     e22:	1f0b 0810      	mov	*4020(r4), (r3)
+     e26:	c002           	bicb	r0, r2
+     e28:	c011           	bicb	r0, (r1)+
+     e2a:	cce5 1f0c      	bicb	17414(r3), -(r5)
+     e2e:	0410           	bge	0xe50
+     e30:	c102           	bicb	r4, r2
+     e32:	0311           	beq	0xe56
+     e34:	0001           	wait
+     e36:	0000           	halt
+     e38:	0000           	halt
+     e3a:	c000           	bicb	r0, r0
+     e3c:	e011           	sub	r0, (r1)+
+     e3e:	e00b           	sub	r0, (r3)
+     e40:	200b           	cmp	r0, (r3)
+     e42:	020a           	bne	0xe58
+     e44:	a010           	cmpb	r0, (r0)+
+     e46:	d010           	bisb	r0, (r0)+
+     e48:	d00b           	bisb	r0, (r3)
+     e4a:	880b           	emt	13
+     e4c:	8010           	bpl	0xe6e
+     e4e:	bf10 a400      	bitb	*-56000(r4), (r0)+
+     e52:	fa00           	stexp	fr0, r0
+     e54:	020b           	bne	0xe6c
+     e56:	0100           	br	0xe58
+     e58:	0003           	bpt
+     e5a:	bf89 ba00      	bitb	*-43000(sp), (r1)
+     e5e:	fe0b           	ldcif	(r3), fr0
+     e60:	02ff           	bne	0xe60
+     e62:	0186           	br	0xd70
+     e64:	0185           	br	0xd70
+     e66:	0081           	rts	r1
+     e68:	bf89 a100      	bitb	*-57400(sp), (r1)
+     e6c:	fa00           	stexp	fr0, r0
+     e6e:	020c           	bne	0xe88
+     e70:	0200           	bne	0xe72
+     e72:	0186           	br	0xd80
+     e74:	0185           	br	0xd80
+     e76:	0081           	rts	r1
+     e78:	af89 fa00      	cmpb	*-3000(sp), (r1)
+     e7c:	020a           	bne	0xe92
+     e7e:	0200           	bne	0xe80
+     e80:	0187           	br	0xd90
+     e82:	0185           	br	0xd8e
+     e84:	0081           	rts	r1
+     e86:	b289           	bitb	(r2), (r1)
+     e88:	ba00           	bitb	*-(r0), r0
+     e8a:	fe0c           	ldcif	(r4), fr0
+     e8c:	02ff           	bne	0xe8c
+     e8e:	0186           	br	0xd9c
+     e90:	0185           	br	0xd9c
+     e92:	0081           	rts	r1
+     e94:	a189           	cmpb	sp, (r1)
+     e96:	b200           	bitb	(r0), r0
+     e98:	3a00           	bit	*-(r0), r0
+     e9a:	fe0c           	ldcif	(r4), fr0
+     e9c:	02ff           	bne	0xe9c
+     e9e:	0183           	br	0xda6
+     ea0:	0185           	br	0xdac
+     ea2:	0080           	rts	r0
+     ea4:	b289           	bitb	(r2), (r1)
+     ea6:	3a00           	bit	*-(r0), r0
+     ea8:	020b           	bne	0xec0
+     eaa:	0200           	bne	0xeac
+     eac:	0186           	br	0xdba
+     eae:	0185           	br	0xdba
+     eb0:	0081           	rts	r1
+     eb2:	a889           	cmpb	-(r2), (r1)
+     eb4:	fa00           	stexp	fr0, r0
+     eb6:	fe00           	ldcif	r0, fr0
+     eb8:	01ff           	br	0xeb8
+     eba:	0187           	br	0xdca
+     ebc:	0081           	rts	r1
+     ebe:	b289           	bitb	(r2), (r1)
+     ec0:	7a00           	fadd	r0
+     ec2:	020a           	bne	0xed8
+     ec4:	0200           	bne	0xec6
+     ec6:	0186           	br	0xdd4
+     ec8:	0185           	br	0xdd4
+     eca:	0081           	rts	r1
+     ecc:	fa89           	stexp	fr2, (r1)
+     ece:	0200           	bne	0xed0
+     ed0:	0100           	br	0xed2
+     ed2:	0081           	rts	r1
+     ed4:	bf89 7a00      	bitb	*75000(sp), (r1)
+     ed8:	080b           	jsr	r0, (r3)
+     eda:	0000           	halt
+     edc:	0000           	halt
+     ede:	0000           	halt
+     ee0:	0001           	wait
+     ee2:	0164           	br	0xfac
+     ee4:	0d7c fffe      	mfpi	*-2(r4)
+     ee8:	8702           	bcs	0xeee
+     eea:	8501           	bvs	0xeee
+     eec:	8001           	bpl	0xef0
+     eee:	8900           	sys	0
+     ef0:	0aba 0002      	inc	*2(r2)
+     ef4:	8401           	bvc	0xef8
+     ef6:	8101           	bmi	0xefa
+     ef8:	8900           	sys	0
+     efa:	00af           	ccc
+     efc:	0c7a fffe      	rol	*-2(r2)
+     f00:	8602           	bcc	0xf06
+     f02:	8401           	bvc	0xf06
+     f04:	0301           	beq	0xf08
+     f06:	8900           	sys	0
+     f08:	8800           	emt	0
+     f0a:	0bd0           	tst	(r0)+
+     f0c:	0a88           	inc	(r0)
+     f0e:	0be0           	tst	-(r0)
+     f10:	0a08           	clr	(r0)
+     f12:	11c1           	mov	pc, r1
+     f14:	00b3           	se_3
+     f16:	8bba 0002      	sbcb	*2(r2)
+     f1a:	8603           	bcc	0xf22
+     f1c:	8502           	bvs	0xf22
+     f1e:	0301           	beq	0xf22
+     f20:	8101           	bmi	0xf24
+     f22:	8900           	sys	0
+     f24:	00bf           	scc
+     f26:	8b7a fffe      	adcb	*-2(r2)
+     f2a:	8703           	bcs	0xf32
+     f2c:	8502           	bvs	0xf32
+     f2e:	0301           	beq	0xf32
+     f30:	8001           	bpl	0xf34
+     f32:	8900           	sys	0
+     f34:	8a7a fffe      	comb	*-2(r2)
+     f38:	8602           	bcc	0xf3e
+     f3a:	8501           	bvs	0xf3e
+     f3c:	8101           	bmi	0xf40
+     f3e:	8900           	sys	0
+     f40:	00a1           	clc
+     f42:	8c3a 0002      	rorb	*2(r2)
+     f46:	8602           	bcc	0xf4c
+     f48:	8401           	bvc	0xf4c
+     f4a:	8001           	bpl	0xf4e
+     f4c:	8900           	sys	0
+     f4e:	8aba 0002      	incb	*2(r2)
+     f52:	8602           	bcc	0xf58
+     f54:	8401           	bvc	0xf58
+     f56:	8101           	bmi	0xf5a
+     f58:	8900           	sys	0
+     f5a:	8afa fffe      	decb	*-2(r2)
+     f5e:	8602           	bcc	0xf64
+     f60:	8501           	bvs	0xf64
+     f62:	8101           	bmi	0xf66
+     f64:	8900           	sys	0
+     f66:	8cfa 0002      	aslb	*2(r2)
+     f6a:	8602           	bcc	0xf70
+     f6c:	8401           	bvc	0xf70
+     f6e:	0301           	beq	0xf72
+     f70:	8900           	sys	0
+     f72:	00a1           	clc
+     f74:	8cba fffe      	asrb	*-2(r2)
+     f78:	8602           	bcc	0xf7e
+     f7a:	8501           	bvs	0xf7e
+     f7c:	8101           	bmi	0xf80
+     f7e:	8900           	sys	0
+     f80:	8b3a 0002      	negb	*2(r2)
+     f84:	8702           	bcs	0xf8a
+     f86:	8501           	bvs	0xf8a
+     f88:	0301           	beq	0xf8c
+     f8a:	8900           	sys	0
+     f8c:	00b2           	sev
+     f8e:	8c7a fffe      	rolb	*-2(r2)
+     f92:	8602           	bcc	0xf98
+     f94:	8501           	bvs	0xf98
+     f96:	8101           	bmi	0xf9a
+     f98:	8900           	sys	0
+     f9a:	8aba fffe      	incb	*-2(r2)
+     f9e:	8aba fffe      	incb	*-2(r2)
+     fa2:	8b7a fffe      	adcb	*-2(r2)
+     fa6:	8a7a fffe      	comb	*-2(r2)
+     faa:	0301           	beq	0xfae
+     fac:	8900           	sys	0
+     fae:	8800           	emt	0
+     fb0:	00bf           	scc
+     fb2:	11c0           	mov	pc, r0
+     fb4:	8602           	bcc	0xfba
+     fb6:	8501           	bvs	0xfba
+     fb8:	0201           	bne	0xfbc
+     fba:	8900           	sys	0
+     fbc:	1002           	mov	r0, r2
+     fbe:	00b2           	sev
+     fc0:	e002           	sub	r0, r2
+     fc2:	8702           	bcs	0xfc8
+     fc4:	8501           	bvs	0xfc8
+     fc6:	0301           	beq	0xfca
+     fc8:	8900           	sys	0
+     fca:	00a4           	clz
+     fcc:	1083           	mov	r2, r3
+     fce:	8701           	bcs	0xfd2
+     fd0:	0301           	beq	0xfd4
+     fd2:	8900           	sys	0
+     fd4:	00af           	ccc
+     fd6:	00ba           	se_a
+     fd8:	2083           	cmp	r2, r3
+     fda:	8703           	bcs	0xfe2
+     fdc:	8502           	bvs	0xfe2
+     fde:	0201           	bne	0xfe2
+     fe0:	8001           	bpl	0xfe4
+     fe2:	8900           	sys	0
+     fe4:	1002           	mov	r0, r2
+     fe6:	1083           	mov	r2, r3
+     fe8:	6083           	add	r2, r3
+     fea:	0cc2           	asl	r2
+     fec:	2083           	cmp	r2, r3
+     fee:	0301           	beq	0xff2
+     ff0:	8900           	sys	0
+     ff2:	0a02           	clr	r2
+     ff4:	0a82           	inc	r2
+     ff6:	0102           	br	0xffc
+     ff8:	0cc2           	asl	r2
+     ffa:	8107           	bmi	0x100a
+     ffc:	1085           	mov	r2, r5
+     ffe:	00bf           	scc
+    1000:	3085           	bit	r2, r5
+    1002:	8602           	bcc	0x1008
+    1004:	8501           	bvs	0x1008
+    1006:	02f8           	bne	0xff8
+    1008:	8900           	sys	0
+    100a:	1085           	mov	r2, r5
+    100c:	00af           	ccc
+    100e:	3085           	bit	r2, r5
+    1010:	8101           	bmi	0x1014
+    1012:	8900           	sys	0
+    1014:	0a02           	clr	r2
+    1016:	00bf           	scc
+    1018:	5002           	bis	r0, r2
+    101a:	8602           	bcc	0x1020
+    101c:	8501           	bvs	0x1020
+    101e:	0201           	bne	0x1022
+    1020:	8900           	sys	0
+    1022:	1003           	mov	r0, r3
+    1024:	00bf           	scc
+    1026:	00a4           	clz
+    1028:	4003           	bic	r0, r3
+    102a:	8603           	bcc	0x1032
+    102c:	8502           	bvs	0x1032
+    102e:	0201           	bne	0x1032
+    1030:	8001           	bpl	0x1034
+    1032:	8900           	sys	0
+    1034:	1004           	mov	r0, r4
+    1036:	0a44           	com	r4
+    1038:	4004           	bic	r0, r4
+    103a:	0a44           	com	r4
+    103c:	2004           	cmp	r0, r4
+    103e:	0301           	beq	0x1042
+    1040:	8900           	sys	0
+    1042:	1004           	mov	r0, r4
+    1044:	0063           	jmp	-(r3)
+    1046:	0000           	halt
+    1048:	0000           	halt
+    104a:	0100           	br	0x104c
+    104c:	6400           	add	(r0)+, r0
+    104e:	da01           	bisb	*-(r0), r1
+    1050:	440e           	bic	(r0)+, (sp)
+    1052:	030a           	beq	0x1068
+    1054:	0311           	beq	0x1078
+    1056:	0150           	br	0x10f8
+    1058:	0186           	br	0xf66
+    105a:	0081           	rts	r1
+    105c:	8389           	blos	0xf70
+    105e:	010a           	br	0x1074
+    1060:	0003           	bpt
+    1062:	c489           	bicb	(r2)+, (r1)
+    1064:	4310           	bic	(r4), (r0)+
+    1066:	b10a           	bitb	r4, (r2)
+    1068:	0400           	bge	0x106a
+    106a:	c40c           	bicb	(r0)+, (r4)
+    106c:	0360           	beq	0x112e
+    106e:	0286           	bne	0xf7c
+    1070:	0184           	br	0xf7a
+    1072:	0103           	br	0x107a
+    1074:	0080           	rts	r0
+    1076:	c089           	bicb	r2, (r1)
+    1078:	1011           	mov	r0, (r1)+
+    107a:	0724           	ble	0x10c4
+    107c:	0120           	br	0x10be
+    107e:	0003           	bpt
+    1080:	c089           	bicb	r2, (r1)
+    1082:	c011           	bicb	r0, (r1)+
+    1084:	0865           	jsr	r1, -(r5)
+    1086:	0200           	bne	0x1088
+    1088:	c010           	bicb	r0, (r0)+
+    108a:	0221           	bne	0x10ce
+    108c:	8002           	bpl	0x1092
+    108e:	0120           	br	0x10d0
+    1090:	0003           	bpt
+    1092:	0089           	.word	211
+    1094:	c388           	bicb	(sp), (r0)
+    1096:	aa15           	cmpb	*-(r0), (r5)+
+    1098:	c4aa           	bicb	(r2)+, *-(r2)
+    109a:	c410           	bicb	(r0)+, (r0)+
+    109c:	c4c0           	bicb	(r3)+, r0
+    109e:	0025           	.word	45
+    10a0:	01aa           	br	0xff6
+    10a2:	0003           	bpt
+    10a4:	0489           	bge	0xfb8
+    10a6:	c40a           	bicb	(r0)+, (r2)
+    10a8:	c4d0           	bicb	(r3)+, (r0)+
+    10aa:	aa25           	cmpb	*-(r0), -(r5)
+    10ac:	0100           	br	0x10ae
+    10ae:	0003           	bpt
+    10b0:	0489           	bge	0xfc4
+    10b2:	c491           	bicb	(r2)+, (r1)+
+    10b4:	aa25           	cmpb	*-(r0), -(r5)
+    10b6:	01ff           	br	0x10b6
+    10b8:	0003           	bpt
+    10ba:	c489           	bicb	(r2)+, (r1)
+    10bc:	55b5 01ff      	bis	(sp)+, 777(r5)
+    10c0:	0003           	bpt
+    10c2:	4489           	bic	(r2)+, (r1)
+    10c4:	048a           	bge	0xfda
+    10c6:	c491           	bicb	(r2)+, (r1)+
+    10c8:	5525           	bis	(r4)+, -(r5)
+    10ca:	0100           	br	0x10cc
+    10cc:	0003           	bpt
+    10ce:	c489           	bicb	(r2)+, (r1)
+    10d0:	84d0           	bvc	0x1072
+    10d2:	c48a           	bicb	(r2)+, (r2)
+    10d4:	010b           	br	0x10ec
+    10d6:	0003           	bpt
+    10d8:	0089           	.word	211
+    10da:	0288           	bne	0xfec
+    10dc:	0001           	wait
+    10de:	0000           	halt
+    10e0:	c400           	bicb	(r0)+, r0
+    10e2:	e411           	sub	(r0)+, (r1)+
+    10e4:	240b           	cmp	(r0)+, (r3)
+    10e6:	030a           	beq	0x10fc
+    10e8:	2311           	cmp	(r4), (r1)+
+    10ea:	4b0a           	bic	*-(r4), (r2)
+    10ec:	8c0a           	rorb	(r2)
+    10ee:	b20a           	bitb	(r0), (r2)
+    10f0:	cc00 0262      	bicb	1142(r0), r0
+    10f4:	0186           	br	0x1002
+    10f6:	0185           	br	0x1002
+    10f8:	0003           	bpt
+    10fa:	bf89 a800      	bitb	*-54000(sp), (r1)
+    10fe:	cc00 0322      	bicb	1442(r0), r0
+    1102:	0287           	bne	0x1012
+    1104:	0185           	br	0x1010
+    1106:	0103           	br	0x110e
+    1108:	0081           	rts	r1
+    110a:	bf89 a400      	bitb	*-56000(sp), (r1)
+    110e:	cc00 0232      	bicb	1062(r0), r0
+    1112:	0186           	br	0x1020
+    1114:	0185           	br	0x1020
+    1116:	0003           	bpt
+    1118:	bf89 a500      	bitb	*-55400(sp), (r1)
+    111c:	4c00 cc0a      	bic	-31766(r0), r0
+    1120:	02e2           	bne	0x10e6
+    1122:	0187           	br	0x1032
+    1124:	0185           	br	0x1030
+    1126:	0003           	bpt
+    1128:	0b89           	sbc	(r1)
+    112a:	cb8a           	bicb	*-(sp), (r2)
+    112c:	b800           	bitb	-(r0), r0
+    112e:	cc00 0112      	bicb	422(r0), r0
+    1132:	0080           	rts	r0
+    1134:	cc89 b300      	bicb	-46400(r2), (r1)
+    1138:	cc00 0252      	bicb	1122(r0), r0
+    113c:	0186           	br	0x104a
+    113e:	0185           	br	0x104a
+    1140:	0081           	rts	r1
+    1142:	cc89 0242      	bicb	1102(r2), (r1)
+    1146:	0186           	br	0x1054
+    1148:	0185           	br	0x1054
+    114a:	0081           	rts	r1
+    114c:	b289           	bitb	(r2), (r1)
+    114e:	cc00 0322      	bicb	1442(r0), r0
+    1152:	0286           	bne	0x1060
+    1154:	0185           	br	0x1060
+    1156:	0103           	br	0x115e
+    1158:	0080           	rts	r0
+    115a:	0b89           	sbc	(r1)
+    115c:	b10a           	bitb	r4, (r2)
+    115e:	0b00           	neg	r0
+    1160:	cc0c 4c12      	bicb	46022(r0), (r4)
+    1164:	cc0a 02e2      	bicb	1342(r0), (r2)
+    1168:	0186           	br	0x1076
+    116a:	0184           	br	0x1074
+    116c:	0081           	rts	r1
+    116e:	bf89 cc00      	bitb	*-32000(sp), (r1)
+    1172:	02e2           	bne	0x1138
+    1174:	0183           	br	0x107c
+    1176:	0185           	br	0x1082
+    1178:	0080           	rts	r0
+    117a:	cc89 0112      	bicb	422(r2), (r1)
+    117e:	0103           	br	0x1186
+    1180:	0081           	rts	r1
+    1182:	cc89 0362      	bicb	1542(r2), (r1)
+    1186:	0286           	bne	0x1094
+    1188:	0184           	br	0x1092
+    118a:	0102           	br	0x1190
+    118c:	0080           	rts	r0
+    118e:	4b89           	bic	*-(sp), (r1)
+    1190:	cc0a cc12      	bicb	-31756(r0), (r2)
+    1194:	0262           	bne	0x125a
+    1196:	0187           	br	0x10a6
+    1198:	0184           	br	0x10a2
+    119a:	0081           	rts	r1
+    119c:	cc89 0265      	bicb	1145(r2), (r1)
+    11a0:	cc00 010b      	bicb	413(r0), r0
+    11a4:	0003           	bpt
+    11a6:	0089           	.word	211
+    11a8:	0288           	bne	0x10ba
+    11aa:	0001           	wait
+    11ac:	0000           	halt
+    11ae:	cb00           	bicb	*-(r4), r0
+    11b0:	0000           	halt
+    11b2:	0000           	halt
+    11b4:	0000           	halt
+    11b6:	0001           	wait
+    11b8:	0164           	br	0x1282
+    11ba:	1038 11c5      	mov	r0, *10705(r0)
+    11be:	0be5           	tst	-(r5)
+    11c0:	0a25           	clr	-(r5)
+    11c2:	1142           	mov	r5, r2
+    11c4:	0a22           	clr	-(r2)
+    11c6:	0a82           	inc	r2
+    11c8:	8a4a           	comb	(r2)
+    11ca:	00bf           	scc
+    11cc:	928d           	movb	(r2), (r5)
+    11ce:	8605           	bcc	0x11da
+    11d0:	8504           	bvs	0x11da
+    11d2:	0303           	beq	0x11da
+    11d4:	8002           	bpl	0x11da
+    11d6:	8a8d           	incb	(r5)
+    11d8:	0301           	beq	0x11dc
+    11da:	8900           	sys	0
+    11dc:	8cca           	aslb	(r2)
+    11de:	84fe           	bvc	0x11dc
+    11e0:	8c0a           	rorb	(r2)
+    11e2:	8acd           	decb	(r5)
+    11e4:	8c0d           	rorb	(r5)
+    11e6:	00af           	ccc
+    11e8:	a34a           	cmpb	(r5), (r2)
+    11ea:	8401           	bvc	0x11ee
+    11ec:	8101           	bmi	0x11f0
+    11ee:	8900           	sys	0
+    11f0:	0a03           	clr	r3
+    11f2:	00b1           	.word	261
+    11f4:	0c03           	ror	r3
+    11f6:	50cd           	bis	r3, (r5)
+    11f8:	00bb           	se_b
+    11fa:	b28d           	bitb	(r2), (r5)
+    11fc:	8602           	bcc	0x1202
+    11fe:	8501           	bvs	0x1202
+    1200:	0301           	beq	0x1204
+    1202:	8900           	sys	0
+    1204:	d28d           	bisb	(r2), (r5)
+    1206:	8601           	bcc	0x120a
+    1208:	8101           	bmi	0x120c
+    120a:	8900           	sys	0
+    120c:	c28d           	bicb	(r2), (r5)
+    120e:	8602           	bcc	0x1214
+    1210:	0301           	beq	0x1214
+    1212:	8001           	bpl	0x1216
+    1214:	8900           	sys	0
+    1216:	8a4a           	comb	(r2)
+    1218:	a28d           	cmpb	(r2), (r5)
+    121a:	0301           	beq	0x121e
+    121c:	8900           	sys	0
+    121e:	c34a           	bicb	(r5), (r2)
+    1220:	0202           	bne	0x1226
+    1222:	8bca           	tstb	(r2)
+    1224:	0301           	beq	0x1228
+    1226:	8900           	sys	0
+    1228:	0102           	br	0x122e
+    122a:	0000           	halt
+    122c:	0000           	halt
+    122e:	11c5           	mov	pc, r5
+    1230:	0be5           	tst	-(r5)
+    1232:	8a25           	clrb	-(r5)
+    1234:	1144           	mov	r5, r4
+    1236:	8a24           	clrb	-(r4)
+    1238:	1103           	mov	r4, r3
+    123a:	8a23           	clrb	-(r3)
+    123c:	10c2           	mov	r3, r2
+    123e:	8a22           	clrb	-(r2)
+    1240:	00b1           	.word	261
+    1242:	8c4a           	rolb	(r2)
+    1244:	928c           	movb	(r2), (r4)
+    1246:	8c4a           	rolb	(r2)
+    1248:	928b           	movb	(r2), (r3)
+    124a:	8c4a           	rolb	(r2)
+    124c:	92cd           	movb	(r3), (r5)
+    124e:	8c4a           	rolb	(r2)
+    1250:	8c4b           	rolb	(r3)
+    1252:	d28d           	bisb	(r2), (r5)
+    1254:	b34a           	bitb	(r5), (r2)
+    1256:	0316           	beq	0x1284
+    1258:	d2cc           	bisb	(r3), (r4)
+    125a:	b30b           	bitb	(r4), (r3)
+    125c:	0313           	beq	0x1284
+    125e:	8a8b           	incb	(r3)
+    1260:	a2cc           	cmpb	(r3), (r4)
+    1262:	0210           	bne	0x1284
+    1264:	8c4b           	rolb	(r3)
+    1266:	a2cd           	cmpb	(r3), (r5)
+    1268:	020d           	bne	0x1284
+    126a:	8c8a           	asrb	(r2)
+    126c:	b28c           	bitb	(r2), (r4)
+    126e:	030a           	beq	0x1284
+    1270:	8c0d           	rorb	(r5)
+    1272:	a30d           	cmpb	(r4), (r5)
+    1274:	0207           	bne	0x1284
+    1276:	8acc           	decb	(r4)
+    1278:	c28c           	bicb	(r2), (r4)
+    127a:	0204           	bne	0x1284
+    127c:	92cc           	movb	(r3), (r4)
+    127e:	8c8b           	asrb	(r3)
+    1280:	c2cd           	bicb	(r3), (r5)
+    1282:	0301           	beq	0x1286
+    1284:	8900           	sys	0
+    1286:	8800           	emt	0
+    1288:	1105           	mov	r4, r5
+    128a:	15cd 0001      	mov	$1, (r5)
+    128e:	15ca ffff      	mov	$-1, (r2)
+    1292:	00af           	ccc
+    1294:	00b2           	sev
+    1296:	6495           	add	(r2)+, (r5)+
+    1298:	8602           	bcc	0x129e
+    129a:	8501           	bvs	0x129e
+    129c:	0301           	beq	0x12a0
+    129e:	8900           	sys	0
+    12a0:	00b2           	sev
+    12a2:	2957 0001      	cmp	-(r5), $1
+    12a6:	8602           	bcc	0x12ac
+    12a8:	8501           	bvs	0x12ac
+    12aa:	8101           	bmi	0x12ae
+    12ac:	8900           	sys	0
+    12ae:	5895           	bis	-(r2), (r5)+
+    12b0:	8601           	bcc	0x12b4
+    12b2:	8101           	bmi	0x12b6
+    12b4:	8900           	sys	0
+    12b6:	00bf           	scc
+    12b8:	00a4           	clz
+    12ba:	e4a5           	sub	(r2)+, -(r5)
+    12bc:	8702           	bcs	0x12c2
+    12be:	8501           	bvs	0x12c2
+    12c0:	0301           	beq	0x12c4
+    12c2:	8900           	sys	0
+    12c4:	0b22           	neg	-(r2)
+    12c6:	0a4d           	com	(r5)
+    12c8:	00bf           	scc
+    12ca:	00a8           	cln
+    12cc:	4495           	bic	(r2)+, (r5)+
+    12ce:	8603           	bcc	0x12d6
+    12d0:	8502           	bvs	0x12d6
+    12d2:	0301           	beq	0x12d6
+    12d4:	8101           	bmi	0x12d8
+    12d6:	8900           	sys	0
+    12d8:	15e2 aaaa      	mov	$-52526, -(r2)
+    12dc:	14a5           	mov	(r2)+, -(r5)
+    12de:	0a55           	com	(r5)+
+    12e0:	00b2           	sev
+    12e2:	38a5           	bit	-(r2), -(r5)
+    12e4:	8602           	bcc	0x12ea
+    12e6:	8501           	bvs	0x12ea
+    12e8:	0301           	beq	0x12ec
+    12ea:	8900           	sys	0
+    12ec:	00b2           	sev
+    12ee:	5495           	bis	(r2)+, (r5)+
+    12f0:	8602           	bcc	0x12f6
+    12f2:	8501           	bvs	0x12f6
+    12f4:	8101           	bmi	0x12f8
+    12f6:	8900           	sys	0
+    12f8:	45e5 aaaa      	bic	$-52526, -(r5)
+    12fc:	0a55           	com	(r5)+
+    12fe:	28a5           	cmp	-(r2), -(r5)
+    1300:	0301           	beq	0x1304
+    1302:	8900           	sys	0
+    1304:	0a0a           	clr	(r2)
+    1306:	0a52           	com	(r2)+
+    1308:	e5e2 0001      	sub	$1, -(r2)
+    130c:	8702           	bcs	0x1312
+    130e:	8501           	bvs	0x1312
+    1310:	8101           	bmi	0x1314
+    1312:	8900           	sys	0
+    1314:	8800           	emt	0
+    1316:	11c2           	mov	pc, r2
+    1318:	1085           	mov	r2, r5
+    131a:	00c8           	swab	(r0)
+    131c:	0000           	halt
+    131e:	0000           	halt
+    1320:	0100           	br	0x1322
+    1322:	6400           	add	(r0)+, r0
+    1324:	9601           	movb	*(r0)+, r1
+    1326:	a511           	cmpb	(r4)+, (r1)+
+    1328:	01a8           	br	0x127a
+    132a:	0003           	bpt
+    132c:	9f89 0820      	movb	*4040(sp), (r1)
+    1330:	fa02           	stexp	fr0, r2
+    1332:	0002           	rti
+    1334:	0288           	bne	0x1246
+    1336:	0001           	wait
+    1338:	0000           	halt
+    133a:	c300           	bicb	(r4), r0
+    133c:	e311           	sub	(r4), (r1)+
+    133e:	e30b           	sub	(r4), (r3)
+    1340:	8095           	bpl	0x126c
+    1342:	e300           	sub	(r4), r0
+    1344:	ff95           	ldcff	(r5)+, fr2
+    1346:	c400           	bicb	(r0)+, r0
+    1348:	e410           	sub	(r0)+, (r0)+
+    134a:	7f95           	sob	sp, 0x1376
+    134c:	e400           	sub	(r0)+, r0
+    134e:	0095           	.word	225
+    1350:	0100           	br	0x1352
+    1352:	0003           	bpt
+    1354:	d489           	bisb	(r2)+, (r1)
+    1356:	01d4           	br	0x1300
+    1358:	0081           	rts	r1
+    135a:	d489           	bisb	(r2)+, (r1)
+    135c:	02a4           	bne	0x12a6
+    135e:	0187           	br	0x126e
+    1360:	0184           	br	0x126a
+    1362:	0080           	rts	r0
+    1364:	b189           	bitb	sp, (r1)
+    1366:	e400           	sub	(r0)+, r0
+    1368:	02b8           	bne	0x12da
+    136a:	0186           	br	0x1278
+    136c:	0185           	br	0x1278
+    136e:	0003           	bpt
+    1370:	a489           	cmpb	(r2)+, (r1)
+    1372:	e400           	sub	(r0)+, r0
+    1374:	01c8           	br	0x1306
+    1376:	0003           	bpt
+    1378:	0089           	.word	211
+    137a:	0488           	bge	0x128c
+    137c:	0001           	wait
+    137e:	0000           	halt
+    1380:	0000           	halt
+    1382:	0000           	halt
+    1384:	c100           	bicb	r4, r0
+    1386:	4011           	bic	r0, (r1)+
+    1388:	2010           	cmp	r0, (r0)+
+    138a:	0528           	blt	0x13dc
+    138c:	6510           	add	(r4)+, (r0)+
+    138e:	0d29           	mark	51
+    1390:	4210           	bic	(r0), (r0)+
+    1392:	0411           	bge	0x13b6
+    1394:	e010           	sub	r0, (r0)+
+    1396:	030b           	beq	0x13ae
+    1398:	2210           	cmp	(r0), (r0)+
+    139a:	0b10           	neg	(r0)+
+    139c:	0c0a           	ror	(r2)
+    139e:	bf0a a400      	bitb	*-56000(r4), (r2)
+    13a2:	9d00 02e6      	movb	1346(r4), r0
+    13a6:	0187           	br	0x12b6
+    13a8:	0185           	br	0x12b4
+    13aa:	0003           	bpt
+    13ac:	ea89           	sub	*-(r2), (r1)
+    13ae:	0055           	jmp	(r5)+
+    13b0:	ed80 0165      	sub	545(sp), r0
+    13b4:	9d00 02e6      	movb	1346(r4), r0
+    13b8:	0186           	br	0x12c6
+    13ba:	0184           	br	0x12c4
+    13bc:	0081           	rts	r1
+    13be:	0c89           	asr	(r1)
+    13c0:	ad0b 013a      	cmpb	472(r4), (r3)
+    13c4:	0003           	bpt
+    13c6:	9d89 0126      	movb	446(sp), (r1)
+    13ca:	0085           	rts	r5
+    13cc:	6a89           	add	*-(r2), (r1)
+    13ce:	af0a ad00      	cmpb	*-51400(r4), (r2)
+    13d2:	0166           	br	0x14a0
+    13d4:	0184           	br	0x12de
+    13d6:	0081           	rts	r1
+    13d8:	b189           	bitb	sp, (r1)
+    13da:	9d00 014a      	movb	512(r4), r0
+    13de:	0186           	br	0x12ec
+    13e0:	0081           	rts	r1
+    13e2:	6d89 9d0a      	add	-61366(sp), (r1)
+    13e6:	0126           	br	0x1434
+    13e8:	0003           	bpt
+    13ea:	0089           	.word	211
+    13ec:	0688           	bgt	0x12fe
+    13ee:	0001           	wait
+	...
+    13f8:	0000           	halt
+    13fa:	c000           	bicb	r0, r0
+    13fc:	2011           	cmp	r0, (r1)+
+    13fe:	0328           	beq	0x1450
+    1400:	c510           	bicb	(r4)+, (r0)+
+    1402:	e310           	sub	(r4), (r0)+
+    1404:	230b           	cmp	(r4), (r3)
+    1406:	8b10           	negb	(r0)+
+    1408:	230a           	cmp	(r4), (r2)
+    140a:	c410           	bicb	(r0)+, (r0)+
+    140c:	e010           	sub	r0, (r0)+
+    140e:	240b           	cmp	(r0)+, (r3)
+    1410:	8c10           	rorb	(r0)+
+    1412:	240a           	cmp	(r0)+, (r2)
+    1414:	b110           	bitb	r4, (r0)+
+    1416:	dc00 0115      	bisb	425(r0), r0
+    141a:	dcfe 8095 1b00 	bisb	-77553(r3), *15400(sp)
+    1420:	1b9b           	mov	*-(sp), *(r3)+
+    1422:	019b           	br	0x135a
+    1424:	0087           	rts	pc
+    1426:	cd89 8025      	bicb	-77733(sp), (r1)
+    142a:	0101           	br	0x142e
+    142c:	0003           	bpt
+    142e:	e389           	sub	(sp), (r1)
+    1430:	1b28           	mov	*-(r4), *-(r0)
+    1432:	1bd7 cdd7      	mov	*-(pc), $-31051
+    1436:	8125           	bmi	0x1482
+    1438:	0181           	br	0x133c
+    143a:	0003           	bpt
+    143c:	2b89           	cmp	*-(sp), (r1)
+    143e:	2bcb           	cmp	*-(pc), (r3)
+    1440:	1bcb           	mov	*-(pc), (r3)
+    1442:	02b7           	bne	0x13b2
+    1444:	1b02           	mov	*-(r4), r2
+    1446:	01bb           	br	0x13be
+    1448:	0002           	rti
+    144a:	2b89           	cmp	*-(sp), (r1)
+    144c:	02a7           	bne	0x139c
+    144e:	2b02           	cmp	*-(r4), r2
+    1450:	01a7           	br	0x13a0
+    1452:	0003           	bpt
+    1454:	0089           	.word	211
+    1456:	0288           	bne	0x1368
+    1458:	0001           	wait
+    145a:	0000           	halt
+    145c:	c200           	bicb	(r0), r0
+    145e:	0417           	bge	0x148e
+    1460:	8502           	bvs	0x1466
+    1462:	3510           	bit	(r4)+, (r0)+
+    1464:	ca0a           	bicb	*-(r0), (r2)
+    1466:	f212           	mulf	(r2)+, fr0
+    1468:	0115           	br	0x1494
+    146a:	c800           	bicb	-(r0), r0
+    146c:	b512           	bitb	(r4)+, (r2)+
+    146e:	c85c           	bicb	-(r1), *(r4)+
+    1470:	ca12           	bicb	*-(r0), (r2)+
+    1472:	f212           	mulf	(r2)+, fr0
+    1474:	c80c           	bicb	-(r0), (r4)
+    1476:	f212           	mulf	(r2)+, fr0
+    1478:	c80c           	bicb	-(r0), (r4)
+    147a:	f812           	stf	fr0, (r2)+
+    147c:	f586           	ldf	fr6, fr2
+    147e:	5525           	bis	(r4)+, -(r5)
+    1480:	ca55           	bicb	*-(r1), (r5)+
+    1482:	0112           	br	0x14a8
+    1484:	5f03 0000      	bis	*0(r4), r3
+    1488:	0000           	halt
+    148a:	0000           	halt
+    148c:	0001           	wait
+    148e:	0164           	br	0x1558
+    1490:	12f4 8900      	mov	(r3), -73400(r4)
+    1494:	15f2 ffff 12c8 	mov	$-1, 11310(r2)
+    149a:	4d72 12ca 12c8 	bic	11312(r5), 11310(r2)
+    14a0:	3cb5 12c8 12ca 	bit	11310(r2), 11312(r5)
+    14a6:	0301           	beq	0x14aa
+    14a8:	8900           	sys	0
+    14aa:	0cf5 12ca      	asl	11312(r5)
+    14ae:	2cb5 12c8 12ca 	cmp	11310(r2), 11312(r5)
+    14b4:	0301           	beq	0x14b8
+    14b6:	8900           	sys	0
+    14b8:	00af           	ccc
+    14ba:	6cb5 12c8 12ca 	add	11310(r2), 11312(r5)
+    14c0:	8602           	bcc	0x14c6
+    14c2:	8401           	bvc	0x14c6
+    14c4:	8001           	bpl	0x14c8
+    14c6:	8900           	sys	0
+    14c8:	0cf2 12c8      	asl	11310(r2)
+    14cc:	ecb5 12c8 12ca 	sub	11310(r2), 11312(r5)
+    14d2:	8701           	bcs	0x14d6
+    14d4:	0301           	beq	0x14d8
+    14d6:	8900           	sys	0
+    14d8:	95c0 00ff      	movb	$377, r0
+    14dc:	1032 12c8      	mov	r0, 11310(r2)
+    14e0:	15f5 ffff 12ca 	mov	$-1, 11312(r5)
+    14e6:	ed40 12ca      	sub	11312(r5), r0
+    14ea:	0301           	beq	0x14ee
+    14ec:	8900           	sys	0
+    14ee:	6cb5 12c8 12ca 	add	11310(r2), 11312(r5)
+    14f4:	0cf2 12c8      	asl	11310(r2)
+    14f8:	0a72 12c8      	com	11310(r2)
+    14fc:	3cb5 12c8 12ca 	bit	11310(r2), 11312(r5)
+    1502:	0301           	beq	0x1506
+    1504:	8900           	sys	0
+    1506:	0a72 12c8      	com	11310(r2)
+    150a:	2cb5 12c8 12ca 	cmp	11310(r2), 11312(r5)
+    1510:	0301           	beq	0x1514
+    1512:	8900           	sys	0
+    1514:	2c80 12c8      	cmp	11310(r2), r0
+    1518:	02ea           	bne	0x14ee
+    151a:	8800           	emt	0
+    151c:	17c2 0204      	mov	*$1004, r2
+    1520:	1084           	mov	r2, r4
+    1522:	1103           	mov	r4, r3
+    1524:	0a83           	inc	r3
+    1526:	10c5           	mov	r3, r5
+    1528:	00b1           	.word	261
+    152a:	15f2 aaaa 13e0 	mov	$-52526, 11740(r2)
+    1530:	95f3 fe55 13e0 	movb	$-653, 11740(r3)
+    1536:	1cb4 13e0 13e2 	mov	11740(r2), 11742(r4)
+    153c:	55f4 aa55 13e2 	bis	$-52653, 11742(r4)
+    1542:	bcb3 13e0 13e0 	bitb	11740(r2), 11740(r3)
+    1548:	0301           	beq	0x154c
+    154a:	8900           	sys	0
+    154c:	ccb4 13e0 13e2 	bicb	11740(r2), 11742(r4)
+    1552:	8701           	bcs	0x1556
+    1554:	8900           	sys	0
+    1556:	acf4 13e0 13e2 	cmpb	11740(r3), 11742(r4)
+    155c:	0301           	beq	0x1560
+    155e:	8900           	sys	0
+    1560:	ccf5 13e0 13e2 	bicb	11740(r3), 11742(r5)
+    1566:	acb5 13e0 13e2 	cmpb	11740(r2), 11742(r5)
+    156c:	0301           	beq	0x1570
+    156e:	8900           	sys	0
+    1570:	bd74 13e2 13e2 	bitb	11742(r5), 11742(r4)
+    1576:	0301           	beq	0x157a
+    1578:	8900           	sys	0
+    157a:	8800           	emt	0
+    157c:	0106           	br	0x158a
+	...
+    158a:	11c0           	mov	pc, r0
+    158c:	2820           	cmp	-(r0), -(r0)
+    158e:	1002           	mov	r0, r2
+    1590:	28a2           	cmp	-(r2), -(r2)
+    1592:	100a           	mov	r0, (r2)
+    1594:	1083           	mov	r2, r3
+    1596:	2823           	cmp	-(r0), -(r3)
+    1598:	100b           	mov	r0, (r3)
+    159a:	00b1           	.word	261
+    159c:	15ff 8000 ffe0 	mov	$-100000, *$0x1582
+    15a2:	1fff ffdc ffdc 	mov	*$0x1582, *$0x1584
+    15a8:	8601           	bcc	0x15ac
+    15aa:	8101           	bmi	0x15ae
+    15ac:	8900           	sys	0
+    15ae:	0cff ffd2      	asl	*$0x1584
+    15b2:	8401           	bvc	0x15b6
+    15b4:	0301           	beq	0x15b8
+    15b6:	8900           	sys	0
+    15b8:	2fff ffc6 ffc6 	cmp	*$0x1582, *$0x1584
+    15be:	8702           	bcs	0x15c4
+    15c0:	8501           	bvs	0x15c4
+    15c2:	8101           	bmi	0x15c6
+    15c4:	8900           	sys	0
+    15c6:	efff ffb8 ffb8 	sub	*$0x1582, *$0x1584
+    15cc:	8603           	bcc	0x15d4
+    15ce:	8402           	bvc	0x15d4
+    15d0:	0301           	beq	0x15d4
+    15d2:	8101           	bmi	0x15d6
+    15d4:	8900           	sys	0
+    15d6:	0cbf ffa8      	asr	*$0x1582
+    15da:	6fff ffa4 ffa4 	add	*$0x1582, *$0x1584
+    15e0:	8603           	bcc	0x15e8
+    15e2:	8402           	bvc	0x15e8
+    15e4:	0301           	beq	0x15e8
+    15e6:	8001           	bpl	0x15ea
+    15e8:	8900           	sys	0
+    15ea:	4fff ff94 ff94 	bic	*$0x1582, *$0x1584
+    15f0:	00b6           	se_6
+    15f2:	0000           	halt
+    15f4:	0000           	halt
+    15f6:	0100           	br	0x15f8
+    15f8:	6400           	add	(r0)+, r0
+    15fa:	5201           	bis	(r0), r1
+    15fc:	0114           	br	0x1626
+    15fe:	0003           	bpt
+    1600:	ff89           	ldcff	(r1), fr2
+    1602:	8a5f 8aff      	comb	*$105377
+    1606:	01ff           	br	0x1606
+    1608:	0081           	rts	r1
+    160a:	ff89           	ldcff	(r1), fr2
+    160c:	802f           	bpl	0x166c
+    160e:	80ff           	bpl	0x160e
+    1610:	01ff           	br	0x1610
+    1612:	0003           	bpt
+    1614:	0089           	.word	211
+    1616:	0088           	.word	210
+    1618:	370a           	bit	*(r4)+, (r2)
+    161a:	3a0a           	bit	*-(r0), (r2)
+    161c:	c700           	bicb	*(r4)+, r0
+    161e:	c711           	bicb	*(r4)+, (r1)+
+    1620:	c7a1           	bicb	*(sp)+, -(r1)
+    1622:	0731           	ble	0x1686
+    1624:	c760           	bicb	*(r5)+, -(r0)
+    1626:	478b           	bic	*(sp)+, (r3)
+    1628:	070b           	ble	0x1640
+    162a:	0722           	ble	0x1670
+    162c:	c7b2 0065      	bicb	*(sp)+, 145(r2)
+    1630:	c700           	bicb	*(r4)+, r0
+    1632:	0427           	bge	0x1682
+    1634:	c702           	bicb	*(r4)+, r2
+    1636:	04b7           	bge	0x15a6
+    1638:	a002           	cmpb	r0, r2
+    163a:	c700           	bicb	*(r4)+, r0
+    163c:	04e7           	bge	0x160c
+    163e:	c702           	bicb	*(r4)+, r2
+    1640:	0467           	bge	0x1710
+    1642:	a002           	cmpb	r0, r2
+    1644:	8700           	bcs	0x1646
+    1646:	8729           	bcs	0x169a
+    1648:	c7b5 0a2d      	bicb	*(sp)+, 5055(r5)
+    164c:	c700           	bicb	*(r4)+, r0
+    164e:	06ed           	bgt	0x162a
+    1650:	c700           	bicb	*(r4)+, r0
+    1652:	024d           	bne	0x16ee
+    1654:	0100           	br	0x1656
+    1656:	0001           	wait
+    1658:	0000           	halt
+    165a:	c288           	bicb	(r2), (r0)
+    165c:	c211           	bicb	(r0), (r1)+
+    165e:	0a65           	com	-(r5)
+    1660:	c700           	bicb	*(r4)+, r0
+    1662:	5a15           	bis	*-(r0), (r5)+
+    1664:	a002           	cmpb	r0, r2
+    1666:	c000           	bicb	r0, r0
+    1668:	e011           	sub	r0, (r1)+
+    166a:	1f0b 0810      	mov	*4020(r4), (r3)
+    166e:	c002           	bicb	r0, r2
+    1670:	c011           	bicb	r0, (r1)+
+    1672:	c6e5           	bicb	*(r3)+, -(r5)
+    1674:	1f14 0410      	mov	*2020(r4), (r4)+
+    1678:	c102           	bicb	r4, r2
+    167a:	0611           	bgt	0x169e
+    167c:	0001           	wait
+	...
+    1686:	0000           	halt
+    1688:	c000           	bicb	r0, r0
+    168a:	2011           	cmp	r0, (r1)+
+    168c:	3028           	bit	r0, *-(r0)
+    168e:	fa10           	stexp	fr0, (r0)+
+    1690:	30ff fc10      	bit	r3, *$0x12a4
+    1694:	b0ff fc0a      	bitb	r3, *$0x12a2
+    1698:	e0ff 300b      	sub	r3, *$0x46a7
+    169c:	f810           	stf	fr0, (r0)+
+    169e:	30ff fa10      	bit	r3, *$0x10b2
+    16a2:	b0ff fa0a      	bitb	r3, *$0x10b0
+    16a6:	02ff           	bne	0x16a6
+    16a8:	c30a           	bicb	(r4), (r2)
+    16aa:	0215           	bne	0x16d6
+    16ac:	c400           	bicb	(r0)+, r0
+    16ae:	fc15           	stcff	fr0, (r5)+
+    16b0:	c5ff fe15 10ff 	bicb	$-753, *$0x27b5
+    16b6:	080a           	jsr	r0, (r2)
+    16b8:	e60a           	sub	*(r0)+, (r2)
+    16ba:	0417           	bge	0x16ea
+    16bc:	8202           	bhi	0x16c2
+    16be:	8363           	blos	0x1786
+    16c0:	8463           	bvc	0x1788
+    16c2:	8563           	bvs	0x178a
+    16c4:	fb65           	stcfi	fr1, -(r5)
+    16c6:	ff95           	ldcff	(r5)+, fr2
+    16c8:	d2ff fa14      	bisb	(r3), *$0x10e0
+    16cc:	ffb5 d200      	ldcff	-27000(r5), fr2
+    16d0:	0114           	br	0x16fa
+    16d2:	0003           	bpt
+    16d4:	fc89           	stcff	fr2, (r1)
+    16d6:	d2de           	bisb	(r3), *(sp)+
+    16d8:	da14           	bisb	*-(r0), (r4)+
+    16da:	bc14 da8a      	bitb	-22566(r0), (r4)+
+    16de:	0114           	br	0x1708
+    16e0:	0003           	bpt
+    16e2:	fd89           	ldexp	(r1), fr2
+    16e4:	da8a           	bisb	*-(r2), (r2)
+    16e6:	bc14 da0a      	bitb	-22766(r0), (r4)+
+    16ea:	fd14           	ldexp	(r4)+, fr0
+    16ec:	d2ae           	bisb	(r2), *-(sp)
+    16ee:	da14           	bisb	*-(r0), (r4)+
+    16f0:	0114           	br	0x171a
+    16f2:	0003           	bpt
+    16f4:	fd89           	ldexp	(r1), fr2
+    16f6:	d2ce           	bisb	(r3), (sp)
+    16f8:	da14           	bisb	*-(r0), (r4)+
+    16fa:	0114           	br	0x1724
+    16fc:	0003           	bpt
+    16fe:	3b89           	bit	*-(sp), (r1)
+    1700:	d28a           	bisb	(r2), (r2)
+    1702:	3b14           	bit	*-(r4), (r4)+
+    1704:	dadf d214      	bisb	*-(r3), *$151024
+    1708:	7c14           	l2dr	r4
+    170a:	da8c           	bisb	*-(r2), (r4)
+    170c:	fa14           	stexp	fr0, (r4)+
+    170e:	fa86           	stexp	fr2, sp
+    1710:	0025           	.word	45
+    1712:	d2ff 0114      	bisb	(r3), *$0x182a
+    1716:	0003           	bpt
+    1718:	fa89           	stexp	fr2, (r1)
+    171a:	d200           	bisb	(r0), r0
+    171c:	fd14           	ldexp	(r4)+, fr0
+    171e:	8095           	bpl	0x164a
+    1720:	da00           	bisb	*-(r0), r0
+    1722:	7a14           	fmul	r4
+    1724:	dacf           	bisb	*-(r3), (pc)
+    1726:	d214           	bisb	(r0), (r4)+
+    1728:	3d14 da8c      	bit	-22564(r4), (r4)+
+    172c:	fa14           	stexp	fr0, (r4)+
+    172e:	fa86           	stexp	fr2, sp
+    1730:	d20b           	bisb	(r0), (r3)
+    1732:	0114           	br	0x175c
+    1734:	0003           	bpt
+    1736:	0089           	.word	211
+    1738:	c288           	bicb	(r2), (r0)
+    173a:	0115           	br	0x1766
+    173c:	c300           	bicb	(r4), r0
+    173e:	0111           	br	0x1762
+    1740:	0001           	wait
+    1742:	d300           	bisb	(r4), r0
+    1744:	cb0b           	bicb	*-(r4), (r3)
+    1746:	8b10           	negb	(r0)+
+    1748:	df0a f415      	bisb	*-5753(r4), (r2)
+    174c:	0415           	bge	0x1778
+    174e:	df00 0467      	bisb	*2147(r4), r0
+    1752:	0402           	bge	0x1758
+    1754:	df00 0417      	bisb	*2027(r4), r0
+    1758:	0800           	jsr	r0, r0
+    175a:	ce00 0000      	bicb	*0(r0), r0
+    175e:	0000           	halt
+    1760:	0000           	halt
+    1762:	0001           	wait
+    1764:	0164           	br	0x182e
+    1766:	15b0 00bf      	mov	(sp)+, 277(r0)
+    176a:	e08a           	sub	r2, (r2)
+    176c:	8900           	sys	0
+    176e:	6092           	add	r2, (r2)+
+    1770:	8900           	sys	0
+    1772:	0ce2           	asl	-(r2)
+    1774:	8900           	sys	0
+    1776:	8d4a           	mfpd	(r2)
+    1778:	8900           	sys	0
+    177a:	f10a           	clrf	(r2)
+    177c:	8900           	sys	0
+    177e:	4482           	bic	(r2)+, r2
+    1780:	8900           	sys	0
+    1782:	e882           	sub	-(r2), r2
+    1784:	8900           	sys	0
+    1786:	da82           	bisb	*-(r2), r2
+    1788:	8900           	sys	0
+    178a:	8b5a           	adcb	*(r2)+
+    178c:	8900           	sys	0
+    178e:	e6c2           	sub	*(r3)+, r2
+    1790:	8900           	sys	0
+    1792:	0bdb           	tst	*(r3)+
+    1794:	8900           	sys	0
+    1796:	8d5b           	mfpd	*(r3)+
+    1798:	8900           	sys	0
+    179a:	f12b           	clrf	*-(r3)
+    179c:	8900           	sys	0
+    179e:	bfc2 fffd      	bitb	*$0x179f, r2
+    17a2:	8900           	sys	0
+    17a4:	8b3f fffb      	negb	*$0x17a3
+    17a8:	8900           	sys	0
+    17aa:	0106           	br	0x17b8
+    17ac:	65ce 0002      	add	$2, (sp)
+    17b0:	55f6 000f 0002 	bis	$17, 2(sp)
+    17b6:	0002           	rti
+    17b8:	15c6 0140      	mov	$500, sp
+    17bc:	15df 0006 0004 	mov	$6, *$4
+    17c2:	15df 000a 0008 	mov	$12, *$10
+    17c8:	8800           	emt	0
+    17ca:	11c0           	mov	pc, r0
+    17cc:	65c0 000a      	add	$12, r0
+    17d0:	00bf           	scc
+    17d2:	0048           	jmp	(r0)
+    17d4:	0102           	br	0x17da
+    17d6:	00a8           	cln
+    17d8:	01fd           	br	0x17d4
+    17da:	8603           	bcc	0x17e2
+    17dc:	8402           	bvc	0x17e2
+    17de:	0201           	bne	0x17e2
+    17e0:	8001           	bpl	0x17e4
+    17e2:	8900           	sys	0
+    17e4:	0a02           	clr	r2
+    17e6:	11c3           	mov	pc, r3
+    17e8:	0101           	br	0x17ec
+    17ea:	0000           	halt
+    17ec:	0bd3           	tst	(r3)+
+    17ee:	10cb           	mov	r3, (r3)
+    17f0:	10c0           	mov	r3, r0
+    17f2:	65cb 0012      	add	$22, (r3)
+    17f6:	10c0           	mov	r3, r0
+    17f8:	005b           	jmp	*(r3)+
+    17fa:	0102           	br	0x1800
+    17fc:	0a42           	com	r2
+    17fe:	01fd           	br	0x17fa
+    1800:	0a82           	inc	r2
+    1802:	0203           	bne	0x180a
+    1804:	0bd0           	tst	(r0)+
+    1806:	2003           	cmp	r0, r3
+    1808:	0301           	beq	0x180c
+    180a:	8900           	sys	0
+    180c:	0a02           	clr	r2
+    180e:	11c4           	mov	pc, r4
+    1810:	1100           	mov	r4, r0
+    1812:	0102           	br	0x1818
+    1814:	0a42           	com	r2
+    1816:	0103           	br	0x181e
+    1818:	2514           	cmp	(r4)+, (r4)+
+    181a:	0bd4           	tst	(r4)+
+    181c:	0064           	jmp	-(r4)
+    181e:	0a82           	inc	r2
+    1820:	0203           	bne	0x1828
+    1822:	2410           	cmp	(r0)+, (r0)+
+    1824:	2004           	cmp	r0, r4
+    1826:	0301           	beq	0x182a
+    1828:	8900           	sys	0
+    182a:	11c3           	mov	pc, r3
+    182c:	0101           	br	0x1830
+    182e:	0000           	halt
+    1830:	0bd3           	tst	(r3)+
+    1832:	10cb           	mov	r3, (r3)
+    1834:	65d3 000e      	add	$16, (r3)+
+    1838:	10c0           	mov	r3, r0
+    183a:	0102           	br	0x1840
+    183c:	0a42           	com	r2
+    183e:	0101           	br	0x1842
+    1840:	006b           	jmp	*-(r3)
+    1842:	0a82           	inc	r2
+    1844:	0203           	bne	0x184c
+    1846:	0be0           	tst	-(r0)
+    1848:	2003           	cmp	r0, r3
+    184a:	0301           	beq	0x184e
+    184c:	8900           	sys	0
+    184e:	0102           	br	0x1854
+    1850:	0a42           	com	r2
+    1852:	0102           	br	0x1858
+    1854:	0077 fff8      	jmp	0x1850
+    1858:	0a82           	inc	r2
+    185a:	0301           	beq	0x185e
+    185c:	8900           	sys	0
+    185e:	15f7 16b4 0010 	mov	$13264, $0x1874
+    1864:	67f7 0204 000a 	add	*$1004, $0x1874
+    186a:	0102           	br	0x1870
+    186c:	0a42           	com	r2
+    186e:	0103           	br	0x1876
+    1870:	007f 0000      	jmp	*0x1874
+    1874:	0000           	halt
+    1876:	0a82           	inc	r2
+    1878:	0301           	beq	0x187c
+    187a:	8900           	sys	0
+    187c:	8800           	emt	0
+    187e:	17c5 0204      	mov	*$1004, r5
+    1882:	15c2 16e4      	mov	$13344, r2
+    1886:	6142           	add	r5, r2
+    1888:	00bf           	scc
+    188a:	00a2           	clv
+    188c:	094a           	jsr	r5, (r2)
+    188e:	0bc2           	tst	r2
+    1890:	020f           	bne	0x18b0
+    1892:	27c5 0204      	cmp	*$1004, r5
+    1896:	020c           	bne	0x18b0
+    1898:	010c           	br	0x18b2
+    189a:	0085           	rts	r5
+    189c:	8609           	bcc	0x18b0
+    189e:	8508           	bvs	0x18b0
+    18a0:	0207           	bne	0x18b0
+    18a2:	8006           	bpl	0x18b0
+    18a4:	0a02           	clr	r2
+    18a6:	15c4 16d6      	mov	$13326, r4
+    18aa:	6384           	add	(sp), r4
+    18ac:	2105           	cmp	r4, r5
+    18ae:	03f5           	beq	0x189a
+    18b0:	8900           	sys	0
+    18b2:	17c4 0204      	mov	*$1004, r4
+    18b6:	0a00           	clr	r0
+    18b8:	15c5 1710      	mov	$13420, r5
+    18bc:	6105           	add	r4, r5
+    18be:	1142           	mov	r5, r2
+    18c0:	15cd 171e      	mov	$13436, (r5)
+    18c4:	610d           	add	r4, (r5)
+    18c6:	004e           	jmp	(sp)
+    18c8:	0000           	halt
+    18ca:	0000           	halt
+    18cc:	0100           	br	0x18ce
+    18ce:	6400           	add	(r0)+, r0
+    18d0:	0e01           	csm	r1
+    18d2:	0117           	br	0x1902
+    18d4:	0001           	wait
+    18d6:	1d00 8009      	mov	-77767(r4), r0
+    18da:	0b0a           	neg	(r2)
+    18dc:	0b02           	neg	r2
+    18de:	4001           	bic	r0, r1
+    18e0:	840a           	bvc	0x18f6
+    18e2:	c300           	bicb	(r4), r0
+    18e4:	1415           	mov	(r0)+, (r5)+
+    18e6:	8317           	blos	0x1916
+    18e8:	0363           	beq	0x19b0
+    18ea:	0321           	beq	0x192e
+    18ec:	d202           	bisb	(r0), r2
+    18ee:	850b           	bvs	0x1906
+    18f0:	f620           	subf	-(r0), fr0
+    18f2:	0003           	bpt
+    18f4:	c489           	bicb	(r2)+, (r1)
+    18f6:	0417           	bge	0x1926
+    18f8:	0502           	blt	0x18fe
+    18fa:	c311           	bicb	(r4), (r1)+
+    18fc:	0111           	br	0x1920
+    18fe:	0501           	blt	0x1902
+    1900:	d301           	bisb	(r4), r1
+    1902:	bf24 2300      	bitb	*21400(r4), -(r4)
+    1906:	0009           	.word	11
+    1908:	0c89           	asr	(r1)
+    190a:	0a01           	clr	r1
+    190c:	0986           	jsr	sp, sp
+    190e:	0884           	jsr	r2, r4
+    1910:	0702           	ble	0x1916
+    1912:	c280           	bicb	(r2), r0
+    1914:	4215           	bic	(r0), (r5)+
+    1916:	8217           	bhi	0x1946
+    1918:	8463           	bvc	0x19e0
+    191a:	0220           	bne	0x195c
+    191c:	d402           	bisb	(r0)+, r2
+    191e:	840b           	bvc	0x1936
+    1920:	0000           	halt
+    1922:	0189           	br	0x1836
+    1924:	0501           	blt	0x1928
+    1926:	c001           	bicb	r0, r1
+    1928:	f711           	cmpf	(r1)+, fr0
+    192a:	f809           	stf	fr0, (r1)
+    192c:	07ff           	ble	0x192c
+    192e:	0081           	rts	r1
+    1930:	1089           	mov	r2, (r1)
+    1932:	0e24           	csm	-(r4)
+    1934:	0120           	br	0x1976
+    1936:	0003           	bpt
+    1938:	b889           	bitb	-(r2), (r1)
+    193a:	8700           	bcs	0x193c
+    193c:	0000           	halt
+    193e:	df88 9415      	bisb	*-65753(sp), (r0)
+    1942:	1017 df00      	mov	r0, $-20400
+    1946:	0467           	bge	0x1a16
+    1948:	1002           	mov	r0, r2
+    194a:	b100           	bitb	r4, r0
+    194c:	df00 fe17      	bisb	*-751(r4), r0
+    1950:	12ff 0000      	mov	(r3), *$0x1954
+    1954:	040a           	bge	0x196a
+    1956:	0300           	beq	0x1958
+    1958:	4001           	bic	r0, r1
+    195a:	fe8c           	ldcif	(r4), fr2
+    195c:	0284           	bne	0x1866
+    195e:	c000           	bicb	r0, r0
+    1960:	048c           	bge	0x187a
+    1962:	0386           	beq	0x1870
+    1964:	0284           	bne	0x186e
+    1966:	c002           	bicb	r0, r2
+    1968:	010b           	br	0x1980
+    196a:	0003           	bpt
+    196c:	df89 1215      	bisb	*11025(sp), (r1)
+    1970:	1000           	mov	r0, r0
+    1972:	1f00 120a      	mov	*11012(r4), r0
+    1976:	0000           	halt
+    1978:	e688           	sub	*(r2)+, (r0)
+    197a:	1817 df00      	mov	-(r0), $-20400
+    197e:	d415           	bisb	(r0)+, (r5)+
+    1980:	1817 df00      	mov	-(r0), $-20400
+    1984:	0467           	bge	0x1a54
+    1986:	1802           	mov	-(r0), r2
+    1988:	b200           	bitb	(r0), r0
+    198a:	df00 fe17      	bisb	*-751(r4), r0
+    198e:	1aff b500      	mov	*-(r3), *$0xffffce92
+    1992:	0000           	halt
+    1994:	1b88           	mov	*-(sp), (r0)
+    1996:	0003           	bpt
+    1998:	1789           	mov	*(sp)+, (r1)
+    199a:	4084           	bic	r2, r4
+    199c:	408a           	bic	r2, (r2)
+    199e:	008b           	.word	213
+    19a0:	138c           	mov	(sp), (r4)
+    19a2:	1284           	mov	(r2), r4
+    19a4:	af80 0000      	cmpb	*0(sp), r0
+    19a8:	0f8b           	.word	7613
+    19aa:	0e84           	wrtlck	r4
+    19ac:	a280           	cmpb	(r2), r0
+    19ae:	b100           	bitb	r4, r0
+    19b0:	c000           	bicb	r0, r0
+    19b2:	0a8a           	inc	(r2)
+    19b4:	0984           	jsr	sp, r4
+    19b6:	a281           	cmpb	(r2), r1
+    19b8:	8000           	bpl	0x19ba
+    19ba:	068a           	bgt	0x18d0
+    19bc:	0586           	blt	0x18ca
+    19be:	0484           	bge	0x18c8
+    19c0:	a280           	cmpb	(r2), r0
+    19c2:	8000           	bpl	0x19c4
+    19c4:	fe8c           	ldcif	(r4), fr2
+    19c6:	0185           	br	0x18d2
+    19c8:	0001           	wait
+    19ca:	0289           	bne	0x18de
+    19cc:	4000           	bic	r0, r0
+    19ce:	038b           	beq	0x18e6
+    19d0:	0286           	bne	0x18de
+    19d2:	c002           	bicb	r0, r2
+    19d4:	010b           	br	0x19ec
+    19d6:	0003           	bpt
+    19d8:	9f89 1815      	movb	*14025(sp), (r1)
+    19dc:	1f00 1a0a      	mov	*15012(r4), r0
+    19e0:	0000           	halt
+    19e2:	df88 1c17      	bisb	*16027(sp), (r0)
+    19e6:	1000           	mov	r0, r0
+    19e8:	df00 4a15      	bisb	*45025(r4), r0
+    19ec:	1c18 df00      	mov	-20400(r0), *(r0)+
+    19f0:	0467           	bge	0x1ac0
+    19f2:	1c02 b800      	mov	-44000(r0), r2
+    19f6:	df00 fe17      	bisb	*-751(r4), r0
+    19fa:	1eff b100 c000 	mov	*-47400(r3), *$0xffffda00
+    1a00:	b491           	bitb	(r2)+, (r1)+
+    1a02:	0000           	halt
+    1a04:	0189           	br	0x1918
+    1a06:	0487           	bge	0x1916
+    1a08:	0100           	br	0x1a0a
+    1a0a:	0403           	bge	0x1a12
+    1a0c:	0a00           	clr	r0
+    1a0e:	0101           	br	0x1a12
+    1a10:	0481           	bge	0x1914
+    1a12:	c000           	bicb	r0, r0
+    1a14:	0465           	bge	0x1ae0
+    1a16:	0e00           	csm	r0
+    1a18:	01a0           	br	0x195a
+    1a1a:	0403           	bge	0x1a22
+    1a1c:	a600           	cmpb	*(r0)+, r0
+    1a1e:	96a9           	movb	*(r2)+, *-(r1)
+    1a20:	0235           	bne	0x1a8c
+    1a22:	df00 1017      	bisb	*10027(r4), r0
+    1a26:	1c00 df00      	mov	-20400(r0), r0
+    1a2a:	8015           	bpl	0x1a56
+    1a2c:	1e00 df00      	mov	*-20400(r0), r0
+    1a30:	ba15           	bitb	*-(r0), (r5)+
+    1a32:	0000           	halt
+    1a34:	0000           	halt
+    1a36:	0000           	halt
+    1a38:	0001           	wait
+    1a3a:	0164           	br	0x1b04
+    1a3c:	186c           	mov	-(r1), *-(r4)
+    1a3e:	0012           	.word	22
+    1a40:	0010           	.word	20
+    1a42:	0a1f 0012      	clr	*$22
+    1a46:	8800           	emt	0
+    1a48:	11c2           	mov	pc, r2
+    1a4a:	65c2 000a      	add	$12, r2
+    1a4e:	15c7 025a      	mov	$1132, pc
+    1a52:	00a0           	nop
+    1a54:	11c1           	mov	pc, r1
+    1a56:	0bf7 e978      	tst	$0x3d2
+    1a5a:	021e           	bne	0x1a98
+    1a5c:	15df 0002 0006 	mov	$2, *$6
+    1a62:	15c0 0003      	mov	$3, r0
+    1a66:	00b1           	.word	261
+    1a68:	0bdf fffa      	tst	*$177772
+    1a6c:	0b80           	sbc	r0
+    1a6e:	00b1           	.word	261
+    1a70:	8bdf ffff      	tstb	*$177777
+    1a74:	0b80           	sbc	r0
+    1a76:	0a1f ffc0      	clr	*$177700
+    1a7a:	0cc0           	asl	r0
+    1a7c:	1017 0000      	mov	r0, $0
+    1a80:	0a1f 0006      	clr	*$6
+    1a84:	0a1f 000a      	clr	*$12
+    1a88:	add7 fff2 0004 	cmpb	$0x1a7e, $4
+    1a8e:	0504           	blt	0x1a98
+    1a90:	09f7 e9d8      	jsr	pc, 0x46c
+    1a94:	1d97 0000 11c0 	mov	0(sp), $10700
+    1a9a:	0be0           	tst	-(r0)
+    1a9c:	101f 0208      	mov	r0, *$1010
+    1aa0:	11c0           	mov	pc, r0
+    1aa2:	e5c0 18d0      	sub	$14320, r0
+    1aa6:	101f 0204      	mov	r0, *$1004
+    1aaa:	11c1           	mov	pc, r1
+    1aac:	17f7 fffe 00c6 	mov	*$177776, $0x1b78
+    1ab2:	0a1f fffe      	clr	*$177776
+    1ab6:	11e6           	mov	pc, -(sp)
+    1ab8:	65ce 005e      	add	$136, (sp)
+    1abc:	139f 0004      	mov	(sp), *$4
+    1ac0:	15df 00e0 0006 	mov	$340, *$6
+    1ac6:	65ce 003c      	add	$74, (sp)
+    1aca:	159f 0010      	mov	(sp)+, *$20
+    1ace:	15e6 00e0      	mov	$340, -(sp)
+    1ad2:	139f 0012      	mov	(sp), *$22
+    1ad6:	11e6           	mov	pc, -(sp)
+    1ad8:	65ce 0006      	add	$6, (sp)
+    1adc:	0002           	rti
+    1ade:	15c3 00fe      	mov	$376, r3
+    1ae2:	10cb           	mov	r3, (r3)
+    1ae4:	10c6           	mov	r3, sp
+    1ae6:	0bce           	tst	(sp)
+    1ae8:	23b6 fffe      	cmp	(sp), -2(sp)
+    1aec:	a5df 0002 18ac 	cmpb	$2, *$14254
+    1af2:	0509           	blt	0x1b06
+    1af4:	0304           	beq	0x1afe
+    1af6:	15f7 000c 0064 	mov	$14, $0x1b60
+    1afc:	0107           	br	0x1b0c
+    1afe:	15f7 001c 005c 	mov	$34, $0x1b60
+    1b04:	0103           	br	0x1b0c
+    1b06:	15ae           	mov	(sp)+, *-(sp)
+    1b08:	59be 0000      	bis	-(sp), *0(sp)
+    1b0c:	0a36 0004      	clr	4(sp)
+    1b10:	5f9e 0000      	bis	*0(sp), *(sp)+
+    1b14:	0106           	br	0x1b22
+    1b16:	1580           	mov	(sp)+, r0
+    1b18:	1582           	mov	(sp)+, r2
+    1b1a:	15c6 0140      	mov	$500, sp
+    1b1e:	8900           	sys	0
+    1b20:	0128           	br	0x1b72
+    1b22:	65df 0036 0004 	add	$66, *$4
+    1b28:	10c6           	mov	r3, sp
+    1b2a:	15c2 0001      	mov	$1, r2
+    1b2e:	0a00           	clr	r0
+    1b30:	0a0e           	clr	(sp)
+    1b32:	0cc2           	asl	r2
+    1b34:	8a96           	incb	(sp)+
+    1b36:	0cc2           	asl	r2
+    1b38:	61e6           	add	pc, -(sp)
+    1b3a:	0cc2           	asl	r2
+    1b3c:	0004           	iot
+    1b3e:	0cc2           	asl	r2
+    1b40:	09f7 000c      	jsr	pc, 0x1b50
+    1b44:	0cc2           	asl	r2
+    1b46:	51b6 fffe      	bis	sp, -2(sp)
+    1b4a:	0107           	br	0x1b5a
+    1b4c:	5080           	bis	r2, r0
+    1b4e:	0002           	rti
+    1b50:	0087           	rts	pc
+    1b52:	15df 0012 0010 	mov	$22, *$20
+    1b58:	0002           	rti
+    1b5a:	15c6 0140      	mov	$500, sp
+    1b5e:	25c0 0000      	cmp	$0, r0
+    1b62:	0307           	beq	0x1b72
+    1b64:	8bdf 18ac      	tstb	*$14254
+    1b68:	0203           	bne	0x1b70
+    1b6a:	25c0 001c      	cmp	$34, r0
+    1b6e:	0301           	beq	0x1b72
+    1b70:	8900           	sys	0
+    1b72:	15c6 0180      	mov	$600, sp
+    1b76:	15e6 0000      	mov	$0, -(sp)
+    1b7a:	11e6           	mov	pc, -(sp)
+    1b7c:	65ce 0006      	add	$6, (sp)
+    1b80:	0002           	rti
+    1b82:	15c6 0140      	mov	$500, sp
+    1b86:	15df 0006 0004 	mov	$6, *$4
+    1b8c:	8800           	emt	0
+    1b8e:	15df 0002 024c 	mov	$2, *$1114
+    1b94:	11c1           	mov	pc, r1
+    1b96:	15c2 1a14      	mov	$15024, r2
+    1b9a:	67c2 0088      	add	*$210, r2
+    1b9e:	0000           	halt
+    1ba0:	0000           	halt
+    1ba2:	0100           	br	0x1ba4
+    1ba4:	6400           	add	(r0)+, r0
+    1ba6:	ca01           	bicb	*-(r0), r1
+    1ba8:	0419           	bge	0x1bdc
+    1baa:	df02 04a5      	bisb	*2245(r4), r2
+    1bae:	ac00 0218      	cmpb	1030(r0), r0
+    1bb2:	c207           	bicb	(r0), pc
+    1bb4:	1e65 df00      	mov	*-20400(r1), -(r5)
+    1bb8:	20b5 ad00      	cmp	r2, -51400(r5)
+    1bbc:	0218           	bne	0x1bee
+    1bbe:	3703           	bit	*(r4)+, r3
+    1bc0:	480a           	bic	-(r0), (r2)
+    1bc2:	df00 0215      	bisb	*1025(r4), r0
+    1bc6:	081a           	jsr	r0, *(r2)+
+    1bc8:	df00 0467      	bisb	*2147(r4), r0
+    1bcc:	0802           	jsr	r0, r2
+    1bce:	8300           	blos	0x1bd0
+    1bd0:	2c14 8403      	cmp	-75775(r0), (r4)+
+    1bd4:	cf14 0010      	bicb	*20(r4), (r4)+
+    1bd8:	0000           	halt
+    1bda:	0089           	.word	211
+    1bdc:	0089           	.word	211
+    1bde:	0589           	blt	0x1af2
+    1be0:	ce01 0c15      	bicb	*6025(r0), r1
+    1be4:	ce1a 0467      	bicb	*2147(r0), *(r2)+
+    1be8:	0202           	bne	0x1bee
+    1bea:	c400           	bicb	(r0)+, r0
+    1bec:	f020           	.word	170040
+    1bee:	8303           	blos	0x1bf6
+    1bf0:	f10a           	clrf	(r2)
+    1bf2:	0701           	ble	0x1bf6
+    1bf4:	3f00 8800      	bit	*-74000(r4), r0
+    1bf8:	9700           	movb	*(r4)+, r0
+    1bfa:	0000           	halt
+    1bfc:	ff0e           	ldcff	(sp), fr0
+    1bfe:	200f           	cmp	r0, (pc)
+    1c00:	ff7a 007d      	ldcff	*175(r2), fr1
+    1c04:	3f8d c08d      	bit	*-37563(sp), (r5)
+    1c08:	ff8d           	ldcff	(r5), fr2
+    1c0a:	008f           	.word	217
+    1c0c:	fff0 00ff      	ldcff	377(r0), fr3
+    1c10:	0600           	bgt	0x1c12
+    1c12:	3f00 8800      	bit	*-74000(r4), r0
+    1c16:	9f00 0000      	movb	*0(r4), r0
+    1c1a:	ff0d           	ldcff	(r5), fr0
+    1c1c:	000f           	.word	17
+    1c1e:	ff70 007f      	ldcff	177(r0), fr1
+    1c22:	ff8d           	ldcff	(r5), fr2
+    1c24:	008f           	.word	217
+    1c26:	fff0 00ff      	ldcff	377(r0), fr3
+    1c2a:	df00 0a15      	bisb	*5025(r4), r0
+    1c2e:	0800           	jsr	r0, r0
+    1c30:	0000           	halt
+    1c32:	f788           	cmpf	(r0), fr2
+    1c34:	fe17 6aff      	ldcif	$65377, fr0
+    1c38:	1f00 fe0a      	mov	*-766(r4), r0
+    1c3c:	26ff e60a      	cmp	*(r3)+, *$0x24a
+    1c40:	ce11 0665      	bicb	*3145(r0), (r1)+
+    1c44:	0200           	bne	0x1c46
+    1c46:	e600           	sub	*(r0)+, r0
+    1c48:	0e17 c400      	csm	$-36000
+    1c4c:	fe15           	ldcif	(r5)+, fr0
+    1c4e:	a8ff cc00      	cmpb	-(r3), *$0xffffe852
+    1c52:	010b           	br	0x1c6a
+    1c54:	0003           	bpt
+    1c56:	c089           	bicb	r2, (r1)
+    1c58:	ac97 0018 761c 	cmpb	30(r2), $73034
+    1c5e:	df1d ac0b      	bisb	*-51765(r4), *(r5)+
+    1c62:	0218           	bne	0x1c94
+    1c64:	c080           	bicb	r2, r0
+    1c66:	0055           	jmp	(r5)+
+    1c68:	c2f0 0115      	bicb	(r3), 425(r0)
+    1c6c:	8000           	bpl	0x1c6e
+    1c6e:	1330 1f03      	mov	(r4), 17403(r0)
+    1c72:	0e0a           	csm	(r2)
+    1c74:	9700           	movb	*(r4)+, r0
+    1c76:	1030 0300      	mov	r0, 1400(r0)
+    1c7a:	df03 0215      	bisb	*1025(r4), r3
+    1c7e:	0e00           	csm	r0
+    1c80:	0c00           	ror	r0
+    1c82:	8c0a           	rorb	(r2)
+    1c84:	0350           	beq	0x1d26
+    1c86:	8313           	blos	0x1cae
+    1c88:	0120           	br	0x1cca
+    1c8a:	0003           	bpt
+    1c8c:	a489           	cmpb	(r2)+, (r1)
+    1c8e:	8c00           	rorb	r0
+    1c90:	0340           	beq	0x1d12
+    1c92:	0113           	br	0x1cba
+    1c94:	0003           	bpt
+    1c96:	c289           	bicb	(r2), (r1)
+    1c98:	e90c           	sub	-(r4), (r4)
+    1c9a:	0c86           	asr	sp
+    1c9c:	9f0a 0e15      	movb	*7025(r4), (r2)
+    1ca0:	e600           	sub	*(r0)+, r0
+    1ca2:	0015           	.word	25
+    1ca4:	e600           	sub	*(r0)+, r0
+    1ca6:	ce11 0665      	bicb	*3145(r0), (r1)+
+    1caa:	0200           	bne	0x1cac
+    1cac:	0000           	halt
+    1cae:	c488           	bicb	(r2)+, (r0)
+    1cb0:	fe17 26ff      	ldcif	$23377, fr0
+    1cb4:	ce11 c095      	bicb	*-37553(r0), (r1)+
+    1cb8:	e600           	sub	*(r0)+, r0
+    1cba:	ce11 0665      	bicb	*3145(r0), (r1)+
+    1cbe:	0200           	bne	0x1cc0
+    1cc0:	8300           	blos	0x1cc2
+    1cc2:	af11 c600      	cmpb	*-35000(r4), (r1)+
+    1cc6:	ff95           	ldcff	(r5)+, fr2
+    1cc8:	0600           	bgt	0x1cca
+    1cca:	fe0c           	ldcif	(r4), fr0
+    1ccc:	8687           	bcc	0x1bdc
+    1cce:	030a           	beq	0x1ce4
+    1cd0:	8203           	bhi	0x1cd8
+    1cd2:	c611           	bicb	*(r0)+, (r1)+
+    1cd4:	0010           	.word	20
+    1cd6:	c689           	bicb	*(r2)+, (r1)
+    1cd8:	8010           	bpl	0x1cfa
+    1cda:	0311           	beq	0x1cfe
+    1cdc:	2310           	cmp	(r4), (r0)+
+    1cde:	e60a           	sub	*(r0)+, (r2)
+    1ce0:	ff95           	ldcff	(r5)+, fr2
+    1ce2:	cbff ff25      	bicb	*-(pc), *$0x1c0b
+    1ce6:	0200           	bne	0x1ce8
+    1ce8:	c602           	bicb	*(r0)+, r2
+    1cea:	0120           	br	0x1d2c
+    1cec:	0003           	bpt
+    1cee:	9689           	movb	*(r2)+, (r1)
+    1cf0:	d38a           	bisb	(sp), (r2)
+    1cf2:	020b           	bne	0x1d0a
+    1cf4:	0602           	bgt	0x1cfa
+    1cf6:	0120           	br	0x1d38
+    1cf8:	0003           	bpt
+    1cfa:	6389           	add	(sp), (r1)
+    1cfc:	8b0a           	negb	(r2)
+    1cfe:	cbc9           	bicb	*-(pc), (r1)
+    1d00:	0025           	.word	45
+    1d02:	02ff           	bne	0x1d02
+    1d04:	8302           	blos	0x1d0a
+    1d06:	fe21           	ldcif	-(r1), fr0
+    1d08:	0000           	halt
+    1d0a:	0000           	halt
+    1d0c:	0000           	halt
+    1d0e:	0001           	wait
+    1d10:	0164           	br	0x1dda
+    1d12:	1b28           	mov	*-(r4), *-(r0)
+    1d14:	0301           	beq	0x1d18
+    1d16:	8900           	sys	0
+    1d18:	b597 00ff      	bitb	(sp)+, $377
+    1d1c:	0202           	bne	0x1d22
+    1d1e:	2180           	cmp	sp, r0
+    1d20:	0301           	beq	0x1d24
+    1d22:	8900           	sys	0
+    1d24:	15e6 0001      	mov	$1, -(sp)
+    1d28:	65c6 0002      	add	$2, sp
+    1d2c:	15c2 ff01      	mov	$-377, r2
+    1d30:	a0a6           	cmpb	r2, -(sp)
+    1d32:	0204           	bne	0x1d3c
+    1d34:	a582           	cmpb	(sp)+, r2
+    1d36:	0202           	bne	0x1d3c
+    1d38:	2006           	cmp	r0, sp
+    1d3a:	0301           	beq	0x1d3e
+    1d3c:	8900           	sys	0
+    1d3e:	1126           	mov	r4, -(sp)
+    1d40:	11e6           	mov	pc, -(sp)
+    1d42:	65ce 0006      	add	$6, (sp)
+    1d46:	0002           	rti
+    1d48:	8800           	emt	0
+    1d4a:	15d7 fffe 0000 	mov	$-2, $0
+    1d50:	11c0           	mov	pc, r0
+    1d52:	e5c0 0004      	sub	$4, r0
+    1d56:	0b50           	adc	(r0)+
+    1d58:	0ce0           	asl	-(r0)
+    1d5a:	84fd           	bvc	0x1d56
+    1d5c:	25f7 7ffe ffec 	cmp	$77776, $0x1d4e
+    1d62:	0301           	beq	0x1d66
+    1d64:	8900           	sys	0
+    1d66:	11c0           	mov	pc, r0
+    1d68:	1002           	mov	r0, r2
+    1d6a:	0a82           	inc	r2
+    1d6c:	00bf           	scc
+    1d6e:	00a9           	cl_9
+    1d70:	2002           	cmp	r0, r2
+    1d72:	8603           	bcc	0x1d7a
+    1d74:	8502           	bvs	0x1d7a
+    1d76:	0301           	beq	0x1d7a
+    1d78:	8101           	bmi	0x1d7c
+    1d7a:	8900           	sys	0
+    1d7c:	00bf           	scc
+    1d7e:	a080           	cmpb	r2, r0
+    1d80:	8703           	bcs	0x1d88
+    1d82:	8502           	bvs	0x1d88
+    1d84:	0301           	beq	0x1d88
+    1d86:	8001           	bpl	0x1d8a
+    1d88:	8900           	sys	0
+    1d8a:	00a0           	nop
+    1d8c:	00a0           	nop
+    1d8e:	00a0           	nop
+    1d90:	00a0           	nop
+    1d92:	00a0           	nop
+    1d94:	00a0           	nop
+    1d96:	00a0           	nop
+    1d98:	00a0           	nop
+    1d9a:	00a0           	nop
+    1d9c:	00a0           	nop
+    1d9e:	00a0           	nop
+    1da0:	00a0           	nop
+    1da2:	00a0           	nop
+    1da4:	00a0           	nop
+    1da6:	00a0           	nop
+    1da8:	00a0           	nop
+    1daa:	00a0           	nop
+    1dac:	00a0           	nop
+    1dae:	00a0           	nop
+    1db0:	00a0           	nop
+    1db2:	00a0           	nop
+    1db4:	00a0           	nop
+    1db6:	00a0           	nop
+    1db8:	00a0           	nop
+    1dba:	8800           	emt	0
+    1dbc:	11c2           	mov	pc, r2
+    1dbe:	65c2 000a      	add	$12, r2
+    1dc2:	15c7 025a      	mov	$1132, pc
+    1dc6:	00a0           	nop
+    1dc8:	0a1f 0204      	clr	*$1004
+    1dcc:	11c1           	mov	pc, r1
+    1dce:	35df 0040 ff74 	bit	$100, *$177564
+    1dd4:	02fc           	bne	0x1dce
+    1dd6:	15df 1c16 0034 	mov	$16026, *$64
+    1ddc:	15df 0080 0036 	mov	$200, *$66
+    1de2:	15f7 1c34 0034 	mov	$16064, $0x1e1c
+    1de8:	9fdf 0030 ff76 	movb	*$0x1e1c, *$177566
+    1dee:	8bdf ff74      	tstb	*$177564
+    1df2:	80fd           	bpl	0x1dee
+    1df4:	0c9f ff74      	asr	*$177564
+    1df8:	0001           	wait
+    1dfa:	0114           	br	0x1e24
+    1dfc:	0cdf ff74      	asl	*$177564
+    1e00:	0002           	rti
+    1e02:	a5ff 000a 0014 	cmpb	$12, *$0x1e1c
+    1e08:	0204           	bne	0x1e12
+    1e0a:	09f7 e678      	jsr	pc, 0x486
+    1e0e:	03e4           	beq	0x1dd8
+    1e10:	0104           	br	0x1e1a
+    1e12:	9fdf 0006 ff76 	movb	*$0x1e1c, *$177566
+    1e18:	03f1           	beq	0x1dfc
+    1e1a:	0a97 0000      	inc	$0
+    1e1e:	0002           	rti
+    1e20:	200d           	cmp	r0, (r5)
+    1e22:	000d           	.word	15
+    1e24:	15df 0002 0006 	mov	$2, *$6
+    1e2a:	15df 1c9a 0040 	mov	$16232, *$100
+    1e30:	15df 00c0 0042 	mov	$300, *$102
+    1e36:	00b2           	sev
+    1e38:	55df 0040 ff66 	bis	$100, *$177546
+    1e3e:	8526           	bvs	0x1e8c
+    1e40:	b5df 0010 fffe 	bitb	$20, *$177776
+    1e46:	0222           	bne	0x1e8c
+    1e48:	95df 00c0 fffe 	movb	$300, *$177776
+    1e4e:	17d7 0034 0000 	mov	*$64, $0
+    1e54:	8bdf ff74      	tstb	*$177564
+    1e58:	80fd           	bpl	0x1e54
+    1e5a:	15df 1c82 0034 	mov	$16202, *$64
+    1e60:	0a97 0000      	inc	$0
+    1e64:	15df 1c86 0040 	mov	$16206, *$100
+    1e6a:	8a1f fffe      	clrb	*$177776
+    1e6e:	8900           	sys	0
+    1e70:	010d           	br	0x1e8c
+    1e72:	0037           	.word	67
+    1e74:	0000           	halt
+    1e76:	0000           	halt
+    1e78:	0100           	br	0x1e7a
+    1e7a:	5c00 8601      	bis	-74777(r0), r0
+    1e7e:	df1c dc1d      	bisb	*-21743(r4), *(r4)+
+    1e82:	34ff df00      	bit	(r3)+, *$0xfffffd86
+    1e86:	9a15           	movb	*-(r0), (r5)+
+    1e88:	401c           	bic	r0, *(r4)+
+    1e8a:	1f00 fe8a      	mov	*-566(r4), r0
+    1e8e:	ceff a015 b71c 	bicb	*-57753(r3), *$0xffffd5b0
+    1e94:	600a           	add	r0, (r2)
+    1e96:	02e5           	bne	0x1e62
+    1e98:	1f00 060a      	mov	*3012(r4), r0
+    1e9c:	a000           	cmpb	r0, r0
+    1e9e:	1f00 fe0a      	mov	*-766(r4), r0
+    1ea2:	26ff e60a      	cmp	*(r3)+, *$0x4b0
+    1ea6:	b215           	bitb	(r0), (r5)+
+    1ea8:	021c           	bne	0x1ee2
+    1eaa:	c600           	bicb	*(r0)+, r0
+    1eac:	8015           	bpl	0x1ed8
+    1eae:	df01 4035      	bisb	*40065(r4), r1
+    1eb2:	7400           	ash	r0, r0
+    1eb4:	fcff df02      	stcff	fr3, *$0xfffffdba
+    1eb8:	788b           	xor	r2, (r3)
+    1eba:	10ff c280      	mov	r3, *$0xffffe13e
+    1ebe:	381d           	bit	-(r0), *(r5)+
+    1ec0:	f7e5           	cmpf	-(r5), fr3
+    1ec2:	0c09           	ror	(r1)
+    1ec4:	c2e6           	bicb	(r3), -(sp)
+    1ec6:	b415           	bitb	(r0)+, (r5)+
+    1ec8:	c303           	bicb	(r4), r3
+    1eca:	c215           	bicb	(r0), (r5)+
+    1ecc:	9303           	movb	(r4), r3
+    1ece:	9314           	movb	(r4), (r4)+
+    1ed0:	df14 ba15      	bisb	*-42753(r4), (r4)+
+    1ed4:	3003           	bit	r0, r3
+    1ed6:	df1c 4055      	bisb	*40125(r4), *(r4)+
+    1eda:	7400           	ash	r0, r0
+    1edc:	dfff 8815 1401 	bisb	*$0xffffa6f5, *$0x32e3
+    1ee2:	df00 e015      	bisb	*-17753(r4), r0
+    1ee6:	1600           	mov	*(r0)+, r0
+    1ee8:	b700           	bitb	*(r4)+, r0
+    1eea:	0c0a           	ror	(r2)
+    1eec:	c0e5           	bicb	r3, -(r5)
+    1eee:	b49d           	bitb	(r2)+, *(r5)+
+    1ef0:	37fb 7a2c 021d 	bit	*$75054, *1035(r3)
+    1ef6:	02e5           	bne	0x1ec2
+    1ef8:	7702           	ashc	r2, r4
+    1efa:	3000           	bit	r0, r0
+    1efc:	c200           	bicb	(r0), r0
+    1efe:	f81d           	stf	fr0, *(r5)+
+    1f00:	c2e4           	bicb	(r3), -(r4)
+    1f02:	020c           	bne	0x1f1c
+    1f04:	724c           	div	(r4), r1
+    1f06:	1f1d 0e0a      	mov	*7012(r4), *(r5)+
+    1f0a:	df00 2015      	bisb	*20025(r4), r0
+    1f0e:	5200           	bis	(r0), r0
+    1f10:	8e02           	.word	107002
+    1f12:	6e1c ce1d      	add	*-30743(r0), *(r4)+
+    1f16:	1035 0600      	mov	r0, 3000(r5)
+    1f1a:	df03 0215      	bisb	*1025(r4), r3
+    1f1e:	5200           	bis	(r0), r0
+    1f20:	df02 061d      	bisb	*3035(r4), r2
+    1f24:	0e00           	csm	r0
+    1f26:	e600           	sub	*(r0)+, r0
+    1f28:	9815           	movb	-(r0), (r5)+
+    1f2a:	0204           	bne	0x1f34
+    1f2c:	df00 4035      	bisb	*40065(r4), r0
+    1f30:	7400           	ash	r0, r0
+    1f32:	fcff df02      	stcff	fr3, *$0xfffffe38
+    1f36:	748b           	ash	(r3), r2
+    1f38:	fdff 1780      	ldexp	*$0x36bc, fr3
+    1f3c:	000a           	.word	12
+    1f3e:	b700           	bitb	*(r4)+, r0
+    1f40:	fa0a           	stexp	fr0, (r2)
+    1f42:	fdff 0502      	ldexp	*$0x2448, fr3
+    1f46:	df00 788b      	bisb	*74213(r4), r0
+    1f4a:	03ff           	beq	0x1f4a
+    1f4c:	f780           	cmpf	fr0, fr2
+    1f4e:	4209           	bic	(r0), (r1)
+    1f50:	cee5 c21d      	bicb	*-36743(r3), -(r5)
+    1f54:	2217 0500      	cmp	(r0), $2400
+    1f58:	0503           	blt	0x1f60
+    1f5a:	ca00           	bicb	*-(r0), r0
+    1f5c:	a009           	cmpb	r0, (r1)
+    1f5e:	a000           	cmpb	r0, r0
+    1f60:	a000           	cmpb	r0, r0
+    1f62:	5f00 9400      	bis	*-66000(r4), r0
+    1f66:	0004           	iot
+    1f68:	1000           	mov	r0, r0
+    1f6a:	fc00           	stcff	fr0, fr0
+    1f6c:	fcff ffff      	stcff	fr3, *$0x1f6f
+    1f70:	ff00           	ldcff	fr0, fr0
+    1f72:	0200           	bne	0x1f74
+    1f74:	0200           	bne	0x1f76
+    1f76:	0d00           	mark	0
+    1f78:	4c0a 574f      	bic	53517(r0), (r2)
+    1f7c:	4c20 4d49      	bic	46511(r0), -(r0)
+    1f80:	5449           	bis	(r1)+, (r1)
+    1f82:	003f           	.word	77
+    1f84:	4948           	bic	-(r5), (r0)
+    1f86:	4847           	bic	-(r1), pc
+    1f88:	4c20 4d49      	bic	46511(r0), -(r0)
+    1f8c:	5449           	bis	(r1)+, (r1)
+    1f8e:	003f           	.word	77
+    1f90:	0a0d           	clr	(r5)
+    1f92:	4854           	bic	-(r1), (r4)+
+    1f94:	5349           	bis	(r5), (r1)
+    1f96:	5420           	bis	(r0)+, -(r0)
+    1f98:	5345           	bis	(r5), r5
+    1f9a:	2054           	cmp	r1, (r4)+
+    1f9c:	4e49 4156      	bic	*40526(r1), (r1)
+    1fa0:	494c           	bic	-(r5), (r4)
+    1fa2:	2044           	cmp	r1, r4
+    1fa4:	4f46 2052      	bic	*20122(r5), sp
+    1fa8:	3131 342f      	bit	r4, 32057(r1)
+    1fac:	2d30 3131 342f 	cmp	30461(r4), 32057(r0)
+    1fb2:	2035 4c50      	cmp	r0, 46120(r5)
+    1fb6:	4145           	bic	r5, r5
+    1fb8:	4553           	bic	(r5)+, (r3)+
+    1fba:	5220           	bis	(r0), -(r0)
+    1fbc:	4e55 4420      	bic	*42040(r1), (r5)+
+    1fc0:	5143           	bis	r5, r3
+    1fc2:	434b           	bic	(r5), (r3)
+    1fc4:	0a0d           	clr	(r5)
+    1fc6:	0d00           	mark	0
+    1fc8:	200a           	cmp	r0, (r2)
+    1fca:	5a44           	bis	*-(r1), r4
+    1fcc:	4b51           	bic	*-(r5), (r1)+
+    1fce:	2043           	cmp	r1, r3
+    1fd0:	4f44 454e      	bic	*42516(r5), r4
+    1fd4:	3100           	bit	r4, r0
+    1fd6:	0000           	halt
+    1fd8:	0000           	halt
+    1fda:	0000           	halt
+    1fdc:	0001           	wait
+    1fde:	0006           	rtt
+    1fe0:	0001           	wait
+    1fe2:	00f8 0000      	swab	*0(r0)
+	...

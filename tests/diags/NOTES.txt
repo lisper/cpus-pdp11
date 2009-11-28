@@ -1,0 +1,26 @@
+
+AC-8041C-MC_CFKAAC0-1134-Bsc-Inst-Tst_Oct78.pdf
+
+maindec-11-dzqkc-e-pb.bin    1/20/76; 11 family instruction exerciser; (c)1973,74,75
+maindec-11-dfkaa-b1-pb.bin   10/13/78; PDP-11/34 CPU TEST 1975,77
+dec-11-uabla-a-po.bin        10/11/78; PDP-11 ABSOLUTE LOADER; REPLACES: DEC-11-L2PC-PO
+
+dec-11-l2pc-po.bin           absolute loader?
+
+EKBAD0.BIC
+FKAAC0.BIC
+FKACA0.BIC
+
+dzqkc.mem
+FKAAC0.mem
+FKABD0.mem
+FKACA0.mem
+
+----\
+Glenn Johnson
+Diagnostic Group 1975
+Bruce Burgess 1975
+Diagnostic Engineering
+Jim Capadia 
+Diagnostic Group 1978
+

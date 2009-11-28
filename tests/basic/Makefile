@@ -23,7 +23,7 @@ unmem: unmem.c
 	$(DUMP) $*.obj $*.mem
 
 clean:
-	rm -f *.lst *.obj
+	rm -f *.lst *.obj *.log
 	rm -f *.mem
 	rm -f unmem aout2mem
 
