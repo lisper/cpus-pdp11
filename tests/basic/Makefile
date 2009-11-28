@@ -48,7 +48,7 @@ endef
 
 # make the bin file for loading into simh
 %.bin: %.mem
-	mem2bin <$< >$@
+	./mem2bin <$< >$@
 
 # make a script file to loading the bin file into simh
 %.simh.script: %.bin
