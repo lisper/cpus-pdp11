@@ -1,0 +1,25 @@
+Verification directory
+
+All tests should run from the Makefile.  The goal is to be able to run
+all the regression tests in an automated manner from a single place.
+If a test fails the makefile should stop and report at least the last
+step.  A makefile and a vcd (waves) file should be left behind for
+post mortem.
+
+The top level test groups are
+
+    regress   - basic verilog regressions with local verilog test benches
+    diags     - pdp11 diagnostic code of verious flavors
+    bootrt11  - boot rt11 from a simulated ide disk
+
+The regressions are pretty simple and just verify basic functionality.  The
+will catch major breaks in functionality.
+
+The diags are a mixture of simple pdp-11 code I wrote to test simple cases
+and actual diagnostics from DEC.
+
+Booting RT11 is a somewhat high level but does test pretty much
+everything except the MMU.
+
+
+
