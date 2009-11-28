@@ -10,7 +10,7 @@ RTL = ../rtl/mmu_regs.v ../rtl/clk_regs.v ../rtl/sr_regs.v ../rtl/psw_regs.v \
 	../rtl/ram.v ../rtl/ram_sync.v ../rtl/ram_async.v ../rtl/ram_s3board.v
 
 .PHONY: regress diags bootrt11
-all: regress diags bootrt11
+all: rk.dsk regress diags bootrt11
 
 
 .PHONY: $(TESTS)
@@ -21,9 +21,9 @@ diags:
 bootrt11:
 
 define testone
-	cver $(CVER_FLAGS) $(1) >$(2);
-	@if grep -q ERROR $(2); then exit 1; fi;
-	@if grep -q FAILURE $(2); then exit 1; fi;
+	cver $(CVER_FLAGS) $(1) >$(2).log;
+	@if grep -q ERROR $(2).log; then exit 1; fi;
+	@if grep -q FAILURE $(2).log; then exit 1; fi;
 endef
 
 LOGS = $(addsuffix .log,$(TESTS))
@@ -52,5 +52,10 @@ test_mul: test_mul.v
 test_shift: test_shift.v
 	$(call testone,$<,$@)
 
+rk.dsk:
+	dd if=/dev/zero of=rk.dsk bs=512 count=100
+
 clean:
 	rm -f *.vcd *.log
+	rm -f rk.dsk
+
