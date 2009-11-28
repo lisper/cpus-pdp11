@@ -1,3 +1,14 @@
+extract diagnostics from XXDP rl02 image
+
+FKAAC0.BIC      11/34 Basic CPU Test
+FKABD0.BIC	11/34 CPU trap Test
+FKACA0.BIC	11/34 Extended Instruction Set Test
+FKTGC0.BIC	11/34 Instruction / I/O Exerciser
+FKTHB0.BIN	11/34 Memory management test 2
+
+EKBAD0.BIC	11/70 CPU Diagnostic part 1
+
+----------
 
 AC-8041C-MC_CFKAAC0-1134-Bsc-Inst-Tst_Oct78.pdf
 
@@ -7,14 +18,18 @@ dec-11-uabla-a-po.bin        10/11/78; PDP-11 ABSOLUTE LOADER; REPLACES: DEC-11-
 
 dec-11-l2pc-po.bin           absolute loader?
 
-EKBAD0.BIC
-FKAAC0.BIC
-FKACA0.BIC
+maindec-11-dfkaa-b1-pb.bin   10/13/78; PDP-11/34 CPU TEST 1975,77
+maindec-11-dfkab-c-pb.bin    09/14/78; 11/34 TRAP TEST
+maindec-11-dfkac-a-pb.bin    10/11/78; 11/34 EIS INSTRUCTION TESTS 1975
+
+----------
 
 dzqkc.mem
 FKAAC0.mem
 FKABD0.mem
 FKACA0.mem
+FKTGC0.mem
+FKTHB0.mem
 
 ----\
 Glenn Johnson

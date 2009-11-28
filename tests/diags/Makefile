@@ -3,7 +3,8 @@
 # we get to xxdp and other places.
 #
 
-MEMS = dzqkc.mem FKAAC0.mem FKABD0.mem FKACA0.mem EKBAD0.mem
+MEMS = dzqkc.mem \
+	FKAAC0.mem FKABD0.mem FKACA0.mem EKBAD0.mem FKTHB0.mem FKTGC0.mem
 
 all: loadtomem mems
 
@@ -19,6 +20,9 @@ endef
 %.mem: %.bin
 	$(call loadone,$<,$@)
 
+%.mem: %.BIN
+	$(call loadone,$<,$@)
+
 %.mem: %.BIC
 	$(call loadone,$<,$@)
 
@@ -28,3 +32,4 @@ dzqkc.mem: maindec-11-dzqkc-e-pb.bin
 
 clean:
 	rm -rf *.mem
+	rm -rf load2mem
