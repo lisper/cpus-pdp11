@@ -9,7 +9,7 @@ DIAGS = FKAAC0.BIC FKABD0.BIC FKACA0.BIC FKTHB0.BIN FKTGC0.BIC
 MEMS = $(addsuffix .mem,$(basename $(DIAGS)))
 LOGS = $(addsuffix .log,$(basename $(DIAGS)))
 
-all: loadtomem mems
+all: loadtomem mems logs
 
 mems: $(MEMS)
 
@@ -45,6 +45,8 @@ logs: $(LOGS)
 %.log : %.simh.script
 	$(call genlog_from_script,$<,$@)
 
+
+#------------------------------
 
 clean:
 	rm -rf *.mem *.log
