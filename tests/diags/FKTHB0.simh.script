@@ -1,0 +1,5 @@
+load FKTHB0.BIN
+set cpu 11/34
+d 42 1
+go 200
+quit
