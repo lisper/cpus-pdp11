@@ -1,5 +1,5 @@
 load FKTHB0.BIN
 set cpu 11/34
-d 42 1
+d 42 40000
 go 200
 quit

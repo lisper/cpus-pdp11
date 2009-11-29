@@ -1,5 +1,5 @@
 load dzqkc.bin
 set cpu 11/34
-d 42 1
+d 42 4
 go 200
 quit
