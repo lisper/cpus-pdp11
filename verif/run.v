@@ -5,36 +5,34 @@
 
 `timescale 1ns / 1ns
 
-`define sim_time 1
+`define sim_time	1
 
 `define minimal_debug 1
-//`define debug 1
+//`define full_debug	1
+`define debug_bus	1
+`define debug_bus_ram	1
+`define debug_bus_io	1
+//`define debug_bus_state	1
+`define debug_io
 
-//`define debug_vcd
+`define debug_vcd
 //`define debug_log
 `define debug_mmu
-//`define debug_bus
-`define debug_io
-`define debug_ram_low
+
+`define debug_ram	1
+`define debug_ram_low	1
 `define debug_tt_out
 //`define debug_cpu_int
 
-//`define use_rk_model 1
-//`define use_ram_async 1
+`define use_rk_model	1
+`define use_ram_async 1
 //`define use_ram_model 1
 
 //`define use_ide_pli
+//`define use_ram_sync	1
+//`define use_ram_pli	1
 
-`define use_ram_sync 1
-`define use_ram_pli 1
-
-`include "pdp11.v"
-`include "mmu.v"
-`include "bus.v"
-`include "ram_sync.v"
-`include "ram_async.v"
-`include "ram_s3board.v"
-`include "debounce.v"
+`include "rtl.v"
 
 module test;
 
@@ -222,7 +220,6 @@ module test;
 		  .ram2_io(ram2_io), .ram2_ce_n(ram2_ce_n), 
 		  .ram2_ub_n(ram2_ub_n), .ram2_lb_n(ram2_lb_n));
 
-/*
     ram_s3board ram2(.ram_a(ram_a),
 		    .ram_oe_n(ram_oe_n),
 		    .ram_we_n(ram_we_n),
@@ -232,7 +229,6 @@ module test;
 		    .ram2_io(ram2_io),
 		    .ram2_ce_n(ram2_ce_n),
 		    .ram2_ub_n(ram2_ub_n), .ram2_lb_n(ram2_lb_n));
-*/
 `endif
 
    
@@ -246,8 +242,6 @@ module test;
 `endif
 
 	starting_pc = 16'o173000;
-//	starting_pc = 16'o0200;
-//	starting_pc = 16'o0500;
 
 `ifdef __ICARUS__
  `define no_scan
@@ -263,9 +257,7 @@ module test;
 `endif
 	if (n > 0)
 	  begin
-//	     $sformat(arg, "%o", starting_pc);
-//	     $sformat(starting_pc, "%o", arg);
-//	     $sscanf(arg, "%o", starting_pc);
+	     n = $sscanf(arg, "%o", starting_pc);
 	     $display("arg %s pc %o", arg, starting_pc);
 	  end
 	
@@ -289,13 +281,9 @@ module test;
 	switches = 0;
 	rs232_rx = 0;
 	
-	#1 begin
-           reset = 1;
-	end
-
-	#40 begin
-           reset = 0;
-	end
+	#1 reset = 1;
+	repeat(1)@(negedge clk);
+	reset = 0;
 	
 //       #5000000 $finish;
      end

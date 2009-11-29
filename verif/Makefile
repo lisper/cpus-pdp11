@@ -1,7 +1,21 @@
 #
+# pdp-11 cpu verification tests
+#
+
 CVER_FLAGS = +loadvpi=../pli/ide/pli_ide.so:vpi_compat_bootstrap
 
-TESTS = test_bus test_rk test_tt test_ide test_div test_mul test_shift
+RTESTS = test_bus test_rk test_tt test_ide test_div test_mul test_shift
+
+BTESTS = $(wildcard ../tests/basic/*.mem)
+BTESTS := $(filter-out %test11.mem,$(BTESTS))
+BTESTS := $(filter-out %test14.mem,$(BTESTS))
+BTESTS := $(filter-out %test15.mem,$(BTESTS))
+BTESTS := $(filter-out %test16.mem,$(BTESTS))
+
+DTESTS = $(wildcard ../tests/diags/*.mem)
+DTESTS := $(filter-out %FKACA0.mem,$(DTESTS))
+DTESTS := $(filter-out %FKABD0.mem,$(DTESTS))
+DTESTS := $(filter-out %FKTHB0.mem,$(DTESTS))
 
 RTL = ../rtl/mmu_regs.v ../rtl/clk_regs.v ../rtl/sr_regs.v ../rtl/psw_regs.v \
 	../rtl/rk_regs.v ../rtl/ide.v \
@@ -9,53 +23,92 @@ RTL = ../rtl/mmu_regs.v ../rtl/clk_regs.v ../rtl/sr_regs.v ../rtl/psw_regs.v \
 	../rtl/bootrom.v ../rtl/iopage.v ../rtl/bus.v \
 	../rtl/ram.v ../rtl/ram_sync.v ../rtl/ram_async.v ../rtl/ram_s3board.v
 
-.PHONY: regress diags bootrt11
-all: rk.dsk regress diags bootrt11
+.PHONY: regress basic diags bootrt11
 
+all: rk.dsk regress basic diags bootrt11
 
-.PHONY: $(TESTS)
-regress: $(TESTS)
-
-diags:
-
+# booting RT-11
 bootrt11:
 
-define testone
-	cver $(CVER_FLAGS) $(1) >$(2).log;
-	@if grep -q ERROR $(2).log; then exit 1; fi;
-	@if grep -q FAILURE $(2).log; then exit 1; fi;
-endef
-
-LOGS = $(addsuffix .log,$(TESTS))
-
-$(LOGS) : %.log : %.v $(RTL)
-	$(call testone,$<,$@)
-
-test_bus: test_bus.v
-	$(call testone,$<,$@)
-
-test_rk: test_rk.v
-	$(call testone,$<,$@)
-
-test_tt: test_tt.v
-	$(call testone,$<,$@)
-
-test_ide: test_ide.v
-	$(call testone,$<,$@)
-
-test_div: test_div.v
-	$(call testone,$<,$@)
-
-test_mul: test_mul.v
-	$(call testone,$<,$@)
-
-test_shift: test_shift.v
-	$(call testone,$<,$@)
-
+#
 rk.dsk:
 	dd if=/dev/zero of=rk.dsk bs=512 count=100
 
 clean:
 	rm -f *.vcd *.log
 	rm -f rk.dsk
+
+#---------------------------------------------------------------------
+
+define checkone_basic_code
+     grep f1 $(1) >/tmp/blf;
+     grep f1 $(2) >/tmp/rlf;
+     diff -u /tmp/blf /tmp/rlf;
+endef
+
+define runone_basic_code
+    eval "cver +loadvpi=../pli/ide/pli_ide.so:vpi_compat_bootstrap \
+	     +loadvpi=../pli/rk/pli_rk.so:vpi_compat_bootstrap \
+	     +loadvpi=../pli/pdp11/pli_pdp11dis.so:vpi_compat_bootstrap \
+	     +test=$(1) +pc=$(3) \
+	     run.v" >$(2);
+endef
+
+BTEST_LOGS = $(addsuffix .log,$(basename $(notdir $(BTESTS))))
+
+$(BTEST_LOGS): %.log: ../tests/basic/%.mem $(RTL)
+	$(call runone_basic_code,$<,$@,500)
+	$(call checkone_basic_code,$(patsubst %.mem,%.log,$<),$@)
+
+# simple pdp-11 code regression tests
+basic: $(BTEST_LOGS)
+
+#---------------------------------------------------------------------
+
+DTEST_LOGS = $(addsuffix .log,$(basename $(DTESTS)))
+
+$(DTESTS_LOGS) : %.log : %.mem $(RTL)
+	$(call runone_basic_code,$<,$@,200)
+	$(call checkone_basic_code,$(patsubst %.mem,%.log,$<),$@)
+
+# dec diagnostics
+diags: $(DTEST_LOGS)
+
+#---------------------------------------------------------------------
+
+define runone_verilog_regression
+	cver $(CVER_FLAGS) $(1) >$(2);
+	@if grep -q ERROR $(2); then exit 1; fi;
+	@if grep -q FAILURE $(2); then exit 1; fi;
+endef
+
+RTEST_LOGS = $(addsuffix .log,$(RTESTS))
+
+$(RTEST_LOGS) : %.log : %.v $(RTL)
+	$(call runone_verilog_regression,$<,$@)
+
+# verilog testbench regression tests
+regress: rk.dsk $(RTEST_LOGS)
+
+test_bus: test_bus.v
+	$(call runone_verilog_regression,$<,$@)
+
+test_rk: test_rk.v
+	$(call runone_verilog_regression,$<,$@)
+
+test_tt: test_tt.v
+	$(call runone_verilog_regression,$<,$@)
+
+test_ide: test_ide.v
+	$(call runone_verilog_regression,$<,$@)
+
+test_div: test_div.v
+	$(call runone_verilog_regression,$<,$@)
+
+test_mul: test_mul.v
+	$(call runone_verilog_regression,$<,$@)
+
+test_shift: test_shift.v
+	$(call runone_verilog_regression,$<,$@)
+
 
