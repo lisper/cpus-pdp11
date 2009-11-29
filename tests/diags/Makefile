@@ -17,7 +17,8 @@ loadtomem: loadtomem.c
 	cc -o loadtomem loadtomem.c
 
 define loadone
-	./loadtomem <$(1) >$(2)
+	./loadtomem <$(1) >$(2);
+	echo "0000042 0000001" >>$(2)
 endef
 
 define genlog_from_script

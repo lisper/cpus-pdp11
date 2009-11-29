@@ -1,3 +1,15 @@
+/*
+ * loadtomem.c
+ *
+ * convert binary "load" file to an asm .mem file
+ * used to create .mem files from DEC diagnostic binaries
+ *
+ * basically load the file to fake memory and notice
+ * which locations are written
+ *
+ * Brad Parker <brad@heeltoe.com> 2009
+ */
+
 #include <stdio.h>
 
 typedef unsigned char u8;
