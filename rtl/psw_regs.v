@@ -36,7 +36,7 @@ module psw_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    always @(posedge clk)
        if (iopage_wr)
 	 case (iopage_addr)
-	    13'o17776:
+	    13'o17776, 13'o17777:
 	      begin
 		 $display("psw: write %o", data_in);
 	      end

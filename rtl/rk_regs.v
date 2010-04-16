@@ -5,8 +5,6 @@
 // (the idea came from pop-11, thanks!)
 // copyright Brad Parker <brad@heeltoe.com> 2009
 
-`include "ide.v"
-
 module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		iopage_rd, iopage_wr, iopage_byte_op,
 		interrupt, interrupt_ack, vector,
@@ -42,10 +40,7 @@ output [4:0] rk_state;
    reg 		 dma_rd;
    reg 		 dma_wr;
    
-   //
-//   reg [7:0]  vector;
-   
-   reg [15:0] 	 rkds, rker, rkwc, rkda;
+   reg [15:0] 	 /*rkds, */rker, rkwc, rkda;
    reg [17:0] 	 rkba;
 
    reg 		 rkcs_err;
@@ -319,7 +314,6 @@ output [4:0] rk_state;
 	rk_state_next = rk_state;
 
 	assert_int = 0;
-//	vector = 8'b0;
 	
 	clear_err = 0;
 	set_err = 0;
@@ -368,6 +362,7 @@ output [4:0] rk_state;
 	       ata_in = 16'h0040;
 	       if (ata_done)
 		 rk_state_next = wait0;
+	       //$display("rk_regs: init1, write 0040 -> drvhead");
 	    end
 
 	  wait0:
@@ -442,6 +437,7 @@ output [4:0] rk_state;
 	       ata_in = 16'h0040;		// LBA[27:24] + LBA
 	       if (ata_done)
 		 rk_state_next = init9;
+	       //$display("rk_regs: init8, write 0040 -> drvhead");
 	    end
 
 	  init9:
@@ -578,7 +574,6 @@ output [4:0] rk_state;
 	       if (rkcs_ie)
 		 begin
 		    assert_int = 1;
-//		    vector = 8'o220;
 		    $display("rk: XXX last2, interrupt");
 		 end
 	       
@@ -595,7 +590,6 @@ output [4:0] rk_state;
 	       if (rkcs_ie)
 		 begin
 		    assert_int = 1;
-//		    vector = 8'o220;
 		    $display("rk: XXX last3, interrupt");
 		 end
 	       

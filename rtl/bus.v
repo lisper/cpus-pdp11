@@ -2,14 +2,12 @@
 // simple pdp11 bus interface
 // copyright Brad Parker <brad@heeltoe.com> 2009
 
-`include "iopage.v"
-
 module bus(clk, brgclk, reset, bus_addr, bus_data_in, bus_data_out,
 	   bus_rd, bus_wr, bus_byte_op,
 	   bus_arbitrate, bus_ack, bus_error,
 	   bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl,
 	   ram_addr, ram_data_in, ram_data_out, ram_rd, ram_wr, ram_byte_op,
-	   pxr_wr, pxr_rd, pxr_addr, pxr_data_in, pxr_data_out, pxr_trap,
+	   pxr_wr, pxr_rd, pxr_be, pxr_addr, pxr_data_in, pxr_data_out, pxr_trap,
 	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 	   psw, psw_io_wr, switches, rs232_tx, rs232_rx
 ,rk_state
@@ -39,6 +37,7 @@ output [4:0] rk_state;
 
    output 	  pxr_wr;
    output 	  pxr_rd;
+   output [1:0]	  pxr_be;
    output [7:0]	  pxr_addr;
    input [15:0] pxr_data_in;
    output [15:0] pxr_data_out;
@@ -71,7 +70,7 @@ output [4:0] rk_state;
 
    wire 	grant_cpu, grant_dma;
    reg [2:0] 	grant_state;
-   reg [3:0] 	grant_count;
+   /*reg [3:0] 	grant_count;*/
    wire [2:0] 	grant_state_next;
  	  
    //
@@ -100,23 +99,37 @@ output [4:0] rk_state;
    assign ram_byte_op = grant_cpu ? bus_byte_op : 1'b0;
 
 
-`ifdef debug_bus
+`ifdef debug_bus_all
+   always @(posedge clk)
+     if (bus_wr || bus_rd)
+       begin
+	  if (bus_wr) $display("bus: write %o <- %o", bus_addr,bus_data_in);
+	  if (bus_rd) $display("bus: read %o -> %o", bus_addr,bus_data_out);
+	  $display("     ram_rd %o, ram_wr %o ram_byte_op %o",
+		   ram_rd, ram_wr, ram_byte_op);
+       end
+`endif
+   
+`ifdef debug_bus_ram
    always @(posedge clk)
      if (ram_access)
        begin
-	  if (bus_wr) $display("bus: ram write %o <- %o", bus_addr,bus_data_in);
-	  if (bus_rd) $display("bus: ram read %o -> %o", bus_addr,bus_data_out);
-	  if (bus_wr || bus_rd)
-	    $display("     ram_rd %o, ram_wr %o ram_byte_op %o",
-		     ram_rd, ram_wr, ram_byte_op);
+	  if (bus_wr) $display("bus: ram write %o <- %o %o%o%o",
+			       bus_addr, bus_data_in,
+			       ram_rd, ram_wr, ram_byte_op);
+	  if (bus_rd) $display("bus: ram read %o -> %o %o%o%o",
+			       bus_addr, bus_data_out,
+			       ram_rd, ram_wr, ram_byte_op);
        end
-
-//   always @(posedge clk)
-//     if (iopage_access)
-//       begin
-//	  if (bus_wr) $display("bus: io write %o <- %o", bus_addr,bus_data_in);
-//	  if (bus_rd) $display("bus: io read %o -> %o", bus_addr,bus_data_out);
-//       end
+`endif
+   
+`ifdef debug_bus_io
+   always @(posedge clk)
+     if (iopage_access)
+       begin
+	  if (bus_wr) $display("bus: io write %o <- %o", bus_addr,bus_data_in);
+	  if (bus_rd) $display("bus: io read %o -> %o", bus_addr,bus_data_out);
+       end
 `endif
    
 `ifdef debug_bus_dma
@@ -191,8 +204,21 @@ output [4:0] rk_state;
    assign dma_ack = grant_dma;
 
    wire   iopage_bus_error;
+   wire   ram_bus_error;
+   wire   ram_present;
 
-   assign bus_error = iopage_bus_error;
+   assign bus_error = iopage_bus_error || ram_bus_error;
+
+`ifdef sim_time
+   //
+   // for diagnostics, pretend we have 56k of ram
+   //
+   assign ram_present = bus_addr < 22'o160000;
+`else
+   assign ram_present = 1'b0;
+`endif
+   
+   assign ram_bus_error = (ram_rd || ram_wr) && ~ram_present;
 	
    iopage iopage1(.clk(clk),
 		  .brgclk(brgclk),
@@ -213,6 +239,7 @@ output [4:0] rk_state;
 		  // mmu_regs
 		  .pxr_wr(pxr_wr),
 		  .pxr_rd(pxr_rd),
+		  .pxr_be(pxr_be),
 		  .pxr_addr(pxr_addr),
 		  .pxr_data_in(pxr_data_in),
 		  .pxr_data_out(pxr_data_out),

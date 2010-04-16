@@ -60,6 +60,7 @@ module shift32(clk, reset, ready, done, in, out, shift,
        begin
 	  count <= 0;
 	  out <= 0;
+	  last_bit <= 0;
        end
    else
      if (state == idle)

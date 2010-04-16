@@ -3,9 +3,6 @@
 // simulated DL11 uart for pdp11
 // copyright Brad Parker <brad@heeltoe.com> 2009
 
-`include "brg.v"
-`include "uart.v"
-
 module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 	       iopage_rd, iopage_wr, iopage_byte_op,
 	       interrupt, interrupt_ack, vector,

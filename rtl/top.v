@@ -62,6 +62,7 @@ module top(rs232_txd, rs232_rxd,
    wire 	halted;
    wire 	waited;
    wire 	trapped;
+   wire         soft_reset;
 
    wire 	mmu_fetch_va;
    wire 	mmu_abort;
@@ -140,6 +141,7 @@ wire [4:0] rk_state;
    wire        psw_io_wr;
    wire [1:0]  bus_cpu_cm;
    wire        bus_i_access;
+   wire        bus_d_access;
    
    pdp11 cpu(.clk(clk),
 	     .reset(reset),
@@ -147,6 +149,7 @@ wire [4:0] rk_state;
 	     .halted(halted),
 	     .waited(waited),
 	     .trapped(trapped),
+	     .soft_reset(soft_reset),
 	     
 	     .bus_addr(bus_addr_v),
 	     .bus_data_in(bus_data_out),
@@ -158,6 +161,7 @@ wire [4:0] rk_state;
 	     .bus_ack(bus_ack),
 	     .bus_error(bus_error),
 	     .bus_i_access(bus_i_access),
+	     .bus_d_access(bus_d_access),
 	     .bus_cpu_cm(bus_cpu_cm),
 
 	     .mmu_fetch_va(mmu_fetch_va),
@@ -184,8 +188,9 @@ wire [4:0] rk_state;
    wire [15:0] switches;
    assign switches = {8'b0, slideswitch};
 
-   wire   pxr_wr;
+   wire        pxr_wr;
    wire        pxr_rd;
+   wire [1:0]  pxr_be;
    wire [7:0]  pxr_addr;
    wire [15:0] pxr_data_in;
    wire [15:0] pxr_data_out;
@@ -219,6 +224,7 @@ wire [4:0] rk_state;
 
 	    .pxr_wr(pxr_wr),
 	    .pxr_rd(pxr_rd),
+	    .pxr_be(pxr_be),
 	    .pxr_addr(pxr_addr),
 	    .pxr_data_in(pxr_data_out),
 	    .pxr_data_out(pxr_data_in),
@@ -237,17 +243,21 @@ wire [4:0] rk_state;
 
    mmu mmu1(.clk(clk),
 	    .reset(reset),
+	    .soft_reset(soft_reset),
 	    .cpu_va(bus_addr_v),
 	    .cpu_cm(bus_cpu_cm),
 	    .cpu_rd(bus_rd),
 	    .cpu_wr(bus_wr),
 	    .cpu_i_access(bus_i_access),
+	    .cpu_d_access(bus_d_access),
+	    .cpu_trap(trapped),
 	    .cpu_pa(bus_addr_p),
 	    .fetch_va(mmu_fetch_va),
 	    .signal_abort(mmu_abort),
 	    .signal_trap(mmu_trap),
 	    .pxr_wr(pxr_wr),
 	    .pxr_rd(pxr_rd),
+	    .pxr_be(pxr_be),
 	    .pxr_addr(pxr_addr),
 	    .pxr_data_in(pxr_data_in),
 	    .pxr_data_out(pxr_data_out));

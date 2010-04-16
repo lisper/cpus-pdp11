@@ -7,7 +7,7 @@
 module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		 iopage_rd, iopage_wr, iopage_byte_op,
 		 trap, vector,
-		 pxr_wr, pxr_rd, pxr_addr, pxr_data_in, pxr_data_out,
+		 pxr_wr, pxr_rd, pxr_be, pxr_addr, pxr_data_in, pxr_data_out,
 		 pxr_trap);
    
    input clk;
@@ -23,6 +23,7 @@ module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 
    output 	 pxr_wr;
    output 	 pxr_rd;
+   output [1:0]  pxr_be;
    output [7:0]  pxr_addr;
    reg [7:0] 	 pxr_addr;
    input [15:0]  pxr_data_in;
@@ -55,9 +56,18 @@ module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    assign 	 decode = decode_reg | par_pdr_decode;
 
    // pass data through
-   assign data_out = pxr_data_in;
    assign pxr_data_out = data_in;
 
+   // handle byte accesses on read
+   assign data_out = iopage_byte_op ?
+		     { 8'b0, iopage_addr[0] ? 
+		       pxr_data_in[15:8] : pxr_data_in[7:0] } :
+		     pxr_data_in;
+
+   // use byte enables for writes
+   assign pxr_be = iopage_byte_op ? { iopage_addr[0], ~iopage_addr[0] } :
+		   2'b11;
+   
    // register/table read/write
    assign pxr_rd = iopage_rd && decode;
    assign pxr_wr = iopage_wr && decode;
@@ -73,15 +83,20 @@ module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    // 7640-7656 uia   010x-010x xxx
    // 7660-7676 uda   011x-011x xxx
    // 
-   // 2200-2216 sid
-   // 2220-2236 sdd
-   // 2240-2256 sia
-   // 2260-2276 sda
+   // 7600-7616 uid   0011xxxx (0011 0000 - 0011 0111) 060 - 067
+   // 7620-7636 udd   0011xxxx (0011 1000 - 0011 1111) 070 - 077
+   // 7640-7656 uia   0111xxxx (0111 0000 - 0111 0111) 160 - 167
+   // 7660-7676 uda   0111xxxx (0111 1000 - 0111 1111) 170 - 177
    // 
-   // 2300-2316 kid   
-   // 2320-2336 kdd
-   // 2340-2356 kia
-   // 2360-2376 kda
+   // 2200-2216 sid   0001xxxx (0001 0000 - 0001 0111) 020 - 027
+   // 2220-2236 sdd   0001xxxx (0001 1000 - 0001 1111) 030 -
+   // 2240-2256 sia   0101xxxx (0101 0000 - 0001 0111) 120 -
+   // 2260-2276 sda   0101xxxx (0101 1000 - 0001 0111) 130 - 
+   // 
+   // 2300-2316 kid   0000xxxx (0000 0000 - 0000 0111) 000 - 007
+   // 2320-2336 kdd   0000xxxx (0000 1000 - 0000 1111) 010 - 017
+   // 2340-2356 kia   0100xxxx (0100 0000 - 0100 0111) 100 - 107
+   // 2360-2376 kda   0100xxxx (0100 1000 - 0100 1111) 110 - 117
 
    // generate appropriate pxr address
    always @(iopage_addr or iopage_rd or iopage_wr or decode)
@@ -105,6 +120,10 @@ module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	  pxr_addr = 8'b0;
      end
 
+   // 
+   // this is pretty, but it's not used; trap_abort is hardwired in pdp11.v
+   // someday we will generalize external aborts w/external vectors
+   // like interrupts.
    //
    assign trap = pxr_trap;
    assign vector = 8'o250;

@@ -1,5 +1,9 @@
+//
 // interface to async sram
 // used on s3board
+//
+// multiplexes between to high speed SRAMs
+//
 
 module ram_async(addr, data_in, data_out, rd, wr, byte_op,
 		 ram_a, ram_oe_n, ram_we_n,
@@ -18,6 +22,8 @@ module ram_async(addr, data_in, data_out, rd, wr, byte_op,
    inout [15:0]  ram2_io;
    output 	 ram2_ce_n, ram2_ub_n, ram2_lb_n;
 
+   wire [15:0]  ram1_io;
+
    //
    wire 	 ram1_ub, ram1_lb;
 
@@ -33,7 +39,7 @@ module ram_async(addr, data_in, data_out, rd, wr, byte_op,
    assign ram_oe_n = ~rd;
    assign ram_we_n = ~wr;
 
-   assign ram1_io = ~ram_oe_n ? /*16'bz*/16'b0 :
+   assign ram1_io = ~ram_oe_n ? 16'bz :
 		    (byte_op ? {data_in[7:0],data_in[7:0]} : data_in);
 
    assign ram1_ce_n = 1'b0;

@@ -4,10 +4,6 @@
 // execute state for pdp-11
 //
 
-`include "mul1616.v"
-`include "div3216.v"
-`include "shift32.v"
-
 module execute(clk, reset, enable,
 	       pc, psw,
 	       ss_data, dd_data,
@@ -293,8 +289,16 @@ module execute(clk, reset, enable,
 		      end
 
 		    5:					    /* reset */
-		      if (current_mode == mode_kernel)
-			assert_reset = 1;
+		      begin
+			 if (current_mode == mode_kernel)
+			   assert_reset = 1;
+
+			 new_cc_n = 0;
+			 new_cc_v = 0;
+			 new_cc_c = 0;
+			 new_cc_z = 0;
+			 latch_cc = 1;
+		      end
 
 		    2:					    /* rti */
 		      begin
@@ -1054,9 +1058,7 @@ module execute(clk, reset, enable,
 
 		   6'o57:				/* tstb */
 		     begin
-			//$display(" TSTB %o", dd_data[7:0]);
 			e1_result = {8'b0, dd_data[7:0]};
-			//$display(" TSTB %o, e1_result 0x%x", dd_data[7:0], e1_result);
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
 			new_cc_v = 0;
@@ -1092,7 +1094,6 @@ module execute(clk, reset, enable,
 			e1_result = {dd_data[15:8], dd_data[7], dd_data[7:1]};
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
-//			new_cc_c = ss_data[0];
 			new_cc_c = dd_data[0];
 			new_cc_v = new_cc_n ^ new_cc_c;
 			latch_cc = 1;
@@ -1104,7 +1105,6 @@ module execute(clk, reset, enable,
 			e1_result = {dd_data[15:8], dd_data[6:0], 1'b0};
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
-//			new_cc_c = ss_data[7];
 			new_cc_c = dd_data[7];
 			new_cc_v = new_cc_n ^ new_cc_c;
 			latch_cc = 1;

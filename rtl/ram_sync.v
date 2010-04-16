@@ -1,6 +1,8 @@
 //
-
-`include "ram.v"
+// basic synchronous ram model
+//
+// requires either 'use_ram_model' or 'use_ram_pli' to be defined
+//
 
 module ram_sync (clk, reset, addr, data_in, data_out, rd, wr, byte_op);
 
@@ -19,7 +21,7 @@ module ram_sync (clk, reset, addr, data_in, data_out, rd, wr, byte_op);
    assign 	 we_n = ~wr;
    
 `ifdef use_ram_model
-   ram_16kx16 ram(.clk(clk),
+   ram_32kx16 ram(.clk(clk),
 		 .reset(reset),
 		 .addr(addr),
 		 .DI(data_in),

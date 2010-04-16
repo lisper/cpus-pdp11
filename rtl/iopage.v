@@ -2,18 +2,11 @@
 // iopage decoding and muxing
 // copyright Brad Parker <brad@heeltoe.com> 2009
 
-`include "mmu_regs.v"
-`include "clk_regs.v"
-`include "sr_regs.v"
-`include "psw_regs.v"
-`include "rk_regs.v"
-`include "tt_regs.v"
-`include "bootrom.v"
-
 module iopage(clk, brgclk, reset, address, data_in, data_out,
 	      iopage_rd, iopage_wr, iopage_byte_op,
 	      no_decode, interrupt, interrupt_ipl, ack_ipl, vector,
-	      pxr_wr, pxr_rd, pxr_addr, pxr_data_in, pxr_data_out, pxr_trap,
+	      pxr_wr, pxr_rd, pxr_be,
+	      pxr_addr, pxr_data_in, pxr_data_out, pxr_trap,
 	      ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 	      psw, psw_io_wr,
 	      switches,
@@ -40,6 +33,7 @@ output [4:0] rk_state;
 
    output 	 pxr_wr;
    output 	 pxr_rd;
+   output [1:0]  pxr_be;
    output [7:0]  pxr_addr;
    input [15:0]  pxr_data_in;
    output [15:0] pxr_data_out;
@@ -143,6 +137,7 @@ output [4:0] rk_state;
 		      .iopage_byte_op(iopage_byte_op),
 		      .pxr_wr(pxr_wr),
 		      .pxr_rd(pxr_rd),
+		      .pxr_be(pxr_be),
 		      .pxr_addr(pxr_addr),
 		      .pxr_data_in(pxr_data_in),
 		      .pxr_data_out(pxr_data_out),
@@ -161,9 +156,9 @@ output [4:0] rk_state;
 		    .interrupt(tt_interrupt),
 		    .interrupt_ack(tt_interrupt_ack),
 		    .vector(tt_vector),
-
 		    // connection to rs-232
-		    .rs232_tx(rs232_tx), .rs232_rx(rs232_rx));
+		    .rs232_tx(rs232_tx),
+		    .rs232_rx(rs232_rx));
 
    clk_regs clk_regs1(.clk(clk),
 		      .reset(reset),

@@ -2,8 +2,9 @@
 // pdp-11 in verilog - cpu
 // copyright Brad Parker <brad@heeltoe.com> 2009
 //
-// Basic pdp-11/34ish cpu implementation
-// current with no mmu or split I & D
+// Basic pdp-11/34-ish cpu implementation
+// Originally with no mmu or split I & D
+// Added 11/40 style mmu, acting like 11/34
 //
 // cpu expects a bus interface which contains ram and unibus
 // cpu allows dma to occur when "bus_arbitrate" is asserted
@@ -14,17 +15,14 @@
 // bus reports interrupts via ipl lines in bus_int_ipl
 // bus assert bus_int_vector until acked
 // bus can write psw by asserting psw_io_wr
+// mmu reports aborts via mmu_abort
 //
 
-`include "ipl_below.v"
-`include "add8.v"
-`include "execute.v"
-
-module pdp11(clk, reset, initial_pc, halted, waited, trapped,
+module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	     bus_addr, bus_data_out, bus_data_in,
 	     bus_rd, bus_wr, bus_byte_op,
 	     bus_arbitrate, bus_ack, bus_error,
-	     bus_i_access, bus_cpu_cm,
+	     bus_i_access, bus_d_access, bus_cpu_cm,
 	     mmu_fetch_va, mmu_abort, mmu_trap,
 	     bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl, 
 	     pc, psw, psw_io_wr);
@@ -34,7 +32,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    output 	halted;
    output 	waited;
    output 	trapped;
-   
+   output 	soft_reset;
+ 	
    output [15:0] bus_addr;
    input [15:0]  bus_data_in;
    output [15:0] bus_data_out;
@@ -52,6 +51,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    reg [7:0] 	 interrupt_ack_ipl;
 
    output 	 bus_i_access;
+   output 	 bus_d_access;
    output [1:0]  bus_cpu_cm;
 
    output 	 mmu_fetch_va;
@@ -73,6 +73,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    reg 		trap_ill;
    reg 		trap_res;
    reg 		trap_priv;
+   reg 		trap_abort;
 
    reg 		trace_inhibit;
    
@@ -87,9 +88,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    wire 	cc_n, cc_z, cc_v, cc_c;
    wire [2:0] 	ipl;
 
+   // cpu registers
    reg [15:0] 	r0, r1, r2, r3, r4, r5;
    reg [15:0] 	r6[0:3];
-
    reg [15:0] 	pc;
 
    // wires 
@@ -108,16 +109,20 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    wire 	assert_trap_emt;
    wire 	assert_trap_trap;
    wire 	assert_trap_bus;
+   wire 	assert_trap_abort;
 
    wire 	assert_trace_inhibit;
 
+   // subfields of isn register
    wire [3:0] 	isn_15_12;
    wire [6:0] 	isn_15_9;
    wire [9:0] 	isn_15_6;
+   wire [8:0] 	isn_14_6;
    wire [5:0] 	isn_11_6;
    wire [2:0] 	isn_11_9;
    wire [5:0] 	isn_5_0;
 
+   // decoded instruction results
    wire 	is_isn_rss;
    wire 	is_isn_rdd;
    wire 	is_isn_rxx;
@@ -125,6 +130,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    wire 	is_isn_byte;
    wire 	is_isn_mfpx;
    wire 	is_isn_mtpx;
+   wire 	is_isn_mfps;
    wire 	is_illegal;
    wire 	is_reserved;
    wire 	no_operand;
@@ -152,6 +158,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 		need_d2,
 		need_d4;
 
+   // dd, ss multiplexing
    wire [15:0] 	dd_ea_mux;
    wire [15:0] 	ss_ea_mux;
 
@@ -364,7 +371,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 				~trap_odd;
   
    //
-   // execute unit
+   // execute unit - produces result from decoded instruction
    //
    execute exec1(.clk(clk), .reset(reset),
 		 .enable(enable_execute),
@@ -449,7 +456,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 		     trap_iot ? 16'o20 :
 		     trap_emt ? 16'o30 :
 		     trap_trap ? 16'o34 :
-		     interrupt ? { 8'b0, vector } :
+		     trap_abort ? 16'o250 :
+ 		     interrupt ? { 8'b0, vector } :
 		     16'd0) :
 
      istate == t2 ? ss_ea :
@@ -496,7 +504,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	       16'b0;
 
    assign dd_data_mux =
-	       (istate == c1 && (isn_15_6 == 10'o1067)) ? {8'b0, psw[7:0]} : // mfps 
+	       (istate == c1 && is_isn_mfps) ? {8'b0, psw[7:0]} : // mfps 
 	       (istate == c1 && dd_mode == 0) ? dd_reg_value :
 	       (istate == d4) ? bus_data_in :
 	       16'b0;
@@ -574,10 +582,15 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 		     psw <= {bus_data_out[15:5], psw[4], bus_data_out[3:0]};
 		   else
 		     if (bus_addr[0])
-		       psw <= {bus_data_out[15:8], psw[7:0]};
+		       psw <= {bus_data_out[7:0], psw[7:0]};
 		     else
 		       psw <= {psw[15:8], bus_data_out[7:5],
 			       psw[4], bus_data_out[3:0]};
+
+//xxx
+	   $display("write psw: bus_data_out %o, bus_byte_op %o, bus_addr %o",
+		    bus_data_out, bus_byte_op, bus_addr);
+//xxx
 		end
        end
 
@@ -587,6 +600,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    assign isn_15_12 = isn[15:12];
    assign isn_15_9  = isn[15:9];
    assign isn_15_6  = isn[15:6];
+   assign isn_14_6  = isn[14:6];
    assign isn_11_6  = isn[11:6];
    assign isn_11_9  = isn[11:9];
    assign isn_5_0   = isn[5:0];
@@ -640,14 +654,14 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 			(isn_15_6 == 10'o0002 && (isn_5_0 < 6'o10)) ||
 			(isn_15_6 == 10'o0064) ||		// mark
 			(isn_15_6 == 10'o0070) ||		// csm
-			(isn[14:6] == 9'o066);			// mtpi/mtpd
+			(isn_14_6 == 9'o066);			// mtpi/mtpd
    
    assign need_pop_pc_psw =					// rti, rtt
 	(isn_15_6 == 0 && (isn_5_0 == 6'o02 || isn_5_0 == 6'o06));
    
    assign need_push_state =
 			   (isn_15_9 == 7'o004) ||		// jsr
-			   (isn[14:6] == 9'o065);		// mfpi/mfpd
+			   (isn_14_6 == 9'o065);		// mfpi/mfpd
 
    assign assert_trap_ill = is_illegal;
 
@@ -659,12 +673,48 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 
    assign assert_trap_odd = odd_fetch;			// fetch from odd
 
+   //
+   // notes on oflo check:
+   // new_ss_reg_pre_decr is not valid after s1 and
+   // new_dd_reg_pre_decr is not valid after d1
+   //
+   // assert_trap_oflo is sampled during f1, c1, s4, d4, e1, w1
+   //
+   // xxx seems like s1 & d1 should be in that list too... hmm.
+   //
    assign assert_trap_oflo = 				// stack overflow
-		(ss_pre_dec && ss_reg == 6 && new_ss_reg_pre_decr < 16'o0400) ||
-		(dd_pre_dec && dd_reg == 6 && new_dd_reg_pre_decr < 16'o0400) ||
-		(trap && (sp - 16'd2) < 16'o0400);
+			     (istate == s1 && ss_pre_dec &&
+			      ss_reg == 6 && new_ss_reg_pre_decr < 16'o0400) ||
+			     (istate == d1 && dd_pre_dec &&
+			      dd_reg == 6 && new_dd_reg_pre_decr < 16'o0400) ||
+			     (trap && (sp - 16'd2) < 16'o0400);
+
+//----debug----
+   always @(posedge clk)
+     begin
+	if (assert_trap_oflo != 1'b0)
+	  begin
+	     $display("asserting oflo: istate %b ss_reg_value %o new_ss_reg_pre_decr %o",
+		      istate,
+		      ss_reg_value,
+		      new_ss_reg_pre_decr);
+	     $display("asserting oflo: istate %b dd_reg_value %o new_dd_reg_pre_decr %o",
+		      istate,
+		      dd_reg_value,
+		      new_dd_reg_pre_decr);
+
+	     if (ok_to_assert_trap)
+	       begin
+		  $display("latching oflo");
+	       end
+	  end
+     end
+//----debug----
 
    assign assert_trap_bus = bus_error;
+
+   // we should generalize external aborts w/external vector
+   assign assert_trap_abort = mmu_abort;
 
    assign trace = psw[4] && !trace_inhibit;			// trace bit
    
@@ -682,8 +732,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 		!(isn_15_6 == 10'o0001) &&			// jmp
 		!(isn_15_6 == 10'o0057) &&
 		!(isn_15_6 == 10'o1057) &&			// tst/tstb
-		!(isn_15_6 == 10'o0064) &&			// mark
-		!(isn[14:6] == 9'o065) &&			// mfpi/mfpd
+		!(isn_14_6 == 9'o064) &&			// mark/mtps
+		!(isn_14_6 == 9'o065) &&			// mfpi/mfpd
 		!(isn_15_12 == 4'o02) &&
 		!(isn_15_12 == 4'o12) &&			// cmp/cmpb
 		!(isn_15_12 == 4'o03) &&
@@ -716,8 +766,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 
    assign is_isn_r32 = (isn_15_9 == 7'o071);			// div
 
-   assign is_isn_mfpx = (isn[14:6] == 9'o065);			// mfpi/mfpd
-   assign is_isn_mtpx = (isn[14:6] == 9'o066);			// mtpi/mtpd
+   assign is_isn_mfpx = (isn_14_6 == 9'o065);			// mfpi/mfpd
+   assign is_isn_mtpx = (isn_14_6 == 9'o066);			// mtpi/mtpd
+   assign is_isn_mfps = (isn_15_6 == 10'o1067);			// mfps
    
    assign need_src_data =
 			 !((isn_15_6 == 10'o0050) ||
@@ -868,6 +919,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 			 (istate == s1 && (ss_mode == 6 || ss_mode == 7)) ||
 			 (istate == d1 && (dd_mode == 6 || dd_mode == 7));
    
+   assign bus_d_access = istate == d1 && (dd_mode != 6 && dd_mode != 7);
+   
    assign bus_cpu_cm = current_mode;
 
    assign mmu_fetch_va = istate == f1;
@@ -902,7 +955,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	  if (istate != w1 && istate != s1 && istate != d1)
 	    begin
 	       r6[current_mode] <= sp_mux;	// sp
-`ifdef debug
+`ifdef full_debug
 	       if (r6[current_mode] != sp_mux)
 		 $display("sp <- %o", sp_mux);
 `endif
@@ -913,7 +966,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	    begin
 	       // bus_rd asserted
 	       isn <= bus_data_in;
-`ifdef debug
+`ifdef full_debug
 	       $display(" fetch pc %o, isn %o", pc, bus_data_in);
 `endif
 	    end
@@ -924,7 +977,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 
 	  s1:
 	    begin
-`ifdef debug
+`ifdef full_debug
                if (ss_post_incr)
 		 $display(" R%d <- %o (ss r++)", ss_reg, new_ss_reg_incdec);
 
@@ -962,7 +1015,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 
 	  d1:
 	    begin
-`ifdef debug
+`ifdef full_debug
                if (dd_post_incr)
 		 $display(" R%d <- %o (dd r++)", dd_reg, new_dd_reg_incdec);
 
@@ -1013,7 +1066,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	       else
 		 if (store_result && dd_dest_reg)
 		   begin
-`ifdef debug
+`ifdef full_debug
 		      $display(" r%d <- %0o (dd)", dd_reg, e1_data);
 `endif
 		      case (dd_reg)
@@ -1152,7 +1205,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    
    assign ok_to_assert_trap =
 			     istate == f1 || istate == c1 || istate == e1 ||
-			     istate == s4 || istate == d4 || istate == w1;
+			     istate == s4 || istate == d4 || istate == w1 ||
+			     // catch stack oflo
+			     istate == s1 || istate == d1;
+   
 
    assign ok_to_reset_trap = istate == t1;
 
@@ -1163,22 +1219,28 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    assign trap =
             trap_bpt || trap_iot || trap_emt || trap_trap ||
 	    trap_res || trap_ill || trap_odd || trap_oflo ||
-	    trap_priv || trap_bus;
+	    trap_priv || trap_bus || trap_abort;
+
+   assign soft_reset = (istate == e1 || istate == w1) && assert_reset;
 
    always @(posedge clk)
      if (reset)
        begin
-	     trap_odd <= 0;
-	     trap_oflo <= 0;
-	     trap_ill <= 0;
-	     trap_res <= 0;
-	     trap_priv <= 0;
-	     trap_bpt <= 0;
-	     trap_iot <= 0;
-	     trap_emt <= 0;
-	     trap_trap <= 0;
-	     trap_bus <= 0;
-	     trace_inhibit <= 0;
+	  trap_bpt <= 0;
+	  trap_iot <= 0;
+	  trap_emt <= 0;
+	  trap_trap <= 0;
+
+	  trap_res <= 0;
+	  trap_ill <= 0;
+	  trap_odd <= 0;
+	  trap_oflo <= 0;
+
+	  trap_priv <= 0;
+	  trap_bus <= 0;
+	  trap_abort <= 0;
+
+	  trace_inhibit <= 0;
        end
    else
      begin
@@ -1188,8 +1250,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	     // allow double trap if trap causes oflo
 	     if (~trap_odd && ~trap_ill && ~trap_res &&
 		 ~trap_priv && ~trap_bpt && ~trap_iot &&
-		 ~trap_emt && ~trap_trap && ~trap_bus)
+		 ~trap_emt && ~trap_trap && ~trap_bus &&
+		 ~trap_abort)
 	       trap_oflo <= 0;
+	     
 	     trap_ill <= 0;
 	     trap_res <= 0;
 	     trap_priv <= 0;
@@ -1198,6 +1262,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	     trap_emt <= 0;
 	     trap_trap <= 0;
 	     trap_bus <= 0;
+	     trap_abort <= 0;
 	  end
 	else
 	  if (ok_to_assert_trap)
@@ -1211,7 +1276,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	       if (assert_trap_bus)
 		    trap_bus <= 1;
 
-`ifdef debug
+	       if (assert_trap_abort)
+		    trap_abort <= 1;
+
+`ifdef full_debug
 	       if (trace)
 		 $display("trace pc %o, addr %o", pc, bus_addr);
 	       if (assert_trap_bus)
@@ -1226,7 +1294,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 		    if (assert_trap_res)
 		      trap_res <= 1;
 
-`ifdef debug
+`ifdef full_debug
 		    if (assert_trap_ill)
 		      begin
 	       		 $display("trap_ill pc %o", pc);
@@ -1258,7 +1326,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 		    if (assert_trace_inhibit)
 		      trace_inhibit <= 1;
 
-`ifdef debug
+`ifdef full_debug
 		    if (assert_trap_emt)
 		      $display("trap_emt pc %o", pc);
 `endif
@@ -1271,10 +1339,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
         if (trap)
 	  begin
              $display("trap: asserts ");
-	     $display(" %o %o %o %o %o %o %o %o %o %o",
+	     $display(" %b %b %b %b %b %b %b %b %b %b %b",
 		      trap_bpt, trap_iot, trap_emt, trap_trap,
 		      trap_res, trap_ill, trap_odd, trap_oflo,
-		      trap_priv, trap_bus);
+		      trap_priv, trap_bus, trap_abort);
 
              if (assert_trap_priv) $display("PRIV ");
              if (assert_trap_odd) $display("ODD ");
@@ -1286,9 +1354,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
              if (assert_trap_emt) $display("EMT ");
              if (assert_trap_trap) $display("TRAP ");
              if (assert_trap_bus) $display("BUS ");
+	     if (assert_trap_abort) $display("ABORT ");
              $display("");
 
-             $display("trap: %d", trap);
+             $display("trap: %b", trap);
 	  end // if (trap)
      end
 
@@ -1306,7 +1375,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	 begin
 	    if (assert_halt)
 	      begin
-`ifdef debug
+`ifdef full_debug
 		 $display("assert_halt");
 `endif
 		 halted <= 1;
@@ -1314,7 +1383,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 
 	    if (assert_wait)
 	      begin
-`ifdef debug
+`ifdef full_debug
 		 $display("assert_wait");
 `endif
 		 waited <= 1;
@@ -1509,11 +1578,12 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
    //debug
    //
 
-`ifdef minimal_debug_xx
+`ifdef minimal_debug
    always @(posedge clk)
      #2 begin
    	case (istate)
 	  f1:
+	    if (~trap)
 	    begin
 	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o)",
 			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
@@ -1525,18 +1595,19 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
      end
 `endif
 
-`ifdef debug
+`ifdef full_debug
    always @(posedge clk)
      #2 begin
-   	case (istate)
+	case (istate)
 	  f1:
+	    if (~trap)
 	    begin
 	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o)",
 			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
 			r0, r1, r2, r3, r4, r5, sp, pc);
 	       $display("    trap=%d, interrupt=%d, trace_inhibit=%d",
 			trap, interrupt, trace_inhibit);
-	    end // case: f1
+	    end
 
 	  c1:
 	    begin
@@ -1690,11 +1761,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped,
 	    end
 
 	  default:
-	    being
-	    end
+	    ;
    
 	endcase // case(istate)
-
+	
 	if (istate == f1)
 	  begin
 	     $display("    regs %0o %0o %0o %0o ",
