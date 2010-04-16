@@ -13,11 +13,16 @@ BTESTS := $(filter-out %test15.mem,$(BTESTS))
 BTESTS := $(filter-out %test16.mem,$(BTESTS))
 
 DTESTS = $(wildcard ../tests/diags/*.mem)
-DTESTS := $(filter-out %FKACA0.mem,$(DTESTS))
+DTESTS := $(filter-out %FKAAC0.mem,$(DTESTS))
 DTESTS := $(filter-out %FKABD0.mem,$(DTESTS))
-DTESTS := $(filter-out %FKTHB0.mem,$(DTESTS))
+DTESTS := $(filter-out %FKACA0.mem,$(DTESTS))
+DTESTS := $(filter-out %FKTGC0.mem,$(DTESTS))
+#DTESTS := $(filter-out %FKTHB0.mem,$(DTESTS))
 
-RTL = ../rtl/mmu_regs.v ../rtl/clk_regs.v ../rtl/sr_regs.v ../rtl/psw_regs.v \
+RTL = \
+	../rtl/pdp11.v ../rtl/ipl_below.v ../rtl/add8.v ../rtl/mmu.v \
+	../rtl/execute.v ../rtl/mul1616.v ../rtl/div3216.v ../rtl/shift32.v \
+	../rtl/mmu_regs.v ../rtl/clk_regs.v ../rtl/sr_regs.v ../rtl/psw_regs.v \
 	../rtl/rk_regs.v ../rtl/ide.v \
 	../rtl/tt_regs.v ../rtl/brg.v ../rtl/uart.v \
 	../rtl/bootrom.v ../rtl/iopage.v ../rtl/bus.v \
@@ -41,9 +46,9 @@ clean:
 #---------------------------------------------------------------------
 
 define checkone_basic_code
-     grep f1 $(1) >/tmp/blf;
-     grep f1 $(2) >/tmp/rlf;
-     diff -u /tmp/blf /tmp/rlf;
+     grep -a f1 $(1) >/tmp/a;
+     grep -a f1 $(2) | sed -e 's/ 077 / 77 /g' -e 's/(077 /(77 /g' >/tmp/b;
+     diff -q /tmp/a /tmp/b;
 endef
 
 define runone_basic_code
@@ -65,14 +70,15 @@ basic: $(BTEST_LOGS)
 
 #---------------------------------------------------------------------
 
-DTEST_LOGS = $(addsuffix .log,$(basename $(DTESTS)))
+DTEST_LOGS = $(addsuffix .log,$(basename $(notdir $(DTESTS))))
 
-$(DTESTS_LOGS) : %.log : %.mem $(RTL)
+$(DTEST_LOGS) : %.log : ../tests/diags/%.mem $(RTL)
 	$(call runone_basic_code,$<,$@,200)
 	$(call checkone_basic_code,$(patsubst %.mem,%.log,$<),$@)
 
 # dec diagnostics
 diags: $(DTEST_LOGS)
+	@echo $(DTEST_LOGS)
 
 #---------------------------------------------------------------------
 

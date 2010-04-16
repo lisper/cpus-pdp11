@@ -19,8 +19,8 @@
 //`define debug_log
 `define debug_mmu
 
-`define debug_ram	1
-`define debug_ram_low	1
+//`define debug_ram	1
+//`define debug_ram_low	1
 `define debug_tt_out
 //`define debug_cpu_int
 
@@ -66,9 +66,11 @@ module test;
    wire        halted;
    wire        waited;
    wire        trapped;
+   wire        soft_reset;
 
    wire [1:0]  bus_cpu_cm;
    wire        bus_i_access;
+   wire        bus_d_access;
 
    wire        mmu_fetch_va;
    wire        mmu_abort;
@@ -83,6 +85,7 @@ module test;
 	     .halted(halted),
 	     .waited(waited),
 	     .trapped(trapped),
+	     .soft_reset(soft_reset),
 	     
 	     .bus_addr(bus_addr_v),
 	     .bus_data_in(bus_data_out),
@@ -94,6 +97,7 @@ module test;
 	     .bus_ack(bus_ack),
 	     .bus_error(bus_error),
 	     .bus_i_access(bus_i_access),
+	     .bus_d_access(bus_d_access),
 	     .bus_cpu_cm(bus_cpu_cm),
 
 	     .mmu_fetch_va(mmu_fetch_va),
@@ -111,23 +115,28 @@ module test;
 
    wire        pxr_wr;
    wire        pxr_rd;
+   wire [1:0]  pxr_be;
    wire [7:0]  pxr_addr;
    wire [15:0] pxr_data_in;
    wire [15:0] pxr_data_out;
    
    mmu mmu1(.clk(clk),
 	    .reset(reset),
+	    .soft_reset(soft_reset),
 	    .cpu_va(bus_addr_v),
 	    .cpu_cm(bus_cpu_cm),
 	    .cpu_rd(bus_rd),
 	    .cpu_wr(bus_wr),
 	    .cpu_i_access(bus_i_access),
+	    .cpu_d_access(bus_d_access),
+	    .cpu_trap(trapped),
 	    .cpu_pa(bus_addr_p),
 	    .fetch_va(mmu_fetch_va),
 	    .signal_abort(mmu_abort),
 	    .signal_trap(mmu_trap),
 	    .pxr_wr(pxr_wr),
 	    .pxr_rd(pxr_rd),
+	    .pxr_be(pxr_be),
 	    .pxr_addr(pxr_addr),
 	    .pxr_data_in(pxr_data_in),
 	    .pxr_data_out(pxr_data_out));
@@ -167,6 +176,7 @@ module test;
 
 	    .pxr_wr(pxr_wr),
 	    .pxr_rd(pxr_rd),
+	    .pxr_be(pxr_be),
 	    .pxr_addr(pxr_addr),
 	    .pxr_data_in(pxr_data_out),
 	    .pxr_data_out(pxr_data_in),
