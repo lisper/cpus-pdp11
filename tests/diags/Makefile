@@ -3,6 +3,8 @@
 # we get to xxdp and other places.
 #
 
+SIMH_PDP11 = ../../simhv36-1/BIN/pdp11
+
 DIAGS = FKAAC0.BIC FKABD0.BIC FKACA0.BIC FKTHB0.BIN FKTGC0.BIC
 #dzqkc.bin
 
@@ -22,7 +24,7 @@ define loadone
 endef
 
 define genlog_from_script
-	../../simhv36-1/BIN/pdp11 $(1) >$(2)
+	$(SIMH_PDP11) $(1) >$(2)
 endef
 
 #------------------------------

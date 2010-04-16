@@ -1,5 +1,6 @@
 load FKAAC0.BIC
 set cpu 11/34
+set cpu 48k
 d 42 40000
 go 200
 quit
