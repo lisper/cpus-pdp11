@@ -1,0 +1,1 @@
+link /out:m.exe  assemble.obj assemble_aux.obj assemble_globals.obj object.obj rept_irpc.obj util.obj extree.obj macros.obj parse.obj stream2.obj listing.obj mlb.obj rad50.obj symbols.obj macro11.obj

@@ -8,8 +8,18 @@ main()
 	int ich, cch, r;
 	char ch;
 	while (fgets(line, sizeof(line), stdin)) {
+		/* cver */
 		if (memcmp(line, "tto_data ", 9) == 0) {
 			r = sscanf(line, "%s %o %c\n",
+				   str, &ich, &ch);
+			if (ich != 0) {
+				printf("%c", ich);
+				fflush(stdout);
+			}
+		}
+		/* modelsim */
+		if (memcmp(line+2, "tto_data ", 9) == 0) {
+			r = sscanf(line+2, "%s %o %c\n",
 				   str, &ich, &ch);
 			if (ich != 0) {
 				printf("%c", ich);
