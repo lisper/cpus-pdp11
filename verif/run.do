@@ -6,6 +6,9 @@ vlib rtl_work
 vmap work rtl_work
 
 #
+transcript file "log"
+
+#
 vlog run.v
 
 noview wave

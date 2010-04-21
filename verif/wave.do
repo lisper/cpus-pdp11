@@ -193,6 +193,32 @@ add wave -noupdate -format Logic /test/cpu/ok_to_assert_trap
 add wave -noupdate -format Logic /test/cpu/ok_to_reset_trap
 add wave -noupdate -format Logic /test/cpu/ok_to_reset_trace_inhibit
 add wave -noupdate -format Logic /test/cpu/ok_to_assert_int
+add wave -noupdate -format Logic /test/mmu1/pxr_addr_5_0
+add wave -noupdate -format Logic /test/mmu1/pxr_be
+add wave -noupdate -format Literal -radix octal /test/mmu1/pxr_data_in
+add wave -noupdate -format Literal -radix octal /test/mmu1/pxr_data_out
+add wave -noupdate -format Logic /test/mmu1/pxr_wr
+add wave -noupdate -format Logic /test/mmu1/pxr_rd
+add wave -noupdate -format Logic /test/mmu1/pxr_addr
+add wave -noupdate -format Logic /test/mmu1/mmu_on
+add wave -noupdate -format Logic /test/mmu1/maint_mode
+add wave -noupdate -format Logic /test/mmu1/cpu_d_access
+add wave -noupdate -format Logic /test/cpu/soft_reset
+add wave -noupdate -format Literal -radix octal /test/mmu1/mmr0
+add wave -noupdate -format Literal -radix octal /test/mmu1/mmr3
+add wave -noupdate -format Literal -radix octal /test/mmu1/map_address
+add wave -noupdate -format Logic /test/mmu1/pdr_ed
+add wave -noupdate -format Logic /test/mmu1/signal_abort
+add wave -noupdate -format Logic /test/mmu1/signal_trap
+add wave -noupdate -format Literal -radix octal /test/mmu1/cpu_bn
+add wave -noupdate -format Literal -radix octal /test/mmu1/pdr_plf
+add wave -noupdate -format Literal -radix octal /test/bus_addr_p
+add wave -noupdate -format Literal -radix octal /test/bus_addr_v
+add wave -noupdate -format Literal -radix octal /test/bus1/bus_error
+add wave -noupdate -format Literal -radix octal /test/bus1/iopage_bus_error
+add wave -noupdate -format Literal -radix octal /test/bus1/ram_bus_error
+add wave -noupdate -format Literal -radix octal /test/bus1/ram_present
+add wave -noupdate -format Literal -radix octal /test/bus1/bus_addr
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {1488 ns} 0}
 configure wave -namecolwidth 252

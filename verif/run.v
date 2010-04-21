@@ -9,11 +9,11 @@
 
 `define minimal_debug 1
 //`define full_debug	1
-`define debug_bus	1
-`define debug_bus_ram	1
-`define debug_bus_io	1
+//`define debug_bus	1
+//`define debug_bus_ram	1
+//`define debug_bus_io	1
 //`define debug_bus_state	1
-`define debug_io
+//`define debug_io
 
 `define debug_vcd
 //`define debug_log
@@ -32,7 +32,7 @@
 //`define use_ram_sync	1
 //`define use_ram_pli	1
 
-`include "rtl.v"
+`include "../verif/rtl.v"
 
 module test;
 
@@ -73,6 +73,7 @@ module test;
    wire        bus_d_access;
 
    wire        mmu_fetch_va;
+   wire        mmu_trap_odd;
    wire        mmu_abort;
    wire        mmu_trap;
 
@@ -101,6 +102,7 @@ module test;
 	     .bus_cpu_cm(bus_cpu_cm),
 
 	     .mmu_fetch_va(mmu_fetch_va),
+	     .mmu_trap_odd(mmu_trap_odd),
 	     .mmu_abort(mmu_abort),
 	     .mmu_trap(mmu_trap),
 	     
@@ -132,6 +134,7 @@ module test;
 	    .cpu_trap(trapped),
 	    .cpu_pa(bus_addr_p),
 	    .fetch_va(mmu_fetch_va),
+	    .trap_odd(mmu_trap_odd),
 	    .signal_abort(mmu_abort),
 	    .signal_trap(mmu_trap),
 	    .pxr_wr(pxr_wr),
@@ -251,7 +254,8 @@ module test;
 	$timeformat(-9, 0, "ns", 7);
 `endif
 
-	starting_pc = 16'o173000;
+//	starting_pc = 16'o173000;
+	starting_pc = 16'o200;
 
 `ifdef __ICARUS__
  `define no_scan
@@ -260,16 +264,20 @@ module test;
  `define no_scan
 `endif
 
-`ifdef no_scan
-	n = 0;
-`else
- 	n = $scan$plusargs("pc=", arg);
+`ifdef Veritak
+ 	n = $value$plusargs("pc=%o", arg);
+	if (n > 0)
+	  starting_pc = pc;
 `endif
+	
+`ifdef __CVER__
+ 	n = $scan$plusargs("pc=", arg);
 	if (n > 0)
 	  begin
 	     n = $sscanf(arg, "%o", starting_pc);
 	     $display("arg %s pc %o", arg, starting_pc);
 	  end
+`endif
 	
 `ifdef debug_log
 `else
@@ -322,8 +330,8 @@ module test;
 `ifdef minimal_debug
 	if (cpu.istate == 1 && cpu.pc == 16'o137046) tracing = 1;
 	
-	if (cpu.istate == 1 && tracing) //f1
-	  $pli_pdp11dis(cpu.pc, cpu.isn, 0, 0);
+//	if (cpu.istate == 1 && tracing) //f1
+//	  $pli_pdp11dis(cpu.pc, cpu.isn, 0, 0);
 `endif
 `ifdef debug
 	cycle = cycle + 1;
