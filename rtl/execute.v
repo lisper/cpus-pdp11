@@ -307,7 +307,7 @@ module execute(clk, reset, enable,
 
 		    6:					    /* rtt */
 		      begin
-			 $display("e: RTT");
+			 //if (0) $display("e: RTT");
 			 assert_trace_inhibit = 1;
 		      end
 
@@ -856,7 +856,6 @@ module execute(clk, reset, enable,
 		   7:					    /* sob */
 		     begin
 			e1_result = ss_data - 16'd1;
-//			new_pc = pc - isn[5:0] - isn[5:0];
 			new_pc = new_pc_sob;
 			latch_pc = ~e1_result_zero;
 		     end
@@ -868,14 +867,14 @@ module execute(clk, reset, enable,
 		 case (isn[11:6])
 		   6'o00, 6'o01:				/* bpl */
 		     begin
-			$display("e: BPL"); 
+			//if (0) $display("e: BPL"); 
 			new_pc = new_pc_w;
 			latch_pc = ~cc_n;
 		     end
 
 		   6'o02, 6'o03:				/* bpl */
 		     begin
-			if (0) $display("e: BPLB");
+			//if (0) $display("e: BPLB");
 			new_pc = new_pc_b;
 			latch_pc = ~cc_n;
 		     end
@@ -1036,7 +1035,7 @@ module execute(clk, reset, enable,
 				     };
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
-			new_cc_v = cc_c && (e1_result[7:0] == 8'o0200);
+			new_cc_v = cc_c && (e1_result[7:0] == 8'o200);
 			new_cc_c = cc_c & new_cc_z;
 			latch_cc = 1;
 			//note: byte write of src - rmw to memory word
@@ -1050,8 +1049,8 @@ module execute(clk, reset, enable,
 				     };
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
-			new_cc_v = cc_c && (e1_result[7:0] == 8'o0177);
-			new_cc_c = cc_c && (e1_result[7:0] == 8'o0377);
+			new_cc_v = cc_c && (e1_result[7:0] == 8'o177);
+			new_cc_c = cc_c && (e1_result[7:0] == 8'o377);
 			latch_cc = 1;
 			//note: byte write of src - rmw to memory word
 		     end

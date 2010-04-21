@@ -66,9 +66,11 @@ module ram_32kx16(clk, reset, addr, DI, DO, CE_N, WE_N, byte_op);
  `define no_scan
 `endif
 
-`ifdef no_scan
-	n = 0;
-`else
+`ifdef Veritak
+ 	n = $value$plusargs("test=", testfilename);
+`endif
+
+`ifdef __CVER__
  	n = $scan$plusargs("test=", testfilename);
 `endif
 	if (n > 0)

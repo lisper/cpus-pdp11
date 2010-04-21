@@ -23,7 +23,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	     bus_rd, bus_wr, bus_byte_op,
 	     bus_arbitrate, bus_ack, bus_error,
 	     bus_i_access, bus_d_access, bus_cpu_cm,
-	     mmu_fetch_va, mmu_abort, mmu_trap,
+	     mmu_fetch_va, mmu_trap_odd, mmu_abort, mmu_trap,
 	     bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl, 
 	     pc, psw, psw_io_wr);
 
@@ -55,6 +55,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    output [1:0]  bus_cpu_cm;
 
    output 	 mmu_fetch_va;
+   output 	 mmu_trap_odd;
    input 	 mmu_abort;
    input 	 mmu_trap;
    
@@ -222,6 +223,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    wire [15:0] 	e32_result;
    wire 	e1_advance;
    
+   wire 	ok_to_assert_trap;
+   wire 	ok_to_reset_trap;
+   wire 	ok_to_reset_trace_inhibit;
+   
    // cpu modes
    parameter 	mode_kernel = 2'b00;
    parameter 	mode_super  = 2'b01;
@@ -337,28 +342,29 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    //  e1  e1_result
    //
 
-   parameter 	h1 = 5'b00000;
-   parameter 	f1 = 5'b00001;
-   parameter 	c1 = 5'b00010;
-   parameter 	s1 = 5'b00011;
-   parameter 	s2 = 5'b00100;
-   parameter 	s3 = 5'b00101;
-   parameter 	s4 = 5'b00110;
-   parameter 	d1 = 5'b00111;
-   parameter 	d2 = 5'b01000;
-   parameter 	d3 = 5'b01001;
-   parameter 	d4 = 5'b01010;
-   parameter 	e1 = 5'b01011;
-   parameter 	w1 = 5'b01100;
-   parameter 	o1 = 5'b01101;
-   parameter 	o2 = 5'b01110;
-   parameter 	o3 = 5'b01111;
-   parameter 	p1 = 5'b10001;
-   parameter 	t1 = 5'b10010;
-   parameter 	t2 = 5'b10011;
-   parameter 	t3 = 5'b10100;
-   parameter 	t4 = 5'b10101;
-   parameter 	i1 = 5'b10110;
+   parameter
+       h1 = 5'b00000,
+       f1 = 5'b00001,
+       c1 = 5'b00010,
+       s1 = 5'b00011,
+       s2 = 5'b00100,
+       s3 = 5'b00101,
+       s4 = 5'b00110,
+       d1 = 5'b00111,
+       d2 = 5'b01000,
+       d3 = 5'b01001,
+       d4 = 5'b01010,
+       e1 = 5'b01011,
+       w1 = 5'b01100,
+       o1 = 5'b01101,
+       o2 = 5'b01110,
+       o3 = 5'b01111,
+       p1 = 5'b10001,
+       t1 = 5'b10010,
+       t2 = 5'b10011,
+       t3 = 5'b10100,
+       t4 = 5'b10101,
+       i1 = 5'b10110;
 
    wire [4:0] 	new_istate;
    reg [4:0] 	istate;
@@ -918,12 +924,17 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    assign bus_i_access = istate == f1 ||
 			 (istate == s1 && (ss_mode == 6 || ss_mode == 7)) ||
 			 (istate == d1 && (dd_mode == 6 || dd_mode == 7));
-   
-   assign bus_d_access = istate == d1 && (dd_mode != 6 && dd_mode != 7);
+
+//xxx needs to include w1 also...
+//   assign bus_d_access = istate == d1 && (dd_mode != 6 && dd_mode != 7);
+    assign bus_d_access = (istate == d1 && (dd_mode != 6 && dd_mode != 7)) ||
+			  (istate == w1);
    
    assign bus_cpu_cm = current_mode;
 
    assign mmu_fetch_va = istate == f1;
+
+   assign mmu_trap_odd = assert_trap_odd;
    
    //
    // clock data
@@ -1199,10 +1210,6 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    //
    // check_for_traps
    //
-   wire ok_to_assert_trap;
-   wire ok_to_reset_trap;
-   wire ok_to_reset_trace_inhibit;
-   
    assign ok_to_assert_trap =
 			     istate == f1 || istate == c1 || istate == e1 ||
 			     istate == s4 || istate == d4 || istate == w1 ||
@@ -1563,6 +1570,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	  if (istate == c1 || istate == s4)
 	       ss_data <= ss_data_mux;
 
+//debug
+if (istate == s4) $display("s4: ss_data_mux %o; %t", ss_data_mux, $time);
+	  
 	  // clock data at c1 for register and d4 for M[] 
 	  if (istate == c1 || istate == d4)
 	       dd_data <= dd_data_mux;
@@ -1585,10 +1595,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	  f1:
 	    if (~trap)
 	    begin
-	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o)",
+	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o) %b%b%b",
 			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
-			r0, r1, r2, r3, r4, r5, sp, pc);
-	       $display("    trap=%d, interrupt=%d, trace_inhibit=%d",
+			r0, r1, r2, r3, r4, r5, sp, pc,
 			trap, interrupt, trace_inhibit);
 	    end // case: f1
 	endcase

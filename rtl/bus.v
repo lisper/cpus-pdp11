@@ -2,6 +2,24 @@
 // simple pdp11 bus interface
 // copyright Brad Parker <brad@heeltoe.com> 2009
 
+//
+// 22-bit
+//   1   7   7 4-7   X   X   X   X		17760000-17777777
+//   2 211 111 111 11
+//   1 098 765 432 109 876 543 210
+//   1 111 111 1xx xxx xxx xxx xxx io-page
+// 18-bit
+//           7   7 6-7   X   X   X		  776000-  777777
+//   x xxx 111 111 11
+//   x xxx 765 432 109 876 543 210
+//   x xxx 111 1xx xxx xxx xxx xxx io-page
+// 16-bit
+//           1 6-7   X   X   X   X		  160000-  177777
+//   x xxx xx1 111 11
+//   x xxx xx5 432 109 876 543 210
+//   x xxx xx1 11x xxx xxx xxx xxx io-page
+//
+
 module bus(clk, brgclk, reset, bus_addr, bus_data_in, bus_data_out,
 	   bus_rd, bus_wr, bus_byte_op,
 	   bus_arbitrate, bus_ack, bus_error,
@@ -72,14 +90,14 @@ output [4:0] rk_state;
    reg [2:0] 	grant_state;
    /*reg [3:0] 	grant_count;*/
    wire [2:0] 	grant_state_next;
- 	  
-   //
+
 `ifdef xxx
-   assign 	ram_access = bus_addr[21:16] == 6'b0 &&
-			     bus_addr[15:13] != 3'b111;
+   // 18 bit physical addressing
+   assign 	iopage_access = bus_addr[17:14] == 4'o17;
    
-   assign 	iopage_access = bus_addr[15:13] == 3'b111;
+   assign 	ram_access = ~iopage_access;
 `else
+   // 22 bit physical addressing
    assign 	iopage_access = (bus_addr[21:13] == 9'o776) ||
 				(bus_addr[21:13] == 9'o777);
 
@@ -157,7 +175,8 @@ output [4:0] rk_state;
        end
 `endif
 
-`ifdef debug
+`define debug_buserr
+`ifdef debug_buserr
    always @(posedge clk)
      if (iopage_access)
        begin

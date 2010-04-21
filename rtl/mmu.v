@@ -4,7 +4,7 @@
 
 module mmu(clk, reset, soft_reset,
 	   cpu_va, cpu_cm, cpu_rd, cpu_wr, cpu_i_access, cpu_d_access,
-	   cpu_trap, cpu_pa, fetch_va, signal_abort, signal_trap,
+	   cpu_trap, cpu_pa, fetch_va, trap_odd, signal_abort, signal_trap,
 	   pxr_wr, pxr_rd, pxr_be, pxr_addr, pxr_data_in, pxr_data_out);
 
    input clk;
@@ -20,6 +20,7 @@ module mmu(clk, reset, soft_reset,
    input 	cpu_trap;
 
    input 	fetch_va;
+   input 	trap_odd;
    output 	signal_abort;
    reg 		signal_abort;
    output 	signal_trap;
@@ -65,9 +66,12 @@ module mmu(clk, reset, soft_reset,
    wire        traps_enabled;	// mmr0[9]
 
    wire        va_is_iopage;
+   wire        pa_is_iopage;
    wire        map_address;
    wire        enable_d_space;
-   
+
+   wire [21:0] map_adder_22;
+   wire [21:0] map_adder;
    wire [21:0] cpu_pa_mapped;
 
    wire [5:0]  pxr_index;
@@ -78,7 +82,7 @@ module mmu(clk, reset, soft_reset,
    reg        update_pdr;
    
    wire       pg_len_err;
-
+   wire       map22;
    
    // break down va into components
    assign cpu_apf = cpu_va[15:13];
@@ -95,6 +99,8 @@ module mmu(clk, reset, soft_reset,
    parameter PDR_W_MASK_HI = 8'o177;
    parameter PDR_W_MASK_LO = 8'o016;
    parameter PAR_MASK = 16'o007777; /* 12 bits */
+
+   assign map22 = 1'b0;
    
    // p*r address = {mm,i,apf}
    assign      pdr_value = {pdr_h[pxr_index], pdr_l[pxr_index]} & PDR_MASK;
@@ -122,16 +128,27 @@ module mmu(clk, reset, soft_reset,
 			   cpu_cm == 2'b11 ? mmr3[0] :
 			   1'b0;
 
-   // disable mapping if maint-mode and not destination
-   assign map_address = mmu_on & (!maint_mode || (maint_mode & cpu_d_access));
-   
-   // form 22 bit physical address
-   assign cpu_pa_mapped = map_address ?
-			  ({cpu_paf, 6'b0} + {9'b0, cpu_df}) :
-			  {6'b0, cpu_va};
+   // enable mapping if mmu on or using maint-mode w/destination access
+   assign map_address = mmu_on || (maint_mode & cpu_d_access);
 
-   // map io page accesses to end of address space
-   assign cpu_pa = va_is_iopage ? {6'o77, cpu_va} : cpu_pa_mapped;
+   // form 22 bit physical address
+   assign map_adder_22 = {cpu_paf, 6'b0} + {9'b0, cpu_df};
+
+   // compensate if doing 18 bit mapping
+   assign map_adder = map22 ? map_adder_22 : {4'b0000, map_adder_22[17:0]};
+   
+   // pick va or mapped address
+   assign cpu_pa_mapped = map_address ? map_adder : {6'b0, cpu_va};
+
+//   // map io page accesses to end of address space
+//   assign cpu_pa = va_is_iopage ? {6'o77, cpu_va} : cpu_pa_mapped;
+
+   // map 18 bit iopage to 22 bit iopage if only doing 18 bit mapping
+   // (iopage.v expects full 22 bit mapping - see bus.v)
+   assign pa_is_iopage = ~map22 & cpu_pa_mapped[17:14] == 4'b1111;
+
+   assign cpu_pa = va_is_iopage ? {6'o77, cpu_va} :
+		   pa_is_iopage ? {6'o77, cpu_pa_mapped[15:0]} : cpu_pa_mapped;
    
    assign 	pdr_plf = pdr_value[14:8];
 
@@ -197,7 +214,7 @@ module mmu(clk, reset, soft_reset,
 		 update_mmr0_nonres = 1;
 		 if (pg_len_err) update_mmr0_ple = 1;
 		 signal_abort = 1;
-$display("zzz: signal abort");
+$display("zzz: signal abort, wr non-res");
 	      end
 
 	    3'd1, 3'd2:		// read-only
@@ -206,6 +223,7 @@ $display("zzz: signal abort");
 		 update_mmr0_ro = 1;
 		 if (pg_len_err) update_mmr0_ple = 1;
 		 signal_abort = 1;
+$display("zzz: signal abort, wr r-o");
 	      end
 
 	    3'd4, 3'd5:		// unused, read/write
@@ -217,6 +235,7 @@ $display("zzz: signal abort");
 		      update_mmr0_page = 1;
 		      update_mmr0_trap_flag = 1;
 		      signal_trap = 1;
+$display("zzz: signal trap, wr unused");
 		   end
 	      end
 	    
@@ -224,11 +243,13 @@ $display("zzz: signal abort");
 	      begin
 $display("zzz: acf=6, set w; index %o, trap %b, cm %b", pxr_index, cpu_trap, cpu_cm);
 		 update_pdr = 1;
-		 pdr_update_w = 1;	// set w bit
+		 if (~trap_odd)
+		   pdr_update_w = 1;	// set w bit
 		 if (pg_len_err)
 		   begin
 		      update_mmr0_ple = 1;
 		      signal_trap = 1;
+$display("zzz: signal trap, wr len");
 		   end
 	      end
 	  endcase
@@ -237,13 +258,15 @@ $display("zzz: acf=6, set w; index %o, trap %b, cm %b", pxr_index, cpu_trap, cpu
 	    case (pdr_acf)
 	      3'd0, 3'd3, 3'd7:	// non-res, unused, unused
 		begin
-		   pdr_update_w = 1;	// set w bit
+		   if (~trap_odd)
+		     pdr_update_w = 1;	// set w bit
 		   update_mmr0_nonres = 1;
 		   signal_abort = 1;
 		   if (pg_len_err)
 		     begin
 			update_mmr0_ple = 1;
 			signal_trap = 1;
+$display("zzz: signal trap, rd non-res");
 		     end
 		end
 
@@ -256,6 +279,7 @@ $display("zzz: acf=6, set w; index %o, trap %b, cm %b", pxr_index, cpu_trap, cpu
 			update_mmr0_page = 1;
 			update_mmr0_trap_flag = 1;
 			signal_trap = 1;
+$display("zzz: signal trap, rd r-o");
 		     end
 		end
 
@@ -265,6 +289,7 @@ $display("zzz: acf=6, set w; index %o, trap %b, cm %b", pxr_index, cpu_trap, cpu
 		     begin
 			update_mmr0_ple = 1;
 			signal_trap = 1;
+$display("zzz: signal trap, rd len");
 		     end
 		end
 	    endcase
@@ -287,7 +312,7 @@ $display("zzz: acf=6, set w; index %o, trap %b, cm %b", pxr_index, cpu_trap, cpu
    //
    
    // read pxr table/reg
-   always @(pxr_rd or pxr_addr or mmr0 or mmr1 or mmr2 or mmr3)
+   always @(pxr_rd or pxr_addr or pxr_addr_5_0 or mmr0 or mmr1 or mmr2 or mmr3)
      begin
 	pxr_data_out = 16'b0;
 	if (pxr_rd)
@@ -307,18 +332,20 @@ $display("zzz: acf=6, set w; index %o, trap %b, cm %b", pxr_index, cpu_trap, cpu
 	      begin
 		 pxr_data_out = {par_h[pxr_addr_5_0], par_l[pxr_addr_5_0]} & PAR_MASK;
 `ifdef debug_mmu
-		 $display("mmu: read par[%o] -> %o",
+		 $display("mmu: read par[%o] -> %o; %t",
 			  pxr_addr_5_0,
-			  {par_h[pxr_addr_5_0], par_l[pxr_addr_5_0]} & PAR_MASK);
+			  {par_h[pxr_addr_5_0], par_l[pxr_addr_5_0]} & PAR_MASK,
+			  $time);
 `endif
 	      end
 	    8'b00xxxxxx:
 	      begin
 		 pxr_data_out = {pdr_h[pxr_addr_5_0], pdr_l[pxr_addr_5_0]} & PDR_MASK;
 `ifdef debug_mmu
-		 $display("mmu: read pdr[%o] -> %o",
+		 $display("mmu: read pdr[%o] -> %o; %t",
 			  pxr_addr_5_0,
-			  {pdr_h[pxr_addr_5_0], pdr_l[pxr_addr_5_0]} & PDR_MASK);
+			  {pdr_h[pxr_addr_5_0], pdr_l[pxr_addr_5_0]} & PDR_MASK,
+			  $time);
 `endif
 	      end
 	    default: pxr_data_out = 16'b0;
@@ -330,9 +357,11 @@ $display("zzz: acf=6, set w; index %o, trap %b, cm %b", pxr_index, cpu_trap, cpu
    assign pdr_update_value = pdr_value | pdr_add_bits;
    
    // write pxr table/reg
-   always @(posedge clk)
+   always @(posedge clk or posedge soft_reset)
      if (reset || soft_reset)
        begin
+	  if (soft_reset)
+	    $display("mmu: soft reset; %t", $time);
 	  mmr0 <= 0;
 	  mmr3 <= 0;
        end
@@ -365,8 +394,10 @@ $display("zzz: acf=6, set w; index %o, trap %b, cm %b", pxr_index, cpu_trap, cpu
 	      if (pxr_be[0])
 		  par_l[pxr_addr_5_0] <= pxr_data_in[7:0];
 `ifdef debug_mmu
-	      $display("mmu: write par[%o,%b] <- %o",
-		       pxr_addr_5_0, pxr_be, pxr_data_in);
+//	      $display("mmu: write par[%o,%b] <- %o",
+//		       pxr_addr_5_0, pxr_be, pxr_data_in);
+	      $display("mmu: write par[%o] <- %o; pxr_be %b; %t",
+		       pxr_addr_5_0, pxr_data_in, pxr_be, $time);
 `endif
 	     end
 
@@ -376,7 +407,9 @@ $display("zzz: acf=6, set w; index %o, trap %b, cm %b", pxr_index, cpu_trap, cpu
 	      if (pxr_be[0])
 		pdr_l[pxr_addr_5_0]  <= pxr_data_in[7:0] & PDR_W_MASK_LO;
 `ifdef debug_mmu
-	      $display("mmu: write pdr[%o,%b] <- %o", pxr_addr, pxr_be, pxr_data_in);
+//	      $display("mmu: write pdr[%o,%b] <- %o", pxr_addr, pxr_be, pxr_data_in);
+      	      $display("mmu: write pdr[%o] <- %o; pxr_addr %o, pxr_be %b; %t",
+		       pxr_addr_5_0, pxr_data_in, pxr_addr, pxr_be, $time);
 `endif
 	     end
 	 endcase
@@ -389,8 +422,8 @@ $display("zzz: acf=6, set w; index %o, trap %b, cm %b", pxr_index, cpu_trap, cpu
 		   pdr_l[pxr_index] <= pdr_update_value[7:0];
 		   
 `ifdef debug_mmu
-		   $display("mmu: update pdr[%o] <- %o",
-			    pxr_index, pdr_update_value);
+		   $display("mmu: update pdr[%o] <- %o; %t",
+			    pxr_index, pdr_update_value, $time);
 `endif
 		end
 
