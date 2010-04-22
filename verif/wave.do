@@ -185,8 +185,8 @@ add wave -noupdate -format Literal -radix octal /test/cpu/e32_result
 add wave -noupdate -format Logic /test/cpu/e1_advance
 add wave -noupdate -format Literal /test/cpu/current_mode
 add wave -noupdate -format Literal /test/cpu/previous_mode
-add wave -noupdate -format Literal -radix decimal /test/cpu/new_istate
-add wave -noupdate -format Literal -radix decimal /test/cpu/istate
+add wave -noupdate -format Literal -radix unsigned /test/cpu/new_istate
+add wave -noupdate -format Literal -radix unsigned /test/cpu/istate
 add wave -noupdate -format Logic /test/cpu/enable_execute
 add wave -noupdate -format Logic /test/cpu/trap_or_int
 add wave -noupdate -format Logic /test/cpu/ok_to_assert_trap
@@ -205,6 +205,7 @@ add wave -noupdate -format Logic /test/mmu1/maint_mode
 add wave -noupdate -format Logic /test/mmu1/cpu_d_access
 add wave -noupdate -format Logic /test/cpu/soft_reset
 add wave -noupdate -format Literal -radix octal /test/mmu1/mmr0
+add wave -noupdate -format Literal -radix octal /test/mmu1/mmr2
 add wave -noupdate -format Literal -radix octal /test/mmu1/mmr3
 add wave -noupdate -format Literal -radix octal /test/mmu1/map_address
 add wave -noupdate -format Logic /test/mmu1/pdr_ed
@@ -219,6 +220,7 @@ add wave -noupdate -format Literal -radix octal /test/bus1/iopage_bus_error
 add wave -noupdate -format Literal -radix octal /test/bus1/ram_bus_error
 add wave -noupdate -format Literal -radix octal /test/bus1/ram_present
 add wave -noupdate -format Literal -radix octal /test/bus1/bus_addr
+add wave -noupdate -format Logic /test/cpu/mmu_wr_inhibit
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {1488 ns} 0}
 configure wave -namecolwidth 252

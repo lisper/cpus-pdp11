@@ -76,7 +76,8 @@ module test;
    wire        mmu_trap_odd;
    wire        mmu_abort;
    wire        mmu_trap;
-
+   wire        mmu_wr_inhibit;
+   
    reg 	       tracing;
    
    
@@ -105,6 +106,7 @@ module test;
 	     .mmu_trap_odd(mmu_trap_odd),
 	     .mmu_abort(mmu_abort),
 	     .mmu_trap(mmu_trap),
+	     .mmu_wr_inhibit(mmu_wr_inhibit),
 	     
 	     .bus_int(bus_int),
 	     .bus_int_ipl(bus_int_ipl),
@@ -218,11 +220,14 @@ module test;
    wire [15:0] ram2_io;
    wire        ram2_ce_n, ram2_ub_n, ram2_lb_n;
 
-   ram_async ram1(.addr(ram_addr[17:0]),
+   ram_async ram1(.clk(clk),
+		  .reset(reset),
+		  .addr(ram_addr[17:0]),
 		  .data_in(ram_data_out),
 		  .data_out(ram_data_in),
 		  .rd(ram_rd),
 		  .wr(ram_wr),
+		  .wr_inhibit(mmu_wr_inhibit),
 		  .byte_op(ram_byte_op),
 
 		  .ram_a(ram_a),
