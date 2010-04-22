@@ -65,9 +65,11 @@ module top(rs232_txd, rs232_rxd,
    wire         soft_reset;
 
    wire 	mmu_fetch_va;
+   wire 	mmu_trap_odd;
    wire 	mmu_abort;
    wire 	mmu_trap;
-
+   wire 	mmu_wr_inhibit;
+   
    assign initial_pc = 16'o173000;
 
 `define slower
@@ -165,8 +167,10 @@ wire [4:0] rk_state;
 	     .bus_cpu_cm(bus_cpu_cm),
 
 	     .mmu_fetch_va(mmu_fetch_va),
+	     .mmu_trap_odd(mmu_trap_odd),
 	     .mmu_abort(mmu_abort),
 	     .mmu_trap(mmu_trap),
+	     .mmu_wr_inhibit(mmu_wr_inhibit),
 	     
 	     .bus_int(bus_int),
 	     .bus_int_ipl(bus_int_ipl),
@@ -253,6 +257,7 @@ wire [4:0] rk_state;
 	    .cpu_trap(trapped),
 	    .cpu_pa(bus_addr_p),
 	    .fetch_va(mmu_fetch_va),
+	    .trap_odd(mmu_trap_odd),
 	    .signal_abort(mmu_abort),
 	    .signal_trap(mmu_trap),
 	    .pxr_wr(pxr_wr),
@@ -263,15 +268,15 @@ wire [4:0] rk_state;
 	    .pxr_data_out(pxr_data_out));
 
 
-   // a bit of a hack to make sure ram_wr deasserts
-   wire        ram_wr_short;
-   assign ram_wr_short = ram_wr & ~clk;
+   ram_async ram1(.clk(clk),
+		  .reset(reset),
 
-   ram_async ram1(.addr(ram_addr[17:0]),
+		  .addr(ram_addr[17:0]),
 		  .data_in(ram_data_out),
 		  .data_out(ram_data_in),
 		  .rd(ram_rd),
-		  .wr(ram_wr_short),
+		  .wr(ram_wr),
+		  .wr_inhibit(mmu_wr_inhibit),
 		  .byte_op(ram_byte_op),
 
 		  .ram_a(ram_a),

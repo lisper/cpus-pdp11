@@ -23,7 +23,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	     bus_rd, bus_wr, bus_byte_op,
 	     bus_arbitrate, bus_ack, bus_error,
 	     bus_i_access, bus_d_access, bus_cpu_cm,
-	     mmu_fetch_va, mmu_trap_odd, mmu_abort, mmu_trap,
+	     mmu_fetch_va, mmu_trap_odd, mmu_abort, mmu_trap, mmu_wr_inhibit,
 	     bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl, 
 	     pc, psw, psw_io_wr);
 
@@ -56,6 +56,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 
    output 	 mmu_fetch_va;
    output 	 mmu_trap_odd;
+   output 	 mmu_wr_inhibit;
    input 	 mmu_abort;
    input 	 mmu_trap;
    
@@ -261,6 +262,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    //
    // p1 push sp	mem write
    //
+   //XXX technically this is wrong;
+   //XXX we should save the old psw & pc
+   //XXX read the new psw & pc
+   //XXX and use the new psw to select stack to push old onto
    // t1 push psw	mem write
    // t2 push pc	mem write
    // t3 read pc	mem read
@@ -935,6 +940,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    assign mmu_fetch_va = istate == f1;
 
    assign mmu_trap_odd = assert_trap_odd;
+
+   assign mmu_wr_inhibit = mmu_abort && istate == w1;
    
    //
    // clock data
@@ -1187,7 +1194,6 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 
 	  t3:
 	    begin
-	       // push: sp_mux <= sp - 2
 	       // bus_rd asserted
 	    end
 

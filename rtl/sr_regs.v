@@ -26,6 +26,14 @@ module sr_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	  data_out = 16'b0;
      end
    
+   always @(posedge clk)
+       if (iopage_wr)
+	 case (iopage_addr)
+	    13'o17570:
+	      begin
+		 $display("display: write %o", data_in);
+	      end
+	 endcase
    
 endmodule
 

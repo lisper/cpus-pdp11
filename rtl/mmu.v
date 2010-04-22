@@ -212,18 +212,22 @@ module mmu(clk, reset, soft_reset,
 	      begin
 		 update_pdr = 1;
 		 update_mmr0_nonres = 1;
+//xxx double check page update - when?
+update_mmr0_page = 1;
 		 if (pg_len_err) update_mmr0_ple = 1;
 		 signal_abort = 1;
-$display("zzz: signal abort, wr non-res");
+$display("zzz: acf=%o, signal abort, wr non-res", pdr_acf);
 	      end
 
 	    3'd1, 3'd2:		// read-only
 	      begin
 		 update_pdr = 1;
 		 update_mmr0_ro = 1;
+//xxx double check page update - when?
+update_mmr0_page = 1;
 		 if (pg_len_err) update_mmr0_ple = 1;
 		 signal_abort = 1;
-$display("zzz: signal abort, wr r-o");
+$display("zzz: acf=%o, signal abort, wr r-o", pdr_acf);
 	      end
 
 	    3'd4, 3'd5:		// unused, read/write
@@ -235,7 +239,15 @@ $display("zzz: signal abort, wr r-o");
 		      update_mmr0_page = 1;
 		      update_mmr0_trap_flag = 1;
 		      signal_trap = 1;
-$display("zzz: signal trap, wr unused");
+$display("zzz: acf=%o, signal trap, wr unused", pdr_acf);
+		   end
+		 else
+		   begin
+		      //on 11/34, abort non-res
+		      update_mmr0_nonres = 1;
+		      update_mmr0_page = 1;
+		      signal_abort = 1;
+$display("zzz: acf=%o, signal abort, wr unused", pdr_acf);
 		   end
 	      end
 	    
@@ -247,6 +259,8 @@ $display("zzz: acf=6, set w; index %o, trap %b, cm %b", pxr_index, cpu_trap, cpu
 		   pdr_update_w = 1;	// set w bit
 		 if (pg_len_err)
 		   begin
+//xxx double check page update - when?
+update_mmr0_page = 1;
 		      update_mmr0_ple = 1;
 		      signal_trap = 1;
 $display("zzz: signal trap, wr len");
@@ -258,19 +272,21 @@ $display("zzz: signal trap, wr len");
 	    case (pdr_acf)
 	      3'd0, 3'd3, 3'd7:	// non-res, unused, unused
 		begin
-		   if (~trap_odd)
-		     pdr_update_w = 1;	// set w bit
+//		   if (~trap_odd)
+//		     pdr_update_w = 1;	// set w bit
 		   update_mmr0_nonres = 1;
 		   signal_abort = 1;
 		   if (pg_len_err)
 		     begin
+//xxx double check page update - when?
+update_mmr0_page = 1;
 			update_mmr0_ple = 1;
 			signal_trap = 1;
-$display("zzz: signal trap, rd non-res");
+$display("zzz: acf=%o, signal trap, rd non-res", pdr_acf);
 		     end
 		end
 
-	      3'd1, 3'd4:		// read-only, read/write
+	      3'd1, 3'd4:	// read-only, read/write
 		begin
 		   update_pdr = 1;
 		   pdr_update_a = 1;	// set a bit
@@ -279,7 +295,15 @@ $display("zzz: signal trap, rd non-res");
 			update_mmr0_page = 1;
 			update_mmr0_trap_flag = 1;
 			signal_trap = 1;
-$display("zzz: signal trap, rd r-o");
+$display("zzz: acf=%o, signal trap, rd r-o", pdr_acf);
+		     end
+		   else
+		     begin
+			//on 11/34, abort non-res
+			update_mmr0_page = 1;
+			update_mmr0_nonres = 1;
+			signal_abort = 1;
+$display("zzz: acf=%o, signal abort, rd r-o", pdr_acf);
 		     end
 		end
 
@@ -287,6 +311,8 @@ $display("zzz: signal trap, rd r-o");
 		begin
 		   if (pg_len_err)
 		     begin
+//xxx double check page update - when?
+update_mmr0_page = 1;
 			update_mmr0_ple = 1;
 			signal_trap = 1;
 $display("zzz: signal trap, rd len");
@@ -438,7 +464,9 @@ $display("zzz: signal trap, rd len");
 			    (update_mmr0_ple ? 1'b1 : mmr0[14]),
 			    (update_mmr0_ro ? 1'b1 : mmr0[13]),
 			    (update_mmr0_trap_flag ? 1'b1 : mmr0[12]),
-			    mmr0[11:4],
+			    mmr0[11:7],
+			    (update_mmr0_page ? cpu_cm : mmr0[6:5]),
+			    mmr0[4],
 			    (update_mmr0_page ? cpu_apf : mmr0[3:1]),
 			    mmr0[0]
 			    };
@@ -448,12 +476,16 @@ $display("zzz: signal trap, rd len");
 		end
 	   end // if (mmu_on)
    
-   always @(posedge clk)
+   always @(posedge clk or posedge soft_reset)
      if (reset || soft_reset)
        mmr2 <= 0;
      else
+       // mmr2 should "track" va during fetch_va until fault
        if (fetch_va && ~(mmr0[15] | mmr0[14] | mmr0[13]))
 	 mmr2 <= cpu_va;
+
+//       if (fetch_va &&
+//	   (update_mmr0_nonres || update_mmr0_ple || update_mmr0_ro))
 
    always @(posedge clk)
      if (reset)
