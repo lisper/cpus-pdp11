@@ -15,7 +15,7 @@ DUMP = ../../macro11/dumpobj
 TESTS = ttytest.mac \
 	test0.mac test1.mac test2.mac test3.mac test4.mac test5.mac \
 	test6.mac test7.mac test8.mac test9.mac test10.mac test11.mac \
-	test12.mac test13.mac test14.mac test15.mac test16.mac
+	test12.mac test13.mac test14.mac test15.mac test16.mac test17.mac
 
 MEMS = $(TESTS:%.mac=%.mem)
 LOGS = $(TESTS:%.mac=%.log)

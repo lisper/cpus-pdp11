@@ -2,8 +2,8 @@
 	.ASECT
 
 	.=34
-	rts	r0
-	mfpt
+	.word	200
+	.word 	0007
 
 	.=200
 	mov	#200, r5
