@@ -1,0 +1,16 @@
+C:\brad\pdp11\verif>..\utils\graboutput\graboutput <log
+
+CFKTHB0  11/34 MEMORY MGMT. DIAG.
+
+ERROR DURING "DOUBLE ERROR" (KT & ODD ADDR.)
+EXPECTED:
+PSW     PC      SR0     SR2
+170017  (3$+4)  020147  (3$)
+RECEIVED:
+PSW     PC      SR0     SR2     TESTNO  ERRORPC
+140010  031702  020147  031702  000045  032046
+
+
+END PASS #     1  TOTAL ERRORS SINCE LAST REPORT      1
+
+C:\brad\pdp11\verif>
