@@ -733,7 +733,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 			      ss_reg == 6 && new_ss_reg_pre_decr < 16'o0400) ||
 			     (istate == d1 && dd_pre_dec &&
 			      dd_reg == 6 && new_dd_reg_pre_decr < 16'o0400) ||
-			     (trap && (sp - 16'd2) < 16'o0400);
+//			     (trap && (sp - 16'd2) < 16'o0400);
+		(trap && (sp - 16'd2) < 16'o0400) ||
+		(interrupt && (sp - 16'd2) < 16'o0400);
 
 //----debug----
 `ifdef debug
@@ -741,12 +743,11 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
      begin
 	if (assert_trap_oflo != 1'b0)
 	  begin
-	     $display("asserting oflo: istate %b ss_reg_value %o new_ss_reg_pre_decr %o",
+	     $display("asserting oflo: istate %d ss_reg_value %o new_ss_reg_pre_decr %o",
 		      istate,
 		      ss_reg_value,
 		      new_ss_reg_pre_decr);
-	     $display("asserting oflo: istate %b dd_reg_value %o new_dd_reg_pre_decr %o",
-		      istate,
+	     $display("asserting oflo:           dd_reg_value %o new_dd_reg_pre_decr %o",
 		      dd_reg_value,
 		      new_dd_reg_pre_decr);
 
@@ -1491,9 +1492,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
                interrupt <= 1;
 	       interrupt_ack_ipl <= bus_int_ipl;
                vector <= bus_int_vector;
-`ifdef debug_cpu_int
-               $display("cpu: XXX interrupt asserts; vector %o",
-			bus_int_vector);
+`ifdef debug/*_cpu_int*/
+               $display("cpu: XXX interrupt asserts; vector %o (istate %d)",
+			bus_int_vector, istate);
 `endif
             end
 	  else
@@ -1530,11 +1531,18 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		interrupt_ack_ipl, istate);
 `endif   
 
+//   // if we're accepting an interrupt this cycle (don't wait till next f1)
+//   wire interrupt_acking;
+//   assign interrupt_acking = ok_to_assert_int && bus_int && ipl_below;
+
    //
    // calculate next state
    //
-   assign new_istate = istate == f1 ? ((trap||interrupt||trace||odd_pc) ? t0 :
-        			       c1) :
+   assign new_istate =
+		      istate == f1 ? ((trap||interrupt||trace||odd_pc) ? t0 :
+        			      c1) :
+//      istate == f1 ? ((trap||interrupt||trace||odd_pc|interrupt_acking) ? t0 :
+//      c1) :
 
 		       istate == c1 ? ((is_illegal || is_reserved) ? f1 :
         			       no_operand ? e1 :

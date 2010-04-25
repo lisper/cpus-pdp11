@@ -297,11 +297,12 @@ module execute(clk, reset, enable,
 			 if (current_mode == mode_kernel)
 			   assert_reset = 1;
 
-			 new_cc_n = 0;
-			 new_cc_v = 0;
-			 new_cc_c = 0;
-			 new_cc_z = 0;
-			 latch_cc = 1;
+			 // apparently reset does not change psw
+			 //new_cc_n = 0;
+			 //new_cc_v = 0;
+			 //new_cc_c = 0;
+			 //new_cc_z = 0;
+			 //latch_cc = 1;
 		      end
 
 		    2:					    /* rti */
