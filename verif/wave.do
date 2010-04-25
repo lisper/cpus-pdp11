@@ -56,6 +56,7 @@ add wave -noupdate -format Logic /test/cpu/mmu_fetch_va
 add wave -noupdate -format Logic /test/cpu/mmu_abort
 add wave -noupdate -format Logic /test/cpu/mmu_trap
 add wave -noupdate -format Logic /test/cpu/trap
+add wave -noupdate -format Logic /test/cpu/trap_abort
 add wave -noupdate -format Logic /test/cpu/trap_bpt
 add wave -noupdate -format Logic /test/cpu/trap_iot
 add wave -noupdate -format Logic /test/cpu/trap_emt
