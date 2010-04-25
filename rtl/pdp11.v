@@ -4,7 +4,7 @@
 //
 // Basic pdp-11/34-ish cpu implementation
 // Originally with no mmu or split I & D
-// Added 11/40 style mmu, acting like 11/34
+// Added 11/44 style mmu, acting like 11/34
 //
 // cpu expects a bus interface which contains ram and unibus
 // cpu allows dma to occur when "bus_arbitrate" is asserted
@@ -95,6 +95,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    reg [15:0] 	r6[0:3];
    reg [15:0] 	pc;
 
+   reg [15:0] 	trap_pc;
+   reg [15:0] 	trap_psw;
+
    // wires 
    wire [15:0] 	sp;
    
@@ -176,6 +179,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    wire [2:0] 	new_psw_prio;
    wire 	latch_psw_prio;
 
+   wire [15:0] 	new_psw_rti_kernel;
+   wire [15:0] 	new_psw_rti_user;
+
    // regs
    reg [15:0] 	isn;
    reg [15:0] 	dd_ea;
@@ -240,7 +246,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    //
    // main cpu states
    //
-   // f1 fetch;	   clock isn
+   // f1 fetch;	   	clock isn
    // c1 decode;
    //
    // s1 source1;	clock ss_data
@@ -258,23 +264,37 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    //
    // o1 pop pc	   	mem read
    // o2 pop psw	mem read
+//xxx aborts here; flip to kernel mode, jump to t0
    // o3 pop reg	mem read
+//xxx aborts here; flip to kernel mode, jump to t0
    //
    // p1 push sp	mem write
+//xxx aborts here; flip to kernel mode, jump to t0
    //
-   //XXX technically this is wrong;
-   //XXX we should save the old psw & pc
-   //XXX read the new psw & pc
-   //XXX and use the new psw to select stack to push old onto
-   // t1 push psw	mem write
-   // t2 push pc	mem write
-   // t3 read pc	mem read
-   // t4 read psw	mem read
+   // t0 save old-pc, old-psw
+   // t1 read pc	mem read
+   // t2 read psw	mem read
+//xxx an mmu abort in t3,t4 should flip to kernel mode and restart from t0
+   // t3 push old-psw	mem write
+   // t4 push old-pc	mem write
+//xxx an mmu abort in t3,t4 should flip to kernel mode and restart from t1
+//xxx update old-psw with psw from t1
    //
    // i1 interrupt wait
    //
    // minimum states/instructions = 3
    // maximum states/instructions = 12
+   //
+   //
+   // PSW:
+   //  111111
+   //  5432109876543210
+   //  pm      ipl
+   //    cm       t
+   //              nzvc
+   //
+   //
+   // Addressing Modes:
    //
    // mode,symbol,ea1	ea2		ea3		data		side-eff
    // 
@@ -365,11 +385,12 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
        o2 = 5'b01110,
        o3 = 5'b01111,
        p1 = 5'b10001,
-       t1 = 5'b10010,
-       t2 = 5'b10011,
-       t3 = 5'b10100,
-       t4 = 5'b10101,
-       i1 = 5'b10110;
+       t0 = 5'b10010,
+       t1 = 5'b10011,
+       t2 = 5'b10100,
+       t3 = 5'b10101,
+       t4 = 5'b10110,
+       i1 = 5'b10111;
 
    wire [4:0] 	new_istate;
    reg [4:0] 	istate;
@@ -379,7 +400,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    
    assign      enable_execute = istate == e1 &&
 				~is_illegal && ~is_reserved &&
-				~trap_odd;
+				~trap_odd/*;*/ && ~trap_abort;
   
    //
    // execute unit - produces result from decoded instruction
@@ -432,8 +453,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    // s1 - if mode 6,7 add result of pc+2 fetch to reg
    // s2 - result of fetch
    // t1 - trap vector
-   // t4 - incr ea
-   //
+   // t2 - trap vector + 2
    
    assign ss_ea_mux =
      (istate == c1 || istate == s1) ?
@@ -459,7 +479,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
      istate == s3 ? bus_data_in :
 
      // assert trap vector during t1
-     istate == t1 ? ((odd_pc |
+     istate == t0 ? ((odd_pc |
 		      trap_odd | trap_oflo | trap_bus | trap_res) ? 16'o4 :
 		     trap_ill ? 16'o10 :
 		     trap_priv ? 16'o10 :
@@ -471,9 +491,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
  		     interrupt ? { 8'b0, vector } :
 		     16'd0) :
 
-     istate == t2 ? ss_ea :
-     istate == t3 ? ss_ea + 16'd2 :
-     istate == t4 ? ss_ea + 16'd2 :
+     istate == t1 ? ss_ea + 16'd2 :
 		     16'd0;
 
    //
@@ -535,7 +553,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	  (istate == s1 && (ss_mode == 6 || ss_mode == 7)) ? pc + 16'd2 :
 	  (istate == d1 && (dd_mode == 6 || dd_mode == 7)) ? pc + 16'd2 :
 	  (istate == e1 && latch_pc                      ) ? new_pc :
-	  (istate == o1 || istate == t3                  ) ? bus_data_in :
+	  (istate == o1 || istate == t1                  ) ? bus_data_in :
 	  pc;
 
    //
@@ -545,8 +563,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		  (istate == o1 || istate == o2 || istate == o3) ? sp + 16'd2 :
 		  (istate == e1 && latch_sp) ? e1_result :
 		  (istate == p1 ) ? sp - 16'd2 :
-		  (istate == t1 ) ? sp - 16'd2 :
-		  (istate == t2 ) ? sp - 16'd2 :
+		  (istate == t3 ) ? sp - 16'd2 :
+		  (istate == t4 ) ? sp - 16'd2 :
 		  r6[current_mode];
 
 
@@ -566,15 +584,26 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    // psw_mux
    //
    // after e1, latch new psw cc bits or latch new prio
-   // after o2|t4, latch new psw from memory read
+   // after o2|t2, latch new psw from memory read
    //
    assign new_psw_cc = {new_cc_n, new_cc_z, new_cc_v, new_cc_c};
+
+   // rti can set trace, but not clear it
+   assign new_psw_rti_kernel = { bus_data_in[15:5],
+				 bus_data_in[4] | psw[4],
+				 bus_data_in[3:0] };
+
+   // rti must stay in user mode
+   assign new_psw_rti_user = { 4'b1111, 7'b0 /*bus_data_in[11:5]*/,
+			       bus_data_in[4] | psw[4],
+			       bus_data_in[3:0] };
 
    always @(posedge clk)
      if (reset)
 	  psw <= 16'o0340;
      else
        begin
+`ifdef xxx	  
 	  if (istate == e1)
 	    psw <= { psw[15:8], 
 		     latch_psw_prio ? new_psw_prio : psw[7:5],
@@ -582,9 +611,14 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		     latch_cc ? new_psw_cc : psw[3:0]};
 	  else
             if (istate == o2)
-	      psw <= bus_data_in;
-            if (istate == t4)
-	      // on exception, save old current mode in previous mode
+//	      psw <= bus_data_in;
+	      psw <= current_mode != mode_user ?
+		     new_psw_rti_kernel : new_psw_rti_user;
+
+            if (istate == t2)
+	      // on exception,
+	      //   save old current mode in previous mode
+	      //   latch new mode from memory read
 	      psw <= { bus_data_in[15:14], psw[15:14], bus_data_in[11:0] };
 	    else
 	      if (istate == w1 && psw_io_wr)
@@ -597,12 +631,48 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		     else
 		       psw <= {psw[15:8], bus_data_out[7:5],
 			       psw[4], bus_data_out[3:0]};
-
 //xxx
 	   $display("write psw: bus_data_out %o, bus_byte_op %o, bus_addr %o",
 		    bus_data_out, bus_byte_op, bus_addr);
 //xxx
 		end
+`else
+	  case (istate)
+	    e1:
+	      psw <= { psw[15:8], 
+		       latch_psw_prio ? new_psw_prio : psw[7:5],
+		       psw[4],
+		       latch_cc ? new_psw_cc : psw[3:0]};
+
+	    o2:
+//	      psw <= bus_data_in;
+	      psw <= current_mode != mode_user ?
+		     new_psw_rti_kernel : new_psw_rti_user;
+
+            t2:
+	      // on exception,
+	      //   save old current mode in previous mode
+	      //   latch new mode from memory read
+	      psw <= { bus_data_in[15:14], psw[15:14], bus_data_in[11:0] };
+
+	    w1:
+	      if (psw_io_wr)
+		begin
+		   if (~bus_byte_op)
+		     psw <= {bus_data_out[15:5], psw[4], bus_data_out[3:0]};
+		   else
+		     if (bus_addr[0])
+		       psw <= {bus_data_out[7:0], psw[7:0]};
+		     else
+		       psw <= {psw[15:8], bus_data_out[7:5],
+			       psw[4], bus_data_out[3:0]};
+//xxx
+	   $display("write psw: bus_data_out %o, bus_byte_op %o, bus_addr %o",
+		    bus_data_out, bus_byte_op, bus_addr);
+//xxx
+		end
+	  endcase
+`endif
        end
 
    //
@@ -725,7 +795,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    assign assert_trap_bus = bus_error;
 
    // we should generalize external aborts w/external vector
-   assign assert_trap_abort = mmu_abort;
+   assign assert_trap_abort = mmu_abort || mmu_trap;
 
    assign trace = psw[4] && !trace_inhibit;			// trace bit
    
@@ -887,20 +957,19 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		  (istate == s2 || istate == s3 || istate == s4) ||
 		  (istate == d2 || istate == d3 || istate == d4) ||
 		  (istate == o1 || istate == o2 || istate == o3) ||
-		  (istate == t3 || istate == t4);
+		  (istate == t1 || istate == t2);
 	   
    assign bus_wr =
-	   (istate == w1 && store_result && dd_dest_mem) ||
-	   istate == p1 ||
-	   istate == t1 ||
-	   istate == t2;
+		  (istate == w1 && store_result && dd_dest_mem) ||
+		  istate == p1 ||
+		  (istate == t3 || istate == t4);
 
    assign bus_data_out =
 		  istate == w1 ? e1_data :
 		  istate == p1 ? (is_isn_mfpx ?			// mfpi/mfpd
 				  dd_data : ss_reg_value) :
-		  istate == t1 ? psw :
-   		  istate == t2 ? pc :
+		  istate == t3 ? trap_psw :
+   		  istate == t4 ? trap_pc :
 		  16'b0;
    
    assign bus_addr =
@@ -916,10 +985,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		    istate == o2 ? sp :
 		    istate == o3 ? sp :
 		    istate == p1 ? sp - 16'd2 :
-		    istate == t1 ? sp - 16'd2 :
-		    istate == t2 ? sp - 16'd2 :
-		    istate == t3 ? ss_ea :
-		    istate == t4 ? ss_ea :
+		    istate == t1 ? ss_ea :
+		    istate == t2 ? ss_ea :
+		    istate == t3 ? sp - 16'd2 :
+		    istate == t4 ? sp - 16'd2 :
 		    16'b0;
    
 
@@ -934,8 +1003,22 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 //   assign bus_d_access = istate == d1 && (dd_mode != 6 && dd_mode != 7);
     assign bus_d_access = (istate == d1 && (dd_mode != 6 && dd_mode != 7)) ||
 			  (istate == w1);
+
+   // force mode to kernel during trap vector fetch
+//   assign bus_cpu_cm = (istate == t1 || istate == t2) ? 2'b0 : current_mode;
+
+   wire force_previous_mode;
+   wire force_kernel_mode;
+
+   assign force_kernel_mode = (istate == t1 || istate == t2);
    
-   assign bus_cpu_cm = current_mode;
+   assign force_previous_mode =
+	(is_isn_mfpx && (istate == d2 || istate == d3 || istate == d4)) ||
+	(is_isn_mtpx && (istate == d4 || istate == w1));
+
+   assign bus_cpu_cm = force_kernel_mode ? 2'b0 :
+		       force_previous_mode ? previous_mode :
+		       current_mode;
 
    assign mmu_fetch_va = istate == f1;
 
@@ -961,6 +1044,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	  r6[3] <= 0;
 	  pc <= initial_pc;
 
+	  trap_pc <= 0;
+	  trap_psw <= 0;
+	  
 	  isn <= 0;
        end
      else
@@ -1178,28 +1264,34 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	       // bus_addr <= sp - 2
 	    end
 
+	  t0:
+	    begin
+	       trap_pc <= pc;
+	       trap_psw <= psw;
+	    end
+
 	  t1:
+	    begin
+	       // bus_rd asserted
+	    end
+
+	  t2:
+	    begin
+	       // bus_rd asserted
+	    end
+
+	  t3:
 	    begin
 	       // push: sp_mux <= sp - 2
 	       // bus_wr asserted
 	       // bus_data_out <= psw
 	    end
 
-	  t2:
+	  t4:
 	    begin
 	       // push: sp_mux <= sp - 2
 	       // bus_wr asserted
 	       // bus_data_out <= pc
-	    end
-
-	  t3:
-	    begin
-	       // bus_rd asserted
-	    end
-
-	  t4:
-	    begin
-	       // bus_rd asserted
 	    end
 
 	  i1:
@@ -1471,7 +1563,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    //
    // calculate next state
    //
-   assign new_istate = istate == f1 ? ((trap||interrupt||trace||odd_pc) ? t1 :
+   assign new_istate = istate == f1 ? ((trap||interrupt||trace||odd_pc) ? t0 :
         			       c1) :
 
 		       istate == c1 ? ((is_illegal || is_reserved) ? f1 :
@@ -1518,6 +1610,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 
 		       istate == p1 ? e1 :
 
+		       istate == t0 ? t1 :		       
 		       istate == t1 ? t2 :
 		       istate == t2 ? t3 :
 		       istate == t3 ? t4 :
@@ -1559,8 +1652,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		    istate == d1 ||
 		    istate == d2 ||
 		    istate == d3 ||
-		    istate == t1 ||
-		    istate == t3) ?
+		    istate == t0 ||
+		    istate == t1) ?
 		   ss_ea_mux : ss_ea;
 
 	  dd_ea <= (istate == c1 ||
@@ -1751,24 +1844,29 @@ if (istate == s4) $display("s4: ss_data_mux %o; %t", ss_data_mux, $time);
 	       $display("p1:");
 	    end
 
+	  t0:
+	    begin
+	       $display("t0:");
+	    end
+
 	  t1:
 	    begin
-	       $display("t1: sp %o", sp);
+	       $display("t1: ss_ea %o, ss_ea_mux %o", ss_ea, ss_ea_mux);
 	    end
 
 	  t2:
 	    begin
-	       $display("t2:");
+	       $display("t2: ss_ea %o, ss_ea_mux %o", ss_ea, ss_ea_mux);
 	    end
 
 	  t3:
 	    begin
-	       $display("t3: ss_ea %o, ss_ea_mux %o", ss_ea, ss_ea_mux);
+	       $display("t3: sp %o", sp);
 	    end
 
 	  t4:
 	    begin
-	       $display("t4: ss_ea %o, ss_ea_mux %o", ss_ea, ss_ea_mux);
+	       $display("t4: sp %o", sp);
 	    end
 
 	  i1:

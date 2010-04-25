@@ -636,6 +636,7 @@ module execute(clk, reset, enable,
 		    
 		    6'o66:					    /* mtpi */
 		      begin
+			 $display(" MTPI %o", dd_data);
 			 new_cc_n = dd_data_sign;
 			 new_cc_z = dd_data_zero;
 			 new_cc_v = 0;
@@ -1128,6 +1129,7 @@ module execute(clk, reset, enable,
 
 		   6'o65:				/* mfpd */
 		     begin
+			$display(" MFPD %o", dd_data);
 			new_cc_n = dd_data_sign;
 			new_cc_z = dd_data_zero;
 			new_cc_v = 0;
@@ -1136,6 +1138,7 @@ module execute(clk, reset, enable,
 
 		   6'o66:				/* mtpd */
 		     begin
+			$display(" MTPD %o", dd_data);
 			new_cc_n = dd_data_sign;
 			new_cc_z = dd_data_zero;
 			new_cc_v = 0;
