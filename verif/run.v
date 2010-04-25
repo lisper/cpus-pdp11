@@ -7,6 +7,8 @@
 
 `define sim_time	1
 
+`define debug		1
+
 `define minimal_debug 1
 //`define full_debug	1
 //`define debug_bus	1
@@ -338,7 +340,7 @@ module test;
 //	if (cpu.istate == 1 && tracing) //f1
 //	  $pli_pdp11dis(cpu.pc, cpu.isn, 0, 0);
 `endif
-`ifdef debug
+`ifdef debug_cycles
 	cycle = cycle + 1;
 	#1 begin
 	   if (cpu.istate == 1)
