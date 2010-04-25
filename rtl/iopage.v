@@ -2,6 +2,10 @@
 // iopage decoding and muxing
 // copyright Brad Parker <brad@heeltoe.com> 2009
 
+
+`define use_rk_model
+//`define use_rk_pli
+
 module iopage(clk, brgclk, reset, address, data_in, data_out,
 	      iopage_rd, iopage_wr, iopage_byte_op,
 	      no_decode, interrupt, interrupt_ipl, ack_ipl, vector,
@@ -227,7 +231,9 @@ output [4:0] rk_state;
 
 		    .rk_state(rk_state)
 		    );
-`else
+`endif
+
+`ifdef use_rk_pli
    always @(posedge clk or iopage_addr)
      begin
 	$pli_rk(clk, reset, iopage_addr, data_in, rk_data_out, rk_decode,

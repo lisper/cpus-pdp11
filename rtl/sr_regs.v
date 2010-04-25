@@ -31,7 +31,9 @@ module sr_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	 case (iopage_addr)
 	    13'o17570:
 	      begin
+`ifdef debug
 		 $display("display: write %o", data_in);
+`endif
 	      end
 	 endcase
    

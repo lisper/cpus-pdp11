@@ -1,8 +1,6 @@
-//
 // execute.v
-//
-// execute state for pdp-11
-//
+// PDP-11 in verilog - combinatorial logic for execute unit (e1 state)
+// copyright Brad Parker <brad@heeltoe.com> 2009-2010
 
 module execute(clk, reset, enable,
 	       pc, psw,
@@ -259,11 +257,15 @@ module execute(clk, reset, enable,
 	  begin
 	     if (isn[11:6] == 6'o00 && isn[5:0] < 6'o10)
 	       begin
+`ifdef debug
 		  if (0) $display("e: MS");
+`endif
 		  case (isn[2:0])
 		    0:					    /* halt */
 		      begin
+`ifdef debug
 			 $display("e: HALT");
+`endif
 //xxx fix me
 //			 if (current_mode == mode_kernel)
 			   assert_halt = 1;
@@ -273,7 +275,9 @@ module execute(clk, reset, enable,
 		    
 		    1:					    /* wait */
 		      begin
+`ifdef debug
 			 $display("e: WAIT");
+`endif
 			 assert_wait = 1;
 		      end
 
@@ -439,16 +443,20 @@ module execute(clk, reset, enable,
 		      begin
 			 new_pc = new_pc_w;
 			 latch_pc = (cc_n ^ cc_v) ? 1'b0 : 1'b1;
+`ifdef debug
 			 $display("e: bge; latch_pc %o pc %o new_pc %o",
 				  latch_pc, pc, new_pc);
+`endif
 		      end
 
 		    6'o22, 6'o23:				    /* bge */
 		      begin
 			 new_pc = new_pc_b;
 			 latch_pc = (cc_n ^ cc_v) ? 1'b0 : 1'b1;
+`ifdef debug
 			 $display("e: bge; isn %o, latch_pc %o pc %o new_pc %o",
 				  isn, latch_pc, pc, new_pc);
+`endif
 		      end
 
 		    6'o24, 6'o25:				    /* blt */
@@ -490,7 +498,7 @@ module execute(clk, reset, enable,
 		    6'o40, 6'o41, 6'o42, 6'o43,	    /* jsr */
 		      6'o44, 6'o45, 6'o46, 6'o47:
 			begin
-			   if (0) $display(" JSR r%d; dd_data %o, dd_ea %o",
+			   if (0) $display("e: JSR r%d; dd_data %o, dd_ea %o",
 					   ss_reg, dd_data, dd_ea);
 			   e1_result = pc;
 			   new_pc = dd_ea;
@@ -627,7 +635,9 @@ module execute(clk, reset, enable,
 		    
 		    6'o65:					    /* mfpi */
 		      begin
-			 $display(" MFPI %o", dd_data);
+`ifdef debug
+			 $display("e: MFPI %o", dd_data);
+`endif
 			 new_cc_n = dd_data_sign;
 			 new_cc_z = dd_data_zero;
 			 new_cc_v = 0;
@@ -636,7 +646,9 @@ module execute(clk, reset, enable,
 		    
 		    6'o66:					    /* mtpi */
 		      begin
-			 $display(" MTPI %o", dd_data);
+`ifdef debug
+			 $display("e: MTPI %o", dd_data);
+`endif
 			 new_cc_n = dd_data_sign;
 			 new_cc_z = dd_data_zero;
 			 new_cc_v = 0;
@@ -675,13 +687,13 @@ module execute(clk, reset, enable,
 		    new_cc_z = e1_result_zero;
 		    new_cc_v = 0;
 		    latch_cc = 1;
-		    if (0) $display(" mov ss_data %o, e1_result %o",
+		    if (0) $display("e: mov ss_data %o, e1_result %o",
 				    ss_data, e1_result);
 		 end
 
 	       4'o02:					    /* cmp */
 		 begin
-		    //$display(" CMP %o %o", ss_data, dd_data);
+		    //$display("e: CMP %o %o", ss_data, dd_data);
 		    e1_result = ss_data - dd_data;
 		    new_cc_n = e1_result_sign;
 		    new_cc_z = e1_result_zero;
@@ -727,7 +739,7 @@ module execute(clk, reset, enable,
 			       (ss_data[15] ^ e1_result[15]);
 		    new_cc_c = (e1_result < ss_data);
 		    latch_cc = 1;
-		    if (0) $display("e1: add, new_cc_z %o", new_cc_z);
+		    if (0) $display("e: add, new_cc_z %o", new_cc_z);
 		 end
 
 	       04'o7:
@@ -735,7 +747,7 @@ module execute(clk, reset, enable,
 
 		   0:					    /* mul */
 		     begin
-			if (0) $display(" MUL %o %o %o",
+			if (0) $display("e: MUL %o %o %o",
 					ss_data, dd_data, mul_result);
 
 			mul_ready = 1;
@@ -804,7 +816,7 @@ module execute(clk, reset, enable,
 		     begin
 			shift = dd_data[5:0];
 `ifdef debug
-			$display(" ASH %o; done %b", shift, shift32_box.done);
+			$display("e: ASH %o; done %b", shift, shift32_box.done);
 `endif
 			
 			shift_ready = 1;
@@ -864,7 +876,7 @@ module execute(clk, reset, enable,
 
 	       4'o10:
 		 begin
-		    if (0) $display(" e: 010 isn[11:6] %o", isn[11:6]);
+		    if (0) $display("e: 010 isn[11:6] %o", isn[11:6]);
 		 case (isn[11:6])
 		   6'o00, 6'o01:				/* bpl */
 		     begin
@@ -966,13 +978,17 @@ module execute(clk, reset, enable,
 
 		   6'o40, 6'o41, 6'o42, 6'o43:	/* emt */
 		     begin
-			$display(" EMT");
+`ifdef debug
+			$display("e: EMT");
+`endif
 			assert_trap_emt = 1;
 		     end
 
 		   6'o44, 6'o45, 6'o46, 6'o47:	/* trap */
 		     begin
-			$display(" TRAP");
+`ifdef debug
+			$display("e: TRAP");
+`endif
 			assert_trap_trap = 1;
 		     end
 
@@ -1079,7 +1095,9 @@ module execute(clk, reset, enable,
 
 		   6'o61:				/* rolb */
 		     begin
-			$display(" ROLB %o", dd_data);
+`ifdef debug
+			if (0) $display("e: ROLB %o", dd_data);
+`endif
 			e1_result = {dd_data[15:8], dd_data[6:0], cc_c};
 			new_cc_n = e1_result_byte_sign;
 			new_cc_z = e1_result_byte_zero;
@@ -1129,7 +1147,9 @@ module execute(clk, reset, enable,
 
 		   6'o65:				/* mfpd */
 		     begin
-			$display(" MFPD %o", dd_data);
+`ifdef debug
+			$display("e: MFPD %o", dd_data);
+`endif
 			new_cc_n = dd_data_sign;
 			new_cc_z = dd_data_zero;
 			new_cc_v = 0;
@@ -1138,7 +1158,9 @@ module execute(clk, reset, enable,
 
 		   6'o66:				/* mtpd */
 		     begin
-			$display(" MTPD %o", dd_data);
+`ifdef debug
+			$display("e: MTPD %o", dd_data);
+`endif
 			new_cc_n = dd_data_sign;
 			new_cc_z = dd_data_zero;
 			new_cc_v = 0;
@@ -1210,7 +1232,7 @@ module execute(clk, reset, enable,
 
 	       4'o16:					    /* sub */
 		 begin
-		    if (0) $display(" SUB %o %o", ss_data, dd_data);
+		    if (0) $display("e: SUB %o %o", ss_data, dd_data);
 		    e1_result = dd_data - ss_data;
 		    new_cc_n = e1_result_sign;
 		    new_cc_z = e1_result_zero;

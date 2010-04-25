@@ -168,7 +168,7 @@ output [4:0] rk_state;
 	    rkda or rker or rkwc or rkba or
 	    rkcs_err or rkcs_done or rkcs_ie or rkcs_mex or rkcs_cmd)
      begin
-	if (decode)
+	if (decode/* && iopage_rd ?? */)
 	  case (iopage_addr)
 	    13'o17400: reg_out = rkda;
 	    13'o17402: reg_out = rker;
@@ -225,25 +225,33 @@ output [4:0] rk_state;
 		   rkcs_ie <= data_in[6];
 		   rkba[17:16] <= data_in[5:4];
 		   rkcs_cmd <= data_in[3:0];
+`ifdef debug
 		   $display("rk: write rkcs %o", data_in);
+`endif
 		end
 	      
 	      13'o17406:
 		begin
 		   rkwc <= data_in;
+`ifdef debug
 		   $display("rk: write rkwc %o", data_in);
+`endif
 		end
 	      
 	      13'o17410:
 		begin
 		   rkba[15:0] <= data_in;
+`ifdef debug
 		   $display("rk: write rkba %o", data_in);
+`endif
 		end
 	      
 	      13'o17412:
 		begin
 		   rkda <= data_in;
+`ifdef debug
 		   $display("rk: XXX write rkda %o", data_in);
+`endif
 		end
 
 	    endcase
@@ -296,14 +304,18 @@ output [4:0] rk_state;
      else
 	  if (assert_int)
 	    begin
+`ifdef debug
 	       $display("rk: XXX assert interrupt\n");
+`endif
 	       interrupt <= 1;
 	    end
 	  else
 	    if (interrupt_ack)
 	      begin
 		 interrupt <= 0;
+`ifdef debug
 		 $display("rk: XXX ack interrupt\n");
+`endif
 	      end
    
    always @(rk_state or rkcs_cmd or rkcs_ie or 
@@ -574,7 +586,9 @@ output [4:0] rk_state;
 	       if (rkcs_ie)
 		 begin
 		    assert_int = 1;
+`ifdef debug
 		    $display("rk: XXX last2, interrupt");
+`endif
 		 end
 	       
 	       clear_err = 1;
@@ -590,11 +604,15 @@ output [4:0] rk_state;
 	       if (rkcs_ie)
 		 begin
 		    assert_int = 1;
+`ifdef debug
 		    $display("rk: XXX last3, interrupt");
+`endif
 		 end
 	       
 	       rk_state_next = ready;
+`ifdef debug
 	       $display("rk: XXX last3, done (ie %b)", rkcs_ie);
+`endif
 	    end
 		 
 	  default:

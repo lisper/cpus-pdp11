@@ -1,6 +1,6 @@
 //
-// pdp-11 in verilog - cpu
-// copyright Brad Parker <brad@heeltoe.com> 2009
+// PDP-11 in verilog - cpu
+// copyright Brad Parker <brad@heeltoe.com> 2009-2010
 //
 // Basic pdp-11/34-ish cpu implementation
 // Originally with no mmu or split I & D
@@ -395,12 +395,12 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    wire [4:0] 	new_istate;
    reg [4:0] 	istate;
 
-   //
+   // disable execution unit in some cases (odd or mmu abort)
    wire        enable_execute;
-   
+
    assign      enable_execute = istate == e1 &&
 				~is_illegal && ~is_reserved &&
-				~trap_odd/*;*/ && ~trap_abort;
+				~trap_odd && ~trap_abort;
   
    //
    // execute unit - produces result from decoded instruction
@@ -594,7 +594,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 				 bus_data_in[3:0] };
 
    // rti must stay in user mode
-   assign new_psw_rti_user = { 4'b1111, 7'b0 /*bus_data_in[11:5]*/,
+   assign new_psw_rti_user = { 4'b1111, 7'b0,
 			       bus_data_in[4] | psw[4],
 			       bus_data_in[3:0] };
 
@@ -603,40 +603,6 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	  psw <= 16'o0340;
      else
        begin
-`ifdef xxx	  
-	  if (istate == e1)
-	    psw <= { psw[15:8], 
-		     latch_psw_prio ? new_psw_prio : psw[7:5],
-		     psw[4],
-		     latch_cc ? new_psw_cc : psw[3:0]};
-	  else
-            if (istate == o2)
-//	      psw <= bus_data_in;
-	      psw <= current_mode != mode_user ?
-		     new_psw_rti_kernel : new_psw_rti_user;
-
-            if (istate == t2)
-	      // on exception,
-	      //   save old current mode in previous mode
-	      //   latch new mode from memory read
-	      psw <= { bus_data_in[15:14], psw[15:14], bus_data_in[11:0] };
-	    else
-	      if (istate == w1 && psw_io_wr)
-		begin
-		   if (~bus_byte_op)
-		     psw <= {bus_data_out[15:5], psw[4], bus_data_out[3:0]};
-		   else
-		     if (bus_addr[0])
-		       psw <= {bus_data_out[7:0], psw[7:0]};
-		     else
-		       psw <= {psw[15:8], bus_data_out[7:5],
-			       psw[4], bus_data_out[3:0]};
-//xxx
-	   $display("write psw: bus_data_out %o, bus_byte_op %o, bus_addr %o",
-		    bus_data_out, bus_byte_op, bus_addr);
-//xxx
-		end
-`else
 	  case (istate)
 	    e1:
 	      psw <= { psw[15:8], 
@@ -645,7 +611,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		       latch_cc ? new_psw_cc : psw[3:0]};
 
 	    o2:
-//	      psw <= bus_data_in;
+	      // in user mode don't allow rti to pop mode or ipl
 	      psw <= current_mode != mode_user ?
 		     new_psw_rti_kernel : new_psw_rti_user;
 
@@ -666,13 +632,12 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		     else
 		       psw <= {psw[15:8], bus_data_out[7:5],
 			       psw[4], bus_data_out[3:0]};
-//xxx
+`ifdef debug
 	   $display("write psw: bus_data_out %o, bus_byte_op %o, bus_addr %o",
 		    bus_data_out, bus_byte_op, bus_addr);
-//xxx
+`endif
 		end
 	  endcase
-`endif
        end
 
    //
@@ -771,6 +736,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 			     (trap && (sp - 16'd2) < 16'o0400);
 
 //----debug----
+`ifdef debug
    always @(posedge clk)
      begin
 	if (assert_trap_oflo != 1'b0)
@@ -790,6 +756,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	       end
 	  end
      end
+`endif
 //----debug----
 
    assign assert_trap_bus = bus_error;
@@ -999,14 +966,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 			 (istate == s1 && (ss_mode == 6 || ss_mode == 7)) ||
 			 (istate == d1 && (dd_mode == 6 || dd_mode == 7));
 
-//xxx needs to include w1 also...
-//   assign bus_d_access = istate == d1 && (dd_mode != 6 && dd_mode != 7);
-    assign bus_d_access = (istate == d1 && (dd_mode != 6 && dd_mode != 7)) ||
+   assign bus_d_access = (istate == d1 && (dd_mode != 6 && dd_mode != 7)) ||
 			  (istate == w1);
 
    // force mode to kernel during trap vector fetch
-//   assign bus_cpu_cm = (istate == t1 || istate == t2) ? 2'b0 : current_mode;
-
    wire force_previous_mode;
    wire force_kernel_mode;
 
@@ -1016,6 +979,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	(is_isn_mfpx && (istate == d2 || istate == d3 || istate == d4)) ||
 	(is_isn_mtpx && (istate == d4 || istate == w1));
 
+   // cpu mode presented to MMU
    assign bus_cpu_cm = force_kernel_mode ? 2'b0 :
 		       force_previous_mode ? previous_mode :
 		       current_mode;
@@ -1193,7 +1157,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		 else
 		   if (store_ss_reg)
 		     begin
+`ifdef debug
 			if (0) $display(" r%d <- %0o (ss)", ss_reg, e1_data);
+`endif
 			case (ss_reg)
 			  0: r0 <= e1_data;
 			  1: r1 <= e1_data;
@@ -1208,6 +1174,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		   else
 		     if (store_result32)
 		       begin
+`ifdef debug
 			  if (0)
 			    begin
 			       $display(" r%0d <- %0o (e32)",
@@ -1215,6 +1182,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 			       $display(" r%0d <- %0o (e32)",
 					ss_reg|1, e1_data);
 			    end
+`endif
 
 			  //regs[ss_reg    ] <= e32_data;
 			  //regs[ss_reg | 1] <= e1_data;
@@ -1441,6 +1409,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	if (ok_to_reset_trace_inhibit)
 	  trace_inhibit <= 0;
 
+`ifdef debug
         if (trap)
 	  begin
              $display("trap: asserts ");
@@ -1464,6 +1433,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 
              $display("trap: %b", trap);
 	  end // if (trap)
+`endif
      end
 
    //
@@ -1670,7 +1640,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	       ss_data <= ss_data_mux;
 
 //debug
-if (istate == s4) $display("s4: ss_data_mux %o; %t", ss_data_mux, $time);
+`ifdef debug
+	  if (istate == s4)
+	    $display("s4: ss_data_mux %o; %t", ss_data_mux, $time);
+`endif
 	  
 	  // clock data at c1 for register and d4 for M[] 
 	  if (istate == c1 || istate == d4)
@@ -1902,7 +1875,7 @@ if (istate == s4) $display("s4: ss_data_mux %o; %t", ss_data_mux, $time);
 	  
      end
 
-`endif
+`endif //  `ifdef full_debug
 	    
 endmodule
 

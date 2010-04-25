@@ -5,15 +5,6 @@
 
 `define use_rk_model 1
 
-`include "pdp11.v"
-`include "mmu.v"
-`include "bus.v"
-`include "ram_async.v"
-`include "debounce.v"
-`include "sevensegdecode.v"
-`include "display.v"
-`include "display_hex.v"
-
 module top(rs232_txd, rs232_rxd,
 	   button, led, sysclk,
 	   sevenseg, sevenseg_an,

@@ -40,8 +40,10 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	    13'o17546:
 	      begin
 		 data_out = {8'b0, clk_done, clk_int_enable, 6'b0};
+`ifdef debug
 		 $display("clk: read %o",
 			  {8'b0, clk_done, clk_int_enable, 6'b0});
+`endif
 	      end
 	    default: data_out = 16'b0;
 	  endcase
@@ -69,14 +71,18 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	     begin
 		clk_int_enable <= data_in[6];
 		clk_done <= data_in[7];
+`ifdef debug
 		$display("clk: write %o", data_in);
+`endif
 	     end
 	 endcase
        else
 	 if (clk_fired)
 	   begin
 	      clk_done <= 1;
+`ifdef debug
 	      $display("clk: fired");
+`endif
 	   end
    
    always @(posedge clk)

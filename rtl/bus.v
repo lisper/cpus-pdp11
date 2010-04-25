@@ -20,6 +20,8 @@
 //   x xxx xx1 11x xxx xxx xxx xxx io-page
 //
 
+//`define debug_buserr
+
 module bus(clk, brgclk, reset, bus_addr, bus_data_in, bus_data_out,
 	   bus_rd, bus_wr, bus_byte_op,
 	   bus_arbitrate, bus_ack, bus_error,
@@ -175,7 +177,6 @@ output [4:0] rk_state;
        end
 `endif
 
-`define debug_buserr
 `ifdef debug_buserr
    always @(posedge clk)
      if (iopage_access)
