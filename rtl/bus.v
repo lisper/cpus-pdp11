@@ -229,18 +229,36 @@ output [4:0] rk_state;
 
    assign bus_error = iopage_bus_error || ram_bus_error;
 
-`ifdef sim_time
+`ifdef sim_56k
    //
    // for diagnostics, pretend we have 56k of ram
    //
    assign ram_present = bus_addr < 22'o160000;
 `else
-   assign ram_present = 1'b0;
+   // 256k
+//   assign ram_present = bus_addr < 22'o760000;
+   // 128k
+   assign ram_present = bus_addr < 22'o400000;
 `endif
    
-   assign ram_bus_error = (ram_rd || ram_wr) && ~ram_present;
+//   assign ram_bus_error = (ram_rd || ram_wr) && ~ram_present;
+   assign ram_bus_error = ram_access && (bus_rd || bus_wr) && ~ram_present;
+
+`ifdef debug
+   always @(posedge clk)
+     if (bus_error)
+       begin
+	  $display("bus: bus error, io %b, ram %b; bus_addr %o; %t",
+		   iopage_bus_error, ram_bus_error, bus_addr, $time);
+
+	  $display("ram_rd %b, ram_wr %b", ram_rd, ram_wr);
+	  $display("ram_access %b iopage_access %b bus_addr[21:13] %b",
+   	    ram_access, iopage_access, bus_addr[21:13]);
+       end
+   
+`endif
 	
-   iopage iopage1(.clk(clk),
+   iopage iopage(.clk(clk),
 		  .brgclk(brgclk),
 		  .reset(reset),
 		  .address(bus_addr),

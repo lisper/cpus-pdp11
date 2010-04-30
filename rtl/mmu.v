@@ -79,7 +79,9 @@ module mmu(clk, reset, soft_reset,
 
    wire [21:0] map_adder_22;
    wire [21:0] map_adder;
-   wire [21:0] cpu_pa_mapped;
+
+   wire [21:0] mapped_pa_22;
+   wire [21:0] unmapped_pa_22;
 
    wire [5:0]  pxr_index;
    wire [15:0] pdr_add_bits;
@@ -117,13 +119,14 @@ module mmu(clk, reset, soft_reset,
    
    assign cpu_paf = par_value;
 
-   assign va_is_iopage = cpu_va[15:13] == 3'b111;	/* 8k io page */
-   
 `ifdef debug_mmu
    always @(posedge clk)
      if (cpu_va != 0 && mmr0[0])
        $display("ZZZ: va %o, pa %o, cm %o, i %o, pxr_index %o",
 		cpu_va, cpu_pa, cpu_cm, cpu_i_access, pxr_index);
+     else
+       $display("ZZZ: va %o, pa %o (unmapped %o %o)",
+		cpu_va, cpu_pa, mapped_pa_22, unmapped_pa_22);
 `endif
 
    // MMR0_MME bit
@@ -149,16 +152,23 @@ module mmu(clk, reset, soft_reset,
 
    // compensate if doing 18 bit mapping
    assign map_adder = map22 ? map_adder_22 : {4'b0000, map_adder_22[17:0]};
+
+   // decide if va is in iopage
+   assign va_is_iopage = cpu_va[15:13] == 3'b111;	/* 8k io page */
    
-   // pick va or mapped address
-   assign cpu_pa_mapped = map_address ? map_adder : {6'b0, cpu_va};
+   // complete translation of 16 bit va to 22 bit pa, unmapped
+   assign unmapped_pa_22 = va_is_iopage ? {6'o77, cpu_va} : {6'b0, cpu_va};
 
    // map 18 bit iopage to 22 bit iopage if only doing 18 bit mapping
    // (iopage.v expects full 22 bit mapping - see bus.v)
-   assign pa_is_iopage = ~map22 & cpu_pa_mapped[17:14] == 4'b1111;
-
-   assign cpu_pa = va_is_iopage ? {6'o77, cpu_va} :
-		   pa_is_iopage ? {6'o77, cpu_pa_mapped[15:0]} : cpu_pa_mapped;
+   assign pa_is_iopage = ~map22 && (map_adder[17:14] == 4'b1111);
+/* \| (map22 & cpu_pa_mapped[21:18] == 4'b1111) */
+   
+   // complete translation of 16 bit va to 22 bit pa, mapped
+   assign mapped_pa_22 = pa_is_iopage ? {6'o77, map_adder[15:0]} : map_adder;
+			 
+   // pick va or mapped address
+   assign cpu_pa = map_address ? mapped_pa_22 : unmapped_pa_22;
    
    assign 	pdr_plf = pdr_value[14:8];
 
@@ -223,7 +233,7 @@ module mmu(clk, reset, soft_reset,
 	     update_mmr0_nonres = 1;
 	     update_mmr0_page = 1;
 	     signal_abort = 1;
- `ifdef debug
+ `ifdef debug_mmu
 	     $display("zzz: no-super, signal abort, rd non-res");
 	     $display("zzz: cpu_apf=%b, cpu_va=%o", cpu_apf, cpu_va);
  `endif
@@ -240,7 +250,7 @@ module mmu(clk, reset, soft_reset,
 		 if (pg_len_err)
 		   update_mmr0_ple = 1;
 		 signal_abort = 1;
- `ifdef debug
+ `ifdef debug_mmu
 		 $display("zzz: acf=%o, signal abort, wr non-res", pdr_acf);
 `endif
 	      end
@@ -253,7 +263,7 @@ module mmu(clk, reset, soft_reset,
 		 if (pg_len_err)
 		   update_mmr0_ple = 1;
 		 signal_abort = 1;
- `ifdef debug
+ `ifdef debug_mmu
 		 $display("zzz: acf=%o, signal abort, wr r-o", pdr_acf);
  `endif
 	      end
@@ -267,7 +277,7 @@ module mmu(clk, reset, soft_reset,
 		 update_mmr0_nonres = 1;
 		 update_mmr0_page = 1;
 		 signal_trap = 1;
- `ifdef debug
+ `ifdef debug_mmu
 		 $display("zzz: acf=%o, signal trap, wr unused", pdr_acf);
  `endif
 `endif		 
@@ -277,7 +287,7 @@ module mmu(clk, reset, soft_reset,
 		      update_mmr0_page = 1;
 		      update_mmr0_trap_flag = 1;
 		      signal_trap = 1;
- `ifdef debug
+ `ifdef debug_mmu
 		      $display("zzz: acf=%o, signal trap, wr unused", pdr_acf);
  `endif
 		   end
@@ -294,7 +304,7 @@ module mmu(clk, reset, soft_reset,
 		      update_mmr0_page = 1;
 		      update_mmr0_trap_flag = 1;
 		      signal_trap = 1;
- `ifdef debug
+ `ifdef debug_mmu
 		      $display("zzz: acf=%o, signal trap, wr r/w", pdr_acf);
  `endif
 		   end
@@ -303,7 +313,7 @@ module mmu(clk, reset, soft_reset,
 	    
 	    3'd6:		// read/write (ok)
 	      begin
- `ifdef debug
+ `ifdef debug_mmu
 		 $display("zzz: acf=6, set w; index %o, trap %b, cm %b",
 			  pxr_index, cpu_trap, cpu_cm);
  `endif
@@ -315,7 +325,7 @@ module mmu(clk, reset, soft_reset,
 		   begin
 		      update_mmr0_ple = 1;
 		      signal_trap = 1;
- `ifdef debug
+ `ifdef debug_mmu
 		      $display("zzz: signal trap, wr len");
  `endif
 		   end
@@ -335,16 +345,19 @@ module mmu(clk, reset, soft_reset,
 			update_mmr0_ple = 1;
 			signal_abort = 1;
  `ifdef debug
-			$display("zzz: acf=%o, signal abort, rd non-res",
+			$display("zzz: acf=%o, signal abort, rd non-res + ple",
 				 pdr_acf);
  `endif
 		     end
 		   else
 		     begin
 			signal_abort = 1;
- `ifdef debug
-			$display("zzz: acf=%o, signal abort, rd non-res",
-				 pdr_acf);
+ `ifdef debug/*_mmu*/
+			$display("zzz: acf=%o, signal abort, rd non-res (pxr_index=%o, cm %o, d_space %b, apf %o)",
+				 pdr_acf,
+				 pxr_index, cpu_cm, enable_d_space, cpu_apf);
+			$display("ZZZ: va %o, pa %o, cm %o, i %o, pxr_index %o",
+				 cpu_va, cpu_pa, cpu_cm, cpu_i_access, pxr_index);
  `endif
 		     end
 		end
@@ -359,7 +372,7 @@ module mmu(clk, reset, soft_reset,
 			update_mmr0_page = 1;
 			update_mmr0_trap_flag = 1;
 			signal_trap = 1;
- `ifdef debug
+ `ifdef debug_mmu
 			$display("zzz: acf=%o, signal trap, rd r-o", pdr_acf);
  `endif
 		     end
@@ -374,7 +387,7 @@ module mmu(clk, reset, soft_reset,
 		   update_mmr0_page = 1;
 		   update_mmr0_nonres = 1;
 		   signal_trap = 1;
- `ifdef debug
+ `ifdef debug_mmu
 		   $display("zzz: acf=%o, signal trap, rd r-w", pdr_acf);
  `endif
 `endif
@@ -384,7 +397,7 @@ module mmu(clk, reset, soft_reset,
 			update_mmr0_page = 1;
 			update_mmr0_trap_flag = 1;
 			signal_trap = 1;
- `ifdef debug
+ `ifdef debug_mmu
 			$display("zzz: acf=%o, signal trap, rd r-w", pdr_acf);
  `endif
 		     end
@@ -399,8 +412,13 @@ module mmu(clk, reset, soft_reset,
 		     begin
 			update_mmr0_ple = 1;
 			signal_abort = 1;
- `ifdef debug
+ `ifdef debug_mmu
 			$display("zzz: acf=%o, signal abort, rd len", pdr_acf);
+			$display("pdr_ed %b, cpu_bn %o, plr_plf %o; <%b >%b",
+				 pdr_ed, cpu_bn, pdr_plf,
+				 cpu_bn < pdr_plf ? 1 : 0,
+				 cpu_bn > pdr_plf ? 1 : 0);
+
  `endif
 		     end
 		end

@@ -15,7 +15,6 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    input 	interrupt_ack;
    
    output [15:0] data_out;
-   reg [15:0] 	 data_out;
    output 	 decode;
 
    output 	 interrupt;
@@ -24,12 +23,19 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    reg [19:0] 	 counter;
    reg 		 clk_int_enable;
    reg 		 clk_done;
+
+   wire [15:0] 	 reg_in;
+   reg [15:0] 	 reg_out;
  		 
    assign 	 decode = (iopage_addr == 13'o17546);
 
+`ifdef sim_time
+   parameter CLK_DIV = 100000;
+`else
    parameter SYS_CLK = 26'd50000000;
    parameter CLK_RATE = 26'd60;
    parameter CLK_DIV = SYS_CLK / CLK_RATE;
+`endif
 
    // register read
    always @(clk or decode or iopage_addr or iopage_rd or
@@ -39,20 +45,29 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	  case (iopage_addr)
 	    13'o17546:
 	      begin
-		 data_out = {8'b0, clk_done, clk_int_enable, 6'b0};
+		 reg_out = {8'b0, clk_done, clk_int_enable, 6'b0};
 `ifdef debug
 		 $display("clk: read %o",
 			  {8'b0, clk_done, clk_int_enable, 6'b0});
 `endif
 	      end
-	    default: data_out = 16'b0;
+	    default: reg_out = 16'b0;
 	  endcase
         else
-	  data_out = 16'b0;
+	  reg_out = 16'b0;
      end
 
+   // handle byte accesses on read
+   assign data_out = iopage_byte_op ?
+		     {8'b0, iopage_addr[0] ? reg_out[15:8] : reg_out[7:0]} :
+		     reg_out;
+
+   // iopage writes
+   assign reg_in = (iopage_byte_op & iopage_addr[0]) ? {8'b0, data_in[15:8]} :
+		   data_in;
+
    assign interrupt = clk_int_enable && clk_done;
-   assign vector = 8'b0100;
+   assign vector = 8'o100;
 
    wire   clk_fired;
    assign clk_fired = (counter == CLK_DIV) || (counter == CLK_DIV-1);
@@ -69,10 +84,10 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	 case (iopage_addr)
 	   13'o17546:
 	     begin
-		clk_int_enable <= data_in[6];
-		clk_done <= data_in[7];
+		clk_int_enable <= reg_in[6];
+		clk_done <= reg_in[7];
 `ifdef debug
-		$display("clk: write %o", data_in);
+		$display("clk: write %o", reg_in);
 `endif
 	     end
 	 endcase
@@ -84,15 +99,22 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	      $display("clk: fired");
 `endif
 	   end
+else
+//if (interrupt_ack)
+if (clk_done)
+begin
+clk_done <= 0;
+$display("clk: reset");
+end	   
    
    always @(posedge clk)
      if (reset)
        counter <= 0;
      else
-       if (counter != CLK_DIV)
-	 counter <= counter + 20'd1;
-       else
+       if (counter == CLK_DIV)
 	 counter <= 0;
+       else
+	 counter <= counter + 20'd1;
 
 endmodule
 

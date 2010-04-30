@@ -278,7 +278,7 @@ module execute(clk, reset, enable,
 `ifdef debug
 			 $display("e: WAIT");
 `endif
-			 assert_wait = 1;
+//			 assert_wait = 1;
 		      end
 
 		    3:					    /* bpt */
@@ -445,8 +445,8 @@ module execute(clk, reset, enable,
 			 new_pc = new_pc_w;
 			 latch_pc = (cc_n ^ cc_v) ? 1'b0 : 1'b1;
 `ifdef debug
-			 $display("e: bge; latch_pc %o pc %o new_pc %o",
-				  latch_pc, pc, new_pc);
+			 if (0) $display("e: bge; latch_pc %o pc %o new_pc %o",
+					 latch_pc, pc, new_pc);
 `endif
 		      end
 
@@ -455,8 +455,8 @@ module execute(clk, reset, enable,
 			 new_pc = new_pc_b;
 			 latch_pc = (cc_n ^ cc_v) ? 1'b0 : 1'b1;
 `ifdef debug
-			 $display("e: bge; isn %o, latch_pc %o pc %o new_pc %o",
-				  isn, latch_pc, pc, new_pc);
+			 if (0) $display("e: bge; isn %o, latch_pc %o pc %o new_pc %o",
+					 isn, latch_pc, pc, new_pc);
 `endif
 		      end
 

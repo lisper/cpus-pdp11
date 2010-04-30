@@ -1,6 +1,9 @@
 // bootrom.v
 // basic rk11 bootrom, residing at 1730000
 
+`define boot_rk
+//`define boot_tt
+
 module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
 	       iopage_rd, iopage_wr, iopage_byte_op);
    
@@ -28,8 +31,6 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
      if (iopage_rd && decode)
        begin
        case (offset)
-`define boot_rk
-//`define boot_tt
 `ifdef boot_rk
 	 0: fetch = 16'o010000;	/* nop */
 	 2: fetch = 16'o012706;

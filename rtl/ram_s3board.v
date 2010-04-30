@@ -76,10 +76,10 @@ module ram_s3board(ram_a, ram_oe_n, ram_we_n,
 
    initial
      begin
-	for (i = 0; i < 32768/*8192*/; i=i+1)
+	for (i = 0; i < 262144/*32768*//*8192*/; i=i+1)
 	  begin
-             ram1.ram_h[i] = 7'b0;
-	     ram1.ram_l[i] = 7'b0;
+             ram1.ram_h[i] = 8'b0;
+	     ram1.ram_l[i] = 8'b0;
 	  end
 
 	n = 0;
@@ -101,12 +101,14 @@ module ram_s3board(ram_a, ram_oe_n, ram_we_n,
 
 	$display("ram_s3board");
 	
+`ifdef MODELSIM
 	if (n == 0)
 	  begin
 	     testfilename = "default.mem";
 	     $display("using default file");
 	     n = 1;
 	  end
+`endif
 	
 	if (n > 0)
 	  begin
@@ -121,10 +123,10 @@ module ram_s3board(ram_a, ram_oe_n, ram_we_n,
 	       end
 
 	     $fclose(file);
+	     $display("ram_s3board: done reading");
 	  end
      end
 
-`define debug_ram
 `ifdef debug_ram
    always @(ram_a or ram_oe_n or ram1_ce_n or ram_we_n or ram1_io)
      begin
@@ -132,9 +134,9 @@ module ram_s3board(ram_a, ram_oe_n, ram_we_n,
 	  $display("ram_s3board: ce_n %b ub_n %b lb_n %b we_n %b oe_n %b",
 		   ram1_ce_n, ram1_ub_n, ram1_lb_n, ram_we_n, ram_oe_n);
 
-	#1 if (ram_oe_n == 0 && ram_we_n == 1)
+	#2 if (ram_oe_n == 0 && ram_we_n == 1)
 	  $display("ram_s3board: read  [%o] -> %o %t", ram_a*2, ram1_io, $time);
-	#1 if (ram_oe_n == 1 && ram_we_n == 0)
+	#2 if (ram_oe_n == 1 && ram_we_n == 0)
 	  $display("ram_s3board: write [%o] <- %o %t", ram_a*2, ram1_io, $time);
      end
 `endif

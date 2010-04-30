@@ -118,6 +118,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 
    wire 	assert_trace_inhibit;
 
+   wire 	deassert_wait;
+
    // subfields of isn register
    wire [3:0] 	isn_15_12;
    wire [6:0] 	isn_15_9;
@@ -598,6 +600,25 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 			       bus_data_in[4] | psw[4],
 			       bus_data_in[3:0] };
 
+   //
+   wire [15:0] new_psw_wr;
+   wire [15:0] new_psw_wr_kernel;
+   wire [15:0] new_psw_wr_user;
+   
+   assign new_psw_wr = current_mode != mode_user ?
+		       new_psw_wr_kernel : new_psw_wr_user;
+
+   // wr can set trace, but not clear it
+   assign new_psw_wr_kernel = { bus_data_out[15:5],
+				bus_data_in[4] | psw[4],
+				bus_data_out[3:0] };
+
+   // wr must stay in user mode
+   assign new_psw_wr_user = { psw[15:12] | bus_data_out[15:12],
+			      7'b0,
+			      bus_data_out[4] | psw[4],
+			      bus_data_out[3:0] };
+
    always @(posedge clk)
      if (reset)
 	  psw <= 16'o0340;
@@ -625,16 +646,15 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	      if (psw_io_wr)
 		begin
 		   if (~bus_byte_op)
-		     psw <= {bus_data_out[15:5], psw[4], bus_data_out[3:0]};
+		     psw <= new_psw_wr;
 		   else
 		     if (bus_addr[0])
-		       psw <= {bus_data_out[7:0], psw[7:0]};
+		       psw <= {new_psw_wr[7:0], psw[7:0]};
 		     else
-		       psw <= {psw[15:8], bus_data_out[7:5],
-			       psw[4], bus_data_out[3:0]};
+		       psw <= {psw[15:8], new_psw_wr[7:0]};
 `ifdef debug
-	   $display("write psw: bus_data_out %o, bus_byte_op %o, bus_addr %o",
-		    bus_data_out, bus_byte_op, bus_addr);
+	   $display("write psw: bus_data_out %o, new_psw_wr %o, bus_byte_op %o, bus_addr %o",
+		    bus_data_out, new_psw_wr, bus_byte_op, bus_addr);
 `endif
 		end
 	  endcase
@@ -989,7 +1009,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 
    assign mmu_trap_odd = assert_trap_odd;
 
-   assign mmu_wr_inhibit = mmu_abort && istate == w1;
+   assign mmu_wr_inhibit = (trap_abort || mmu_abort) && istate == w1;
    
    //
    // clock data
@@ -1413,33 +1433,66 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 `ifdef debug
         if (trap)
 	  begin
-             $display("trap: asserts ");
-	     $display(" %b %b %b %b %b %b %b %b %b %b %b",
+             $display("trap: asserts %b %b %b %b %b %b %b %b %b %b %b; s%d",
 		      trap_bpt, trap_iot, trap_emt, trap_trap,
 		      trap_res, trap_ill, trap_odd, trap_oflo,
-		      trap_priv, trap_bus, trap_abort);
+		      trap_priv, trap_bus, trap_abort,
+		      istate);
 
-             if (assert_trap_priv) $display("PRIV ");
-             if (assert_trap_odd) $display("ODD ");
-             if (assert_trap_oflo) $display("OFLO");
-             if (assert_trap_ill) $display("ILL ");
-             if (assert_trap_res) $display("RES ");
-             if (assert_bpt) $display("BPT ");
-             if (assert_iot) $display("IOT ");
-             if (assert_trap_emt) $display("EMT ");
-             if (assert_trap_trap) $display("TRAP ");
-             if (assert_trap_bus) $display("BUS ");
-	     if (assert_trap_abort) $display("ABORT ");
-             $display("");
+             if (assert_trap_priv) $display("+PRIV ");
+             if (assert_trap_odd) $display("+ODD ");
+             if (assert_trap_oflo) $display("+OFLO");
+             if (assert_trap_ill) $display("+ILL ");
+             if (assert_trap_res) $display("+RES ");
+             if (assert_bpt) $display("+BPT ");
+             if (assert_iot) $display("+IOT ");
+             if (assert_trap_emt) $display("+EMT ");
+             if (assert_trap_trap) $display("+TRAP ");
+             if (assert_trap_bus) $display("+BUS ");
+	     if (assert_trap_abort) $display("+ABORT ");
 
-             $display("trap: %b", trap);
+             if (trap_priv) $display("PRIV ");
+             if (trap_odd) $display("ODD ");
+             if (trap_oflo) $display("OFLO");
+             if (trap_ill) $display("ILL ");
+             if (trap_res) $display("RES ");
+             if (trap_bpt) $display("BPT ");
+             if (trap_iot) $display("IOT ");
+             if (trap_emt) $display("EMT ");
+             if (trap_trap) $display("TRAP ");
+             if (trap_bus) $display("BUS ");
+	     if (trap_abort) $display("ABORT ");
+
+             $display("trap: set %b", trap);
+
+`ifdef debug
+	     if (trap_odd) $finish;
+`endif
+
 	  end // if (trap)
+
+	if (istate == t0)
+	  begin
+	     $display("t0: trap vector %o", ss_ea_mux);
+	  end
 `endif
      end
 
    //
    // halt & wait entry
    //
+   assign deassert_wait = /*interrupt || bus_int ||*/ istate == i1;
+
+`ifdef debug
+   always @(posedge clk)
+     begin
+	if (istate == w1 && new_istate == i1)
+	  $display("i1: entering");
+	if (istate == i1 && new_istate == f1)
+	  $display("i1: leaving");
+     end
+`endif
+   
    always @(posedge clk)
      if (reset)
        begin
@@ -1447,24 +1500,35 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	  waited <= 0;
        end
      else
-       if (istate == e1)
-	 begin
-	    if (assert_halt)
-	      begin
+       begin
+	  if (istate == e1)
+	    begin
+	       if (assert_halt)
+		 begin
 `ifdef full_debug
-		 $display("assert_halt");
+		    $display("assert_halt");
 `endif
-		 halted <= 1;
-	      end
+		    halted <= 1;
+		 end
 
-	    if (assert_wait)
-	      begin
-`ifdef full_debug
-		 $display("assert_wait");
+	       if (assert_wait)
+		 begin
+`ifdef debug
+		    $display("assert_wait");
 `endif
-		 waited <= 1;
+		    waited <= 1;
+		 end
+	    end // if (istate == e1)
+	  else
+	    if (deassert_wait)
+	      begin
+`ifdef debug
+		 if (waited)
+		   $display("deassert_wait");
+`endif
+		 waited <= 0;
 	      end
-	 end
+       end
 
    //
    // check_for_interrupts
@@ -1535,6 +1599,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 //   wire interrupt_acking;
 //   assign interrupt_acking = ok_to_assert_int && bus_int && ipl_below;
 
+   // abort push state if we've trapped due to bus error
+   wire do_push_state;
+   assign do_push_state = need_push_state && !(assert_trap_bus || trap_bus);
+
    //
    // calculate next state
    //
@@ -1561,16 +1629,16 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 
 		       istate == d1 ? (need_d2 ? d2 : 
         			       need_d4 ? d4 :
-        			       need_push_state ? p1 :
+        			       do_push_state ? p1 :
         			       e1) :
 		       istate == d2 ? (dd_ea_ind ? d3 :
         			       need_d4 ? d4 :
-        			       need_push_state ? p1 :
+        			       do_push_state ? p1 :
         			       e1) :
 		       istate == d3 ? (need_d4 ? d4 :
-        			       need_push_state ? p1 :
+        			       do_push_state ? p1 :
         			       e1) :
-		       istate == d4 ? (need_push_state ? p1 :
+		       istate == d4 ? (do_push_state ? p1 :
         			       e1) :
 
 		       istate == e1 ? (~e1_advance ? e1 :
@@ -1648,10 +1716,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	       ss_data <= ss_data_mux;
 
 //debug
-`ifdef debug
-	  if (istate == s4)
-	    $display("s4: ss_data_mux %o; %t", ss_data_mux, $time);
-`endif
+//`ifdef debug
+//	  if (istate == s4)
+//	    $display("s4: ss_data_mux %o; %t", ss_data_mux, $time);
+//`endif
 	  
 	  // clock data at c1 for register and d4 for M[] 
 	  if (istate == c1 || istate == d4)

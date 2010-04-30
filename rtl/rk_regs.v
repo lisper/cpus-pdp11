@@ -4,6 +4,41 @@
 // simple state machine which talks to IDE drive
 // (the idea came from pop-11, thanks!)
 // copyright Brad Parker <brad@heeltoe.com> 2009
+//
+// special cases:
+// RK05 has blocks of 128 words, or 256 bytes.  Two of these fit
+// inside each IDE 512 byte block.  This needs to be accounted
+// for in the state machine.
+//
+// read-from-even-block:
+//	while wc > 0
+//		read ide block
+//		dma
+
+// read-from-odd-block:
+//	pre-read ide block
+//	dma 256 with offset of 256
+//	if wc > 0
+//		goto read-from-even-block
+//
+// write-to-even-block:
+//	while wc > 0
+//		if wc == 256
+//			pre-reset ide block
+//			dma with proper offset (0 or 256)
+//			write ide block
+//			done
+//		else
+//			dma
+//			write ide block
+//
+// write-to-odd-block:
+//	pre-read ide block
+//	dma 256 with offset of 256
+//	write ide block
+//	if wc > 0
+//		goto write-to-even-block
+//
 
 module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		iopage_rd, iopage_wr, iopage_byte_op,
@@ -58,6 +93,8 @@ output [4:0] rk_state;
    reg inc_ba;
    reg inc_wc;
 
+   reg [15:0] dma_data_hold;
+   
    wire [15:0] 	 reg_in;
    reg [15:0] 	 reg_out;
 
@@ -317,7 +354,16 @@ output [4:0] rk_state;
 		 $display("rk: XXX ack interrupt\n");
 `endif
 	      end
-   
+
+   // grab the dma'd data, later used by ide
+   always @(posedge clk)
+     if (reset)
+       dma_data_hold <= 0;
+     else
+     if (rk_state == write0 && dma_ack)
+       dma_data_hold <= dma_data_in;
+
+   // combinatorial logic based on rk_state
    always @(rk_state or rkcs_cmd or rkcs_ie or 
 	    rkwc or rkda or rkba or lba or
             ata_done or ata_out or
@@ -353,7 +399,7 @@ output [4:0] rk_state;
 	       if (rkcs_cmd[0])
 		 begin
 		    rk_state_next = init0;
-		    //$display("rk: XXX go!");
+$display("rk: XXX go! rkcs_cmd %b", rkcs_cmd);
 		 end
 	    end
 	  
@@ -543,11 +589,10 @@ output [4:0] rk_state;
 	       //after mem-ack, inc wc
 	       dma_req = 1;
 	       dma_addr = rkba;
+	       dma_rd = 1;
 	       
 	       if (dma_ack)
 		 begin
-		    dma_rd = 1;
-		    ata_in = dma_data_in;
 		    inc_wc = 1;
 		    rk_state_next = write1;
 		 end
@@ -555,15 +600,22 @@ output [4:0] rk_state;
 
 	  write1:
 	    begin
-	       // inc18 {mex,ba}, set mex bits
-	       inc_ba = 1;
-	       if (rkwc == 0)
-		 rk_state_next = last0;
-	       else
-	       if (rkwc == 16'hff00)
-		 rk_state_next = init10;
-	       else
-		 rk_state_next = write0;
+	       ata_wr = 1;
+	       ata_addr = ATA_DATA;
+	       ata_in = dma_data_hold;
+
+	       if (ata_done)
+		 begin
+		    // inc18 {mex,ba}, set mex bits
+		    inc_ba = 1;
+		    if (rkwc == 0)
+		      rk_state_next = last0;
+		    else
+		      if (rkwc == 16'hff00)
+			rk_state_next = init10;
+		      else
+			rk_state_next = write0;
+		 end
 	    end
 
 	  last0:

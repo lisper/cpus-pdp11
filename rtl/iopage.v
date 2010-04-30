@@ -104,6 +104,7 @@ output [4:0] rk_state;
 
    assign interrupt = tt_interrupt | clk_interrupt | rk_interrupt;
 
+   // note priority order
    assign interrupt_ipl = { 1'b0,
 			    clk_interrupt, rk_interrupt, tt_interrupt,
 			    4'b0000 };
@@ -112,13 +113,15 @@ output [4:0] rk_state;
    assign rk_interrupt_ack = ack_ipl[5];
    assign tt_interrupt_ack = ack_ipl[4];
 
-   assign vector = tt_interrupt ? tt_vector :
-		     clk_interrupt ? clk_vector :
-		     rk_interrupt ? rk_vector :
-		     8'b0;
+   // note: these need to be in priority order
+   assign vector = 
+		   clk_interrupt ? clk_vector :
+		   rk_interrupt ? rk_vector :
+		   tt_interrupt ? tt_vector :
+		   8'b0;
 
    
-   bootrom bootrom1(.clk(clk),
+   bootrom bootrom(.clk(clk),
 		    .reset(reset),
 		    .iopage_addr(iopage_addr),
 		    .data_in(data_in),
@@ -128,7 +131,7 @@ output [4:0] rk_state;
 		    .iopage_wr(iopage_wr),
 		    .iopage_byte_op(iopage_byte_op));
 
-   mmu_regs mmu_regs1(.clk(clk),
+   mmu_regs mmu_regs(.clk(clk),
 		      .reset(reset),
 		      .iopage_addr(iopage_addr),
 		      .data_in(data_in),
@@ -147,7 +150,7 @@ output [4:0] rk_state;
 		      .pxr_data_out(pxr_data_out),
 		      .pxr_trap(pxr_trap));
 
-   tt_regs tt_regs1(.clk(clk),
+   tt_regs tt_regs(.clk(clk),
 		    .brgclk(brgclk),
 		    .reset(reset),
 		    .iopage_addr(iopage_addr),
@@ -164,7 +167,7 @@ output [4:0] rk_state;
 		    .rs232_tx(rs232_tx),
 		    .rs232_rx(rs232_rx));
 
-   clk_regs clk_regs1(.clk(clk),
+   clk_regs clk_regs(.clk(clk),
 		      .reset(reset),
 		      .iopage_addr(iopage_addr),
 		      .data_in(data_in),
@@ -177,7 +180,7 @@ output [4:0] rk_state;
 		      .interrupt_ack(clk_interrupt_ack),
 		      .vector(clk_vector));
 
-   sr_regs sr_regs1(.clk(clk),
+   sr_regs sr_regs(.clk(clk),
 		    .reset(reset),
 		    .iopage_addr(iopage_addr),
 		    .data_in(data_in),
@@ -188,7 +191,7 @@ output [4:0] rk_state;
 		    .iopage_byte_op(iopage_byte_op),
 		    .switches(switches));
 
-   psw_regs psw_regs1(.clk(clk),
+   psw_regs psw_regs(.clk(clk),
 		      .reset(reset),
 		      .iopage_addr(iopage_addr),
 		      .data_in(data_in),
@@ -203,7 +206,7 @@ output [4:0] rk_state;
 		      .psw_io_wr(psw_io_wr));
 
 `ifdef use_rk_model
-   rk_regs rk_regs1(.clk(clk),
+   rk_regs rk_regs(.clk(clk),
 		    .reset(reset),
 		    .iopage_addr(iopage_addr),
 		    .data_in(data_in),

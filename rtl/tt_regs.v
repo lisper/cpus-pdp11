@@ -20,7 +20,6 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    output 	 decode;
 
    output 	 interrupt;
-   reg 		 interrupt;
    output [7:0]  vector;
 
    output 	 rs232_tx;
@@ -32,7 +31,14 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    wire 	 tti_full;
    wire 	 tti_data_rd;
 
-   wire 	 interrupt_req;
+   wire 	 asserting_tx_int;
+   wire 	 asserting_rx_int;
+   
+   wire 	 assert_tx_int;
+   wire 	 clear_tx_int;
+   
+   wire 	 assert_rx_int;
+   wire 	 clear_rx_int;
 
    assign 	 decode = (iopage_addr == 13'o17560) |
 			  (iopage_addr == 13'o17562) |
@@ -74,8 +80,11 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 		.rx_in(rs232_rx),
 		.rx_empty(rx_empty));
 
-   wire 	 rx_int, tx_int;
-   reg 		 rx_int_enable, tx_int_enable;
+   reg 		 rx_int;
+   reg 		 tx_int;
+
+   reg 		 rx_int_enable;
+   reg 		 tx_int_enable;
 
    wire [15:0] 	 reg_in;
    reg [15:0] 	 reg_out;
@@ -176,13 +185,21 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
 			   (tto_state == 1) ? 0 :
 			   tto_state;
+
+   assign assert_tx_int = tto_state == 1 && tto_state_next == 0;
 `else
    assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
 			   (tto_state == 1 && ld_tx_ack) ? 2 :
 			   (tto_state == 2 && ~ld_tx_ack) ? 3 :
 			   (tto_state == 3 && tx_empty) ? 0 :
 			   tto_state;
+
+   assign assert_tx_int = tto_state == 3 && tto_state_next == 0;
 `endif
+
+   assign clear_tx_int =
+		(interrupt_ack && asserting_tx_int && !asserting_rx_int) ||
+		(tto_state == 0 && tto_state_next == 1);
 
    assign ld_tx_req = tto_state == 1;
    assign tto_empty = tto_state == 0;
@@ -211,8 +228,12 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 			   tti_state;
 
    initial
+`ifdef no_fake_input
+     fake_count = 10;
+`else
      fake_count = 0;
-
+`endif
+   
    always @(posedge clk)
      if (tti_state == 1)
        begin
@@ -249,32 +270,60 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    assign uld_rx_req = tti_state == 1;
    assign tti_full = tti_state == 3;
    
-   always @(posedge clk)
-     if (reset)
-       interrupt <= 0;
-     else
-       if (interrupt_req)
-	 interrupt <= 1'b1;
-       else
-//	 if (interrupt_ack)
-	   interrupt <= 1'b0;
-	       
+   assign assert_rx_int = tti_full;
+
+   assign clear_rx_int = (interrupt_ack && asserting_rx_int) ||
+			 (tti_state == 3 && tti_state_next == 0);
+
 
    // interrupts
-   assign rx_int = rx_int_enable && tti_full;
-   assign tx_int = tx_int_enable && tto_empty;
-
-   assign interrupt_req = rx_int || tx_int;
+   assign interrupt = asserting_rx_int || asserting_tx_int;
    
-   assign vector = rx_int ? 8'o60 :
-		   tx_int ? 8'o64 :
+   assign asserting_rx_int = rx_int_enable && rx_int;
+   assign asserting_tx_int = rx_int_enable && tx_int;
+
+   // assert vector in int priority order
+   assign vector = asserting_rx_int ? 8'o60 :
+		   asserting_tx_int ? 8'o64 :
 		   8'b0;
 
+   always @(posedge clk)
+     if (reset)
+       begin
+	  tx_int <= 0;
+	  rx_int <= 0;
+       end
+     else
+       begin
+	  if (assert_tx_int)
+	    tx_int <= 1;
+	  else
+	    if (clear_tx_int)
+	      tx_int <= 0;
+
+	  if (assert_rx_int)
+	    rx_int <= 1;
+	  else
+	    if (clear_rx_int)
+	      rx_int <= 0;
+       end
+   
 `ifdef debug_tt_int
    always @(posedge clk)
      begin
-	if (tx_int)
-	  $display("tt: XXX tx_int %b", tx_int);
+	if (tx_int == 0 && assert_tx_int)
+	  $display("tt: XXX tx_int+ %b; %t", tx_int, $time);
+	if (tx_int == 1 && clear_tx_int)
+	  $display("tt: XXX tx_int- %b; %t", tx_int, $time);
+	if (rx_int == 0 && assert_rx_int)
+	  $display("tt: XXX rx_int+ %b; %t", rx_int, $time);
+	if (rx_int == 1 && clear_rx_int)
+	  $display("tt: XXX rx_int- %b; %t", rx_int, $time);
+//	if (interrupt)
+//	  $display("tt: interrupt %b %b; %t", 
+//		   asserting_rx_int, asserting_tx_int, $time);
+	if (interrupt_ack)
+	  $display("tt: interrupt_ack; %t", $time);
      end
 `endif
    
