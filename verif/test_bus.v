@@ -54,6 +54,7 @@ module test_bus;
    wire        pxr_wr;
    wire        pxr_rd;
    wire [7:0]  pxr_addr;
+   wire [1:0]  pxr_be;
    wire [15:0] pxr_data_in;
    wire [15:0] pxr_data_out;
    
@@ -70,17 +71,19 @@ module test_bus;
    reg 	       rs232_rx;
 
    wire [4:0]  rk_state;
+
+   reg 	       wr_inhibit;
    
-   bus bus1(.clk(clk),
+   bus bus(.clk(clk),
 	    .brgclk(brgclk),
 	    .reset(reset),
+
 	    .bus_addr(bus_addr),
 	    .bus_data_in(bus_in),
 	    .bus_data_out(bus_out),
 	    .bus_rd(bus_rd),
 	    .bus_wr(bus_wr),
 	    .bus_byte_op(bus_byte_op),
-
 	    .bus_arbitrate(bus_arbitrate),
 	    .bus_ack(bus_ack),
 	    .bus_error(bus_error),
@@ -99,6 +102,7 @@ module test_bus;
 
 	    .pxr_wr(pxr_wr),
 	    .pxr_rd(pxr_rd),
+	    .pxr_be(pxr_be),
 	    .pxr_addr(pxr_addr),
 	    .pxr_data_in(pxr_data_in),
 	    .pxr_data_out(pxr_data_out),
@@ -113,9 +117,9 @@ module test_bus;
 	    .psw(psw),
 	    .psw_io_wr(psw_io_wr),
 	    .switches(switches),
+	    .rk_state(rk_state),
 	    .rs232_tx(rs232_tx),
-	    .rs232_rx(rs232_rx),
-	    .rk_state(rk_state)
+	    .rs232_rx(rs232_rx)
 	    );
 
 `ifdef use_ram_sync
@@ -137,19 +141,19 @@ module test_bus;
    wire [15:0] ram2_io;
    wire        ram2_ce_n, ram2_ub_n, ram2_lb_n;
 
-   // a bit of a hack to make sure ram_wr deasserts
-   wire        ram_wr_short;
-   assign ram_wr_short = ram_wr & ~clk;
-
-   ram_async ram1(.addr(ram_addr[17:0]),
+   ram_async ram1(.clk(clk),
+		  .reset(reset),
+		  .addr(ram_addr[17:0]),
 		  .data_in(ram_data_out),
 		  .data_out(ram_data_in),
 		  .rd(ram_rd),
-		  .wr(ram_wr_short),
+		  .wr(ram_wr),
+		  .wr_inhibit(wr_inhibit),
 		  .byte_op(ram_byte_op),
 
 		  .ram_a(ram_a),
 		  .ram_oe_n(ram_oe_n), .ram_we_n(ram_we_n),
+
 		  .ram1_io(ram1_io), .ram1_ce_n(ram1_ce_n),
 		  .ram1_ub_n(ram1_ub_n), .ram1_lb_n(ram1_lb_n),
 		   
@@ -195,6 +199,23 @@ module test_bus;
 
 	 @(posedge clk);
 	 bus_rd = 0;
+      end
+   endtask
+
+   task write_mem22;
+      input [21:0] addr;
+      input [15:0] data;
+
+      begin
+	 repeat(2)@(posedge clk);
+	 bus_addr = addr;
+	 bus_in = data;
+	 bus_byte_op = 0;
+	 bus_wr = 1;
+
+	 @(posedge clk);
+	 bus_in = 0;
+	 bus_wr = 0;
       end
    endtask
 
@@ -260,29 +281,39 @@ module test_bus;
 
    task test_bus_rk_test;
       begin
-       write_io_reg(13'o17400, 0); // rkda
-       write_io_reg(13'o17402, 0); // rker
        write_io_reg(13'o17406, 16'o177400); // rkwc;
        write_io_reg(13'o17410, 16'o1000); // rkba;
        write_io_reg(13'o17412, 0); // rkda;
        bus_arbitrate = 1;
        write_io_reg(13'o17404, 5); // rkcs
-
        wait_for_rk;
 
-       write_io_reg(13'o17400, 0); // rkda
-       write_io_reg(13'o17402, 0); // rker
        write_io_reg(13'o17406, 16'o177400); // rkwc;
        write_io_reg(13'o17410, 16'o1000); // rkba;
        write_io_reg(13'o17412, 2); // rkda;
        write_io_reg(13'o17404, 5); // rkcs
-
        wait_for_rk;
+
+       write_io_reg(13'o17406, 16'o177400); // rkwc;
+       write_io_reg(13'o17410, 16'o1000); // rkba;
+       write_io_reg(13'o17412, 4); // rkda;
+       write_io_reg(13'o17404, 3); // rkcs
+       wait_for_rk;
+
+       write_io_reg(13'o17406, 16'o177400); // rkwc;
+       write_io_reg(13'o17410, 16'o1000); // rkba;
+       write_io_reg(13'o17412, 4); // rkda;
+       write_io_reg(13'o17404, 5); // rkcs
+       wait_for_rk;
+
       end
    endtask
    
    task test_bus_ram_test;
       begin
+	 // should bus error
+         write_mem22(22'o0776000, 16'h0000);
+
          write_mem(16'h0000, 16'ha5a5);
 	 write_mem(16'h0002, 16'h5a5a);
 	 write_mem(16'h0004, 16'o1234);
@@ -326,6 +357,7 @@ module test_bus;
        bus_rd = 0;
        bus_byte_op = 0;
        bus_arbitrate = 0;
+       wr_inhibit = 0;
 
        switches = 0;
        rs232_rx = 0;
@@ -355,7 +387,7 @@ module test_bus;
    always @(posedge clk)
      #2 begin
 	if (0) $display("grant_state %b",
-			bus1.grant_state);
+			bus.grant_state);
      end
    
 endmodule

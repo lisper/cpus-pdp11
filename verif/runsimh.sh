@@ -1,0 +1,1 @@
+M=2000000 ../simhv36-1/BIN/pdp11 simh.cmd >log4

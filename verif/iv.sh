@@ -3,5 +3,9 @@
 #    -M../pli/pdp11 -mpli_pdp11dis \
 #    ./a.out
 
-vvp -M../pli/iv -mpli_all ./a.out
+#vvp -M../pli/iv -mpli_all ./a.out
+
+iverilog run.v
+vvp -M../pli/ide -mpli_ide ./a.out >log2 &
+
 

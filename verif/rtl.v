@@ -5,6 +5,7 @@
 `include "../rtl/add8.v"
 
 `include "../rtl/mmu.v"
+`include "../rtl/null_mmu.v"
 
 `include "../rtl/execute.v"
 `include "../rtl/mul1616.v"

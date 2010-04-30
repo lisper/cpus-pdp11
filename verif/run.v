@@ -8,6 +8,12 @@
 `define sim_time	1
 
 `define debug		1
+//`define debug_cycles
+
+// for booting rt-11
+//`define no_mmu
+//`define no_fake_input
+//`define sim_56k
 
 `define minimal_debug 1
 //`define full_debug	1
@@ -17,20 +23,21 @@
 //`define debug_bus_state	1
 //`define debug_io
 
-`define debug_vcd
+//`define debug_vcd
 //`define debug_log
-`define debug_mmu
+//`define debug_mmu
 
-//`define debug_ram	1
+`define debug_ram	1
 //`define debug_ram_low	1
 `define debug_tt_out
+`define debug_tt_int
 //`define debug_cpu_int
 
 `define use_rk_model	1
 `define use_ram_async 1
 //`define use_ram_model 1
 
-//`define use_ide_pli
+`define use_ide_pli
 //`define use_ram_sync	1
 //`define use_ram_pli	1
 
@@ -125,8 +132,9 @@ module test;
    wire [7:0]  pxr_addr;
    wire [15:0] pxr_data_in;
    wire [15:0] pxr_data_out;
-   
-   mmu mmu1(.clk(clk),
+
+`ifdef no_mmu
+   null_mmu mmu(.clk(clk),
 	    .reset(reset),
 	    .soft_reset(soft_reset),
 	    .cpu_va(bus_addr_v),
@@ -147,7 +155,29 @@ module test;
 	    .pxr_addr(pxr_addr),
 	    .pxr_data_in(pxr_data_in),
 	    .pxr_data_out(pxr_data_out));
-   
+`else   
+   mmu mmu(.clk(clk),
+	    .reset(reset),
+	    .soft_reset(soft_reset),
+	    .cpu_va(bus_addr_v),
+	    .cpu_cm(bus_cpu_cm),
+	    .cpu_rd(bus_rd),
+	    .cpu_wr(bus_wr),
+	    .cpu_i_access(bus_i_access),
+	    .cpu_d_access(bus_d_access),
+	    .cpu_trap(trapped),
+	    .cpu_pa(bus_addr_p),
+	    .fetch_va(mmu_fetch_va),
+	    .trap_odd(mmu_trap_odd),
+	    .signal_abort(mmu_abort),
+	    .signal_trap(mmu_trap),
+	    .pxr_wr(pxr_wr),
+	    .pxr_rd(pxr_rd),
+	    .pxr_be(pxr_be),
+	    .pxr_addr(pxr_addr),
+	    .pxr_data_in(pxr_data_in),
+	    .pxr_data_out(pxr_data_out));
+`endif   
      
    wire [21:0] ram_addr;
    wire [15:0] ram_data_in, ram_data_out;
@@ -155,7 +185,7 @@ module test;
    wire [4:0]  rk_state;
    wire signal_mmu_trap;
    
-   bus bus1(.clk(clk),
+   bus bus(.clk(clk),
 	    .brgclk(clk),
 	    .reset(reset),
 
@@ -204,7 +234,7 @@ module test;
    wire        ram_wr_short;
    assign      ram_wr_short = ram_wr & ~clk;
 
-   ram_sync ram1(.clk(clk),
+   ram_sync ram(.clk(clk),
 		 .reset(reset),
 		 .addr(ram_addr[15:0]),
 		 .data_in(ram_data_out),
@@ -261,8 +291,8 @@ module test;
 	$timeformat(-9, 0, "ns", 7);
 `endif
 
-//	starting_pc = 16'o173000;
-	starting_pc = 16'o200;
+	starting_pc = 16'o173000;
+//	starting_pc = 16'o200;
 
 `ifdef __ICARUS__
  `define no_scan
@@ -305,12 +335,12 @@ module test;
 	reset = 0;
 	switches = 0;
 	rs232_rx = 0;
+
+	max_cycles = 2500000;
 	
 	#1 reset = 1;
 	repeat(1)@(negedge clk);
 	reset = 0;
-	
-//       #5000000 $finish;
      end
 
 `ifdef use_ide_pli
@@ -328,20 +358,40 @@ module test;
 
    //----
    integer cycle;
+   integer max_cycles;
+   integer last_cycles;
 
    initial
-     cycle = 0;
+     begin
+	cycle = 0;
+	last_cycles = 0;
+     end
 
    always @(posedge cpu.clk)
      begin
+
 `ifdef minimal_debug
-	if (cpu.istate == 1 && cpu.pc == 16'o137046) tracing = 1;
-	
+ `ifdef debug_dis
 //	if (cpu.istate == 1 && tracing) //f1
 //	  $pli_pdp11dis(cpu.pc, cpu.isn, 0, 0);
+ `endif
 `endif
+
+	if (cpu.istate == 1)
+	  begin
+	     cycle = cycle + 1;
+	     if (max_cycles > 0 && cycle >= max_cycles)
+	       $finish;
+
+	     last_cycles = last_cycles + 1;
+	     if (last_cycles >= 10000)
+	       begin
+		  last_cycles = 0;
+		  $display("f0: isn count %d", cycle);
+	       end
+	  end
+	
 `ifdef debug_cycles
-	cycle = cycle + 1;
 	#1 begin
 	   if (cpu.istate == 1)
 	     $display("------------------------------");
@@ -349,9 +399,11 @@ module test;
 		    cycle, cpu.pc, cpu.psw, cpu.istate);
 	end
 
+ `ifdef debug_dis
 	if (cpu.istate == 1) //f1
 	  $pli_pdp11dis(cpu.pc, cpu.isn, 0, 0);
-	
+ `endif
+
 	if (0) $display("[%o %o %o %o %o %o %o %o %b %o %o]",
 			bus_addr_v, bus_addr_p, bus_rd, bus_wr,
 			bus_data_in, bus_data_out, 

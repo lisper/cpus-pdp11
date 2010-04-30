@@ -117,9 +117,10 @@ module test_rk;
 
        dma_ack = 1;
 
-       // read sector
        write_rk_reg(13'o17400, 0); // rkda
        write_rk_reg(13'o17402, 0); // rker
+
+       // read sector 0
        write_rk_reg(13'o17406, 16'hfe00); // rkwc;
        write_rk_reg(13'o17410, 0); // rkba;
        write_rk_reg(13'o17412, 0); // rkda;
@@ -128,12 +129,37 @@ module test_rk;
        wait_for_rk_busy;
        wait_for_rk_idle;
        
-       // read sector
-       write_rk_reg(13'o17400, 0); // rkda
-       write_rk_reg(13'o17402, 0); // rker
+       // read sector 2
        write_rk_reg(13'o17406, 16'hfe00); // rkwc;
        write_rk_reg(13'o17410, 0); // rkba;
        write_rk_reg(13'o17412, 2); // rkda;
+       write_rk_reg(13'o17404, 5); // rkcs
+
+       wait_for_rk_busy;
+       wait_for_rk_idle;
+       
+       // read sector 0
+       write_rk_reg(13'o17406, 16'hfe00); // rkwc;
+       write_rk_reg(13'o17410, 0); // rkba;
+       write_rk_reg(13'o17412, 0); // rkda;
+       write_rk_reg(13'o17404, 5); // rkcs
+
+       wait_for_rk_busy;
+       wait_for_rk_idle;
+       
+       // write sector 4
+       write_rk_reg(13'o17406, 16'hfe00); // rkwc;
+       write_rk_reg(13'o17410, 0); // rkba;
+       write_rk_reg(13'o17412, 4); // rkda;
+       write_rk_reg(13'o17404, 3); // rkcs
+
+       wait_for_rk_busy;
+       wait_for_rk_idle;
+       
+       // read sector 4
+       write_rk_reg(13'o17406, 16'hfe00); // rkwc;
+       write_rk_reg(13'o17410, 0); // rkba;
+       write_rk_reg(13'o17412, 4); // rkda;
        write_rk_reg(13'o17404, 5); // rkcs
 
        wait_for_rk_busy;
@@ -165,10 +191,12 @@ module test_rk;
 	$display("            dma_req %b, dma_ack %b",
 		   rk.rk_state, rk.dma_req, rk.dma_ack);
 	  end
-	
+
+`ifdef show_ata	
 	$display("            ata_state %d ata_rd %d ata_done %o ide_data_bus %o ata_out %o",
 		 rk.ide1.ata_state, rk.ide1.ata_rd, rk.ide1.ata_done,
 		 rk.ide1.ide_data_bus, rk.ide1.ata_out);
+`endif
 
      end
    
