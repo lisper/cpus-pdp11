@@ -154,7 +154,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 		if (reg_in < 16'o40)
 		  $display("tto_data %o", reg_in);
 		else
-		  $display("tto_data %o %c", reg_in, reg_in[7:0]);
+		  $display("tto_data %o %c", reg_in, reg_in[7:0] & 8'h7f);
 `endif
 	     end
 	 endcase

@@ -44,8 +44,9 @@ output [4:0] rk_state;
    reg [15:0] 	 dma_data_out;
    reg 		 dma_rd;
    reg 		 dma_wr;
-   
-   reg [15:0] 	 /*rkds, */rker, rkwc, rkda;
+
+   wire [15:0] 	 rkds;
+   reg [15:0] 	 rker, rkwc, rkda;
    reg [17:0] 	 rkba;
 
    reg 		 rkcs_err;
@@ -59,7 +60,8 @@ output [4:0] rk_state;
    reg 	 clear_cmd;
    reg 	 set_done;
    reg 	 clear_done;
- 	 
+   reg 	 clear_da, clear_ba;
+   
    reg inc_ba;
    reg inc_wc;
 
@@ -171,7 +173,15 @@ output [4:0] rk_state;
    
    // (track*12)+sector = 4*(track+track+track) + sector
    assign lba = {(track + track + track), 2'b0} + { 8'b0, sector };
-		
+
+   //
+   parameter
+     RKDS_RK05  = 16'o004000,
+       RKDS_RDY  = 16'o000200,
+       RKDS_RWS  = 16'o000100;
+       
+   assign rkds = RKDS_RK05 | RKDS_RDY | RKDS_RWS;
+
    // register read
    always @(clk or decode or iopage_addr or iopage_rd or iopage_byte_op or
 	    rkda or rker or rkwc or rkba or
@@ -179,7 +189,7 @@ output [4:0] rk_state;
      begin
 	if (decode/* && iopage_rd ?? */)
 	  case (iopage_addr)
-	    13'o17400: reg_out = rkda;
+	    13'o17400: reg_out = rkds;
 	    13'o17402: reg_out = rker;
 	    13'o17404:
 	      begin
@@ -281,18 +291,23 @@ output [4:0] rk_state;
 		 if (clear_done)
 		   rkcs_done <= 0;
 
+	       if (clear_da)
+		 rkda <= 0;
+	       
 	       if (inc_ba)
 		 begin
 		    rkba <= rkba + 18'd2;
 		    if (0) $display("rk: inc ba %o", rkba);
 		 end
-	       
+	       else
+		 if (clear_ba)
+		   rkba <= 0;
+
 	       if (inc_wc)
 		 begin
 		    rkwc <= rkwc + 16'd1;
 		    if (0) $display("rk: inc wc %o", rkwc);
 		 end
-	       
 	    end
        end
 
@@ -350,6 +365,9 @@ output [4:0] rk_state;
 	clear_cmd = 0;
 	set_done = 0;
 	clear_done = 0;
+
+	clear_ba = 0;
+	clear_da = 0;
 	
 	inc_ba = 0;
 	inc_wc = 0;
@@ -370,7 +388,14 @@ output [4:0] rk_state;
 	    begin
 	       if (rkcs_cmd[0])
 		 begin
-		    rk_state_next = init0;
+		    if (rkcs_cmd[3:1] == 3'b000)
+		      begin
+			 clear_da = 1;
+			 clear_ba = 1;
+			 rk_state_next = done0;
+		      end
+		    else
+		      rk_state_next = init0;
 $display("rk: XXX go! rkcs_cmd %b", rkcs_cmd);
 		 end
 	    end
@@ -658,7 +683,6 @@ $display("rk: XXX go! rkcs_cmd %b", rkcs_cmd);
 	       set_done = 1;
 	       
 	       rk_state_next = done1;
-	       
 	    end
 
 	  done1:

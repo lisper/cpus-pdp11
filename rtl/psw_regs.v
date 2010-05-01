@@ -1,4 +1,6 @@
 // psw_regs.v
+//
+// 177776 psw
 
 module psw_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 		iopage_rd, iopage_wr, iopage_byte_op,
@@ -9,24 +11,16 @@ module psw_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    input [12:0] iopage_addr;
    input [15:0] data_in;
    input 	iopage_rd, iopage_wr, iopage_byte_op;
+   input [15:0]  psw;
+
    output [15:0] data_out;
    reg [15:0] 	 data_out;
    output 	 decode;
-
-   input [15:0]  psw;
    output 	 psw_io_wr;
 
-//   // 17760 - 17777
-//   assign decode = iopage_addr == 13'b1_111_111_11x_xxx;
    //
-//   assign decode = (iopage_addr == 13'o17776 || iopage_addr == 13'o17777) ||
-//		   (iopage_addr == 13'o17774 || iopage_addr == 13'o17775);
    assign decode = (iopage_addr == 13'o17776 || iopage_addr == 13'o17777) ||
-		   (iopage_addr == 13'o17774 || iopage_addr == 13'o17775) ||
-   		   (iopage_addr == 13'o17772 || iopage_addr == 13'o17773) ||
-      		   (iopage_addr == 13'o17770 || iopage_addr == 13'o17771) ||
-		   (iopage_addr == 13'o17760 || iopage_addr == 13'o17762) ||
-		   (iopage_addr == 13'o17766 || iopage_addr == 13'o17767);
+		   (iopage_addr == 13'o17774 || iopage_addr == 13'o17775);
    
    assign psw_io_wr = iopage_wr && decode;
    
