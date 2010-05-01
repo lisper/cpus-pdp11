@@ -22,8 +22,9 @@ module test_rk;
    wire [1:0]  ide_cs;
    wire [2:0]  ide_da;
 
-   wire        dma_rd, dma_wr, dma_req;
-   reg dma_ack;
+   wire        dma_rd, dma_wr;
+   wire        dma_req;
+   reg 	       dma_ack;
    wire [17:0] 	dma_addr;
 
    wire 	interrupt;
@@ -97,6 +98,141 @@ module test_rk;
 	 $display("rk controller idle");
       end
    endtask
+
+   task rk_read_block;
+      input [15:0] blk;
+      input [15:0] wc;
+      input [15:0] ma;
+
+      begin
+	 write_rk_reg(13'o17402, 0); // rker
+	 
+	 write_rk_reg(13'o17406, -wc); // rkwc;
+	 write_rk_reg(13'o17410, ma); // rkba;
+	 write_rk_reg(13'o17412, blk); // rkda;
+	 write_rk_reg(13'o17404, 5); // rkcs
+
+	 wait_for_rk_busy;
+	 wait_for_rk_idle;
+      end
+   endtask
+
+   task rk_write_block;
+      input [15:0] blk;
+      input [15:0] wc;
+      input [15:0] ma;
+
+      begin
+	 write_rk_reg(13'o17402, 0); // rker
+
+	 write_rk_reg(13'o17406, -wc); // rkwc;
+	 write_rk_reg(13'o17410, ma); // rkba;
+	 write_rk_reg(13'o17412, blk); // rkda;
+	 write_rk_reg(13'o17404, 3); // rkcs
+
+	 wait_for_rk_busy;
+	 wait_for_rk_idle;
+      end
+   endtask
+
+   task failure;
+      input [15:0] addr;
+      input [15:0] data;
+      input [15:0] expected;
+      
+      begin
+	 $display("FAILURE addr %o, data %o, expected %o",
+		  addr, data, expected);
+      end
+   endtask
+
+   task basic_rk_test;
+      begin
+	 // read sector zero
+	 rk_write_block(0, 256, 0);
+
+	 // read sector 2
+//	 rk_read_block(2, 256, 0);
+	 
+	 // write sector 4
+//	 rk_write_block(4, 256, 0);
+      end
+   endtask // basic_rk_test
+
+   task odd_rk_test;
+      begin
+	 // read sector 0 short
+	 rk_read_block(0, 128, 0);
+
+	 // read sector 0
+	 rk_read_block(0, 256, 0);
+
+	 // write sector 1 short
+	 rk_read_block(1, 128, 0);
+
+	 // write sector 0
+	 rk_read_block(1, 256, 0);
+      end
+   endtask // odd_rk_test
+   
+   task rk_test;
+      integer 	   blk;
+
+      begin
+	 for (blk = 0; blk < 10; blk = blk + 1)
+	   begin
+	      rk_read_block(blk, 256, 0);
+	   end
+
+	 for (blk = 0; blk < 10; blk = blk + 1)
+	   begin
+	      rk_write_block(blk, 256, 0);
+	   end
+
+	 for (blk = 0; blk < 10; blk = blk + 1)
+	   begin
+	      rk_read_block(blk, 256, 0);
+	      rk_write_block(blk, 256, 0);
+	   end
+      end
+   endtask // odd_rk_test
+
+   task prep_rk;
+      reg [15:0] v;
+      integer   b, i, file;
+
+      begin
+	 file = $fopen("rk.dsk", "wb");
+
+	 // block 0
+	 for (i = 0; i < 128; i = i + 1)
+	   begin
+	      v = i;
+	      $fwrite(file, "%u", 8'h11);
+	      $fwrite(file, "%u", v+1);
+	   end
+
+	 for (i = 0; i < 128; i = i + 1)
+	   begin
+	      v = i;
+	      $fwrite(file, "%u", 8'h22);
+	      $fwrite(file, "%u", v+1);
+	   end
+
+	 // block 1..15
+	 for (b = 1; b < 16; b = b + 1)
+	   begin
+	      v = b;
+	      for (i = 0; i < 256; i = i + 1)
+		begin
+		   $fwrite(file, "%u", v);
+		   $fwrite(file, "%u", v);
+		end
+	   end
+
+	 $fclose(file);
+      end
+   endtask
    
   initial
     begin
@@ -117,53 +253,10 @@ module test_rk;
 
        dma_ack = 1;
 
-       write_rk_reg(13'o17400, 0); // rkda
-       write_rk_reg(13'o17402, 0); // rker
-
-       // read sector 0
-       write_rk_reg(13'o17406, 16'hfe00); // rkwc;
-       write_rk_reg(13'o17410, 0); // rkba;
-       write_rk_reg(13'o17412, 0); // rkda;
-       write_rk_reg(13'o17404, 5); // rkcs
-
-       wait_for_rk_busy;
-       wait_for_rk_idle;
-       
-       // read sector 2
-       write_rk_reg(13'o17406, 16'hfe00); // rkwc;
-       write_rk_reg(13'o17410, 0); // rkba;
-       write_rk_reg(13'o17412, 2); // rkda;
-       write_rk_reg(13'o17404, 5); // rkcs
-
-       wait_for_rk_busy;
-       wait_for_rk_idle;
-       
-       // read sector 0
-       write_rk_reg(13'o17406, 16'hfe00); // rkwc;
-       write_rk_reg(13'o17410, 0); // rkba;
-       write_rk_reg(13'o17412, 0); // rkda;
-       write_rk_reg(13'o17404, 5); // rkcs
-
-       wait_for_rk_busy;
-       wait_for_rk_idle;
-       
-       // write sector 4
-       write_rk_reg(13'o17406, 16'hfe00); // rkwc;
-       write_rk_reg(13'o17410, 0); // rkba;
-       write_rk_reg(13'o17412, 4); // rkda;
-       write_rk_reg(13'o17404, 3); // rkcs
-
-       wait_for_rk_busy;
-       wait_for_rk_idle;
-       
-       // read sector 4
-       write_rk_reg(13'o17406, 16'hfe00); // rkwc;
-       write_rk_reg(13'o17410, 0); // rkba;
-       write_rk_reg(13'o17412, 4); // rkda;
-       write_rk_reg(13'o17404, 5); // rkcs
-
-       wait_for_rk_busy;
-       wait_for_rk_idle;
+       prep_rk;
+       basic_rk_test;
+       odd_rk_test;
+//       rk_test;
        
        $finish;
     end
@@ -189,7 +282,7 @@ module test_rk;
 		 rk.rkcs_done, rk.rkcs_cmd, rk.rkba, rk.rkwc);
 
 	$display("            dma_req %b, dma_ack %b",
-		   rk.rk_state, rk.dma_req, rk.dma_ack);
+		 rk.dma_req, rk.dma_ack);
 	  end
 
 `ifdef show_ata	

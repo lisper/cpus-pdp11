@@ -250,6 +250,23 @@ module test_bus;
       end
    endtask
 
+   task fill_memory;
+      input [15:0] start;
+      input 	   size;
+      input [15:0] value;
+
+      integer size;
+
+      reg [15:0] l;
+      
+      begin
+	 for (l = start; l < start+size-2; l = l + 2)
+	   begin
+	      write_mem(l, value);
+	   end
+      end
+   endtask
+
    task failure;
       input [15:0] addr;
       input [15:0] data;
@@ -272,6 +289,31 @@ module test_bus;
       end
    endtask
       
+   task prep_rk;
+      reg [7:0] v;
+      integer   b, i, file;
+
+      begin
+	 file = $fopen("rk.dsk", "wb");
+
+	 // block 0
+	 for (i = 0; i < 256; i = i + 1)
+	   begin
+		$fwrite(file, "%c%c", i, i);
+	   end
+
+	 // block 1..15
+	 for (b = 1; b < 16; b = b + 1)
+	   begin
+	      v = b;
+	      for (i = 0; i < 256; i = i + 1)
+		$fwrite(file, "%c%c", v, v);
+	   end
+
+	 $fclose(file);
+      end
+   endtask
+   
    task wait_for_rk;
       begin
 	 read_io_reg(13'o17404);
@@ -279,36 +321,6 @@ module test_bus;
       end
    endtask
 
-   task test_bus_rk_test;
-      begin
-       write_io_reg(13'o17406, 16'o177400); // rkwc;
-       write_io_reg(13'o17410, 16'o1000); // rkba;
-       write_io_reg(13'o17412, 0); // rkda;
-       bus_arbitrate = 1;
-       write_io_reg(13'o17404, 5); // rkcs
-       wait_for_rk;
-
-       write_io_reg(13'o17406, 16'o177400); // rkwc;
-       write_io_reg(13'o17410, 16'o1000); // rkba;
-       write_io_reg(13'o17412, 2); // rkda;
-       write_io_reg(13'o17404, 5); // rkcs
-       wait_for_rk;
-
-       write_io_reg(13'o17406, 16'o177400); // rkwc;
-       write_io_reg(13'o17410, 16'o1000); // rkba;
-       write_io_reg(13'o17412, 4); // rkda;
-       write_io_reg(13'o17404, 3); // rkcs
-       wait_for_rk;
-
-       write_io_reg(13'o17406, 16'o177400); // rkwc;
-       write_io_reg(13'o17410, 16'o1000); // rkba;
-       write_io_reg(13'o17412, 4); // rkda;
-       write_io_reg(13'o17404, 5); // rkcs
-       wait_for_rk;
-
-      end
-   endtask
-   
    task test_bus_ram_test;
       begin
 	 // should bus error
@@ -339,7 +351,172 @@ module test_bus;
       end
    endtask
    
+   // ------------------------------------------------------------------
 
+   task bus_rk_test;
+      begin
+       write_io_reg(13'o17406, 16'o177400); // rkwc;
+       write_io_reg(13'o17410, 16'o1000); // rkba;
+       write_io_reg(13'o17412, 0); // rkda;
+       bus_arbitrate = 1;
+       write_io_reg(13'o17404, 5); // rkcs
+       wait_for_rk;
+      end
+   endtask // bus_rk_test
+   
+   task rk_read_block;
+      input [15:0] blk;
+      input [15:0] wc;
+      input [15:0] ma;
+
+      begin
+	 write_io_reg(13'o17402, 0); // rker
+	 
+	 write_io_reg(13'o17406, -wc); // rkwc;
+	 write_io_reg(13'o17410, ma); // rkba;
+	 write_io_reg(13'o17412, blk); // rkda;
+	 write_io_reg(13'o17404, 5); // rkcs
+	 wait_for_rk;
+      end
+   endtask
+
+   task rk_write_block;
+      input [15:0] blk;
+      input [15:0] wc;
+      input [15:0] ma;
+
+      begin
+	 write_io_reg(13'o17402, 0); // rker
+
+	 write_io_reg(13'o17406, -wc); // rkwc;
+	 write_io_reg(13'o17410, ma); // rkba;
+	 write_io_reg(13'o17412, blk); // rkda;
+	 write_io_reg(13'o17404, 3); // rkcs
+	 wait_for_rk;
+      end
+   endtask
+
+   task rk_check_blk0_pattern;
+      reg [15:0] l;
+      reg [15:0] tv;
+
+      begin
+	 // which should contain 0, 1, 2...
+	 for (l = 0; l < 128; l = l + 2)
+	   begin
+	      tv = { l[8:1], 8'h11 };
+	      read_mem_expect(l,  tv);
+	   end
+
+	 for (l = 128; l < 256; l = l + 2)
+	   begin
+	      tv = { l[8:1], 8'h22 };
+	      read_mem_expect(l,  tv);
+	   end
+      end
+   endtask
+
+   task basic_rk_test;
+      reg [15:0] l;
+      reg [15:0] tv;
+
+      begin
+	 // read sector zero
+	 fill_memory(0, 512, 16'hffff);
+	 rk_write_block(0, 512, 0);
+
+	 rk_check_blk0_pattern;
+
+	 // write sector 2 with zeros
+	 fill_memory(0, 512, 16'o0);
+	 rk_write_block(2, 512, 0);
+
+	 // read sector 0
+	 rk_read_block(0, 512, 0);
+
+	 rk_check_blk0_pattern;
+
+	 // read sector 2
+	 rk_read_block(2, 512, 0);
+	 
+	 for (l = 0; l < 256; l = l + 2)
+	   read_mem_expect(l,  0);
+
+	 // write sector 0 with zeros
+	 fill_memory(0, 512, 16'o0);
+	 rk_write_block(2, 512, 0);
+
+	 // read sector 0
+	 rk_read_block(0, 512, 0);
+
+	 for (l = 0; l < 256; l = l + 2)
+	   read_mem_expect(l,  0);
+	 
+	 // write sector 4
+	 fill_memory(0, 512, 16'o1234);
+	 rk_write_block(4, 512, 0);
+       
+	 // read sector 0
+	 rk_read_block(0, 512, 0);
+       
+	 // read sector 4
+	 rk_read_block(4, 512, 0);
+
+	 for (l = 0; l < 256; l = l + 2)
+	   read_mem_expect(l,  16'o1234);
+      end
+   endtask // basic_rk_test
+
+   task odd_rk_test;
+      begin
+	 // read sector 0
+	 rk_read_block(0, 256, 0);
+
+	 // read sector 1
+	 rk_read_block(1, 256, 0);
+
+	 // write sector 0
+	 rk_read_block(0, 256, 0);
+
+	 // write sector 1
+	 rk_read_block(1, 256, 0);
+      end
+   endtask // odd_rk_test
+   
+   task rk_test;
+      integer 	   blk;
+
+      begin
+	 for (blk = 0; blk < 10; blk = blk + 1)
+	   begin
+	      rk_read_block(blk, 256, 0);
+	   end
+
+	 for (blk = 0; blk < 10; blk = blk + 1)
+	   begin
+	      rk_write_block(blk, 256, 0);
+	   end
+
+	 for (blk = 0; blk < 10; blk = blk + 1)
+	   begin
+	      rk_read_block(blk, 256, 0);
+	      rk_write_block(blk, 256, 0);
+	   end
+      end
+   endtask // odd_rk_test
+
+   task test_bus_rk_test;
+      begin
+	 prep_rk;
+	 bus_rk_test;
+	 basic_rk_test;
+//       odd_rk_test;
+//       rk_test;
+      end
+   endtask
+   
+   // ------------------------------------------------------------------
+   
   initial
     begin
        $timeformat(-9, 0, "ns", 7);
