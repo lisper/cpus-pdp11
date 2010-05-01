@@ -6,38 +6,8 @@
 // copyright Brad Parker <brad@heeltoe.com> 2009
 //
 // special cases:
-// RK05 has blocks of 128 words, or 256 bytes.  Two of these fit
-// inside each IDE 512 byte block.  This needs to be accounted
-// for in the state machine.
+// RK05 has sectors of 256 words, or 512 bytes. 
 //
-// read-from-even-block:
-//	while wc > 0
-//		read ide block
-//		dma
-
-// read-from-odd-block:
-//	pre-read ide block
-//	dma 256 with offset of 256
-//	if wc > 0
-//		goto read-from-even-block
-//
-// write-to-even-block:
-//	while wc > 0
-//		if wc == 256
-//			pre-reset ide block
-//			dma with proper offset (0 or 256)
-//			write ide block
-//			done
-//		else
-//			dma
-//			write ide block
-//
-// write-to-odd-block:
-//	pre-read ide block
-//	dma 256 with offset of 256
-//	write ide block
-//	if wc > 0
-//		goto write-to-even-block
 //
 
 module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
@@ -156,6 +126,8 @@ output [4:0] rk_state;
    parameter last3 = 5'd20;
    parameter wait0 = 5'd21;
    parameter wait1 = 5'd22;
+   parameter done0 = 5'd30;
+   parameter done1 = 5'd31;
 
    reg 	     ata_rd;
    reg 	     ata_wr;
@@ -630,10 +602,48 @@ $display("rk: XXX go! rkcs_cmd %b", rkcs_cmd);
 	    begin
 	       ata_rd = 1;
 	       ata_addr = ATA_STATUS;
+
 	       if (ata_done)
-		 rk_state_next = last2;
+		 begin
+//$display("ata_out %x", ata_out);
+		    if (ata_out[IDE_STATUS_ERR])
+		      set_err = 1;
+		      
+		    // if buffer is not empty, flush
+		    if (ata_out[IDE_STATUS_DRQ])
+		      begin
+			 if (rkcs_cmd[3:1] == 3'b010)
+			   rk_state_next = last2;
+			 else
+			   if (rkcs_cmd[3:1] == 3'b001)
+			     rk_state_next = last3;
+		      end
+		    else
+		      // otherwise, we're done
+		      rk_state_next = done0;
+		 end
 	    end
+
 	  last2:
+	    begin
+	       ata_rd = 1;
+	       ata_addr = ATA_DATA;
+
+	       if (ata_done)
+		 rk_state_next = last1;
+	    end
+
+	  last3:
+	    begin
+	       ata_wr = 1;
+	       ata_addr = ATA_DATA;
+	       ata_in = dma_data_hold;
+
+	       if (ata_done)
+		 rk_state_next = last1;
+	    end
+	  
+	  done0:
 	    begin
 	       if (rkcs_ie)
 		 begin
@@ -647,11 +657,11 @@ $display("rk: XXX go! rkcs_cmd %b", rkcs_cmd);
 	       clear_cmd = 1;
 	       set_done = 1;
 	       
-	       rk_state_next = last3;
+	       rk_state_next = done1;
 	       
 	    end
 
-	  last3:
+	  done1:
 	    begin
 	       if (rkcs_ie)
 		 begin
