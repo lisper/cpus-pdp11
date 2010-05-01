@@ -36,6 +36,8 @@ int last_evh;
 char last_dior_bit;
 char last_diow_bit;
 
+int running_cver;
+
 static struct state_s {
     vpiHandle bus_aref;
     unsigned short reg_seccnt, reg_secnum, reg_cyllow, reg_cylhigh, reg_drvhead;
@@ -103,7 +105,7 @@ do_ide_setup(struct state_s *s)
 {
     s->file_fd = open("rk.dsk", O_RDWR);
 
-    s->status = 1<<IDE_STATUS_DRDY;
+    s->status = (1<<IDE_STATUS_DRDY)|(1<<IDE_STATUS_DSC);
     s->fifo_depth = 0;
     s->fifo_rd = 0;
     s->fifo_wr = 0;
@@ -120,19 +122,59 @@ do_ide_read(struct state_s *s)
         ((s->reg_cyllow & 0xff) << 8) |
         (s->reg_secnum & 0xff);
 
-    vpi_printf("pli_ide: lba %08x (%d), seccnt %d\n",
-               s->lba, s->lba*512,s->reg_seccnt);
+    vpi_printf("pli_ide: %d (lba %d), seccnt %d (read)\n",
+               s->lba*512, s->lba, s->reg_seccnt);
 
     ret = lseek(s->file_fd, (off_t)s->lba*512, SEEK_SET);
     ret = read(s->file_fd, (char *)s->fifo, 512 * s->reg_seccnt);
     if (ret < 0)
         perror("read");
 
+    vpi_printf("pli_ide: buffer %06o %06o %06o %06o\n",
+               s->fifo[0], s->fifo[1], s->fifo[2], s->fifo[3]);
+
     s->fifo_depth = (512 * s->reg_seccnt) / 2;
     s->fifo_rd = 0;
     s->fifo_wr = 0;
 
-    s->status = (1<<IDE_STATUS_DRDY) | (1<<IDE_STATUS_DRQ);
+    s->status = (1<<IDE_STATUS_DRDY)|(1<<IDE_STATUS_DSC) | (1<<IDE_STATUS_DRQ);
+}
+
+static void
+do_ide_write(struct state_s *s)
+{
+    s->lba =
+        ((s->reg_drvhead & 0x0f) << 24) |
+        ((s->reg_cylhigh & 0xff) << 16) |
+        ((s->reg_cyllow & 0xff) << 8) |
+        (s->reg_secnum & 0xff);
+
+    if (0) vpi_printf("pli_ide: %d (lba %d), seccnt %d (write)\n",
+               s->lba*512, s->lba, s->reg_seccnt);
+
+    vpi_printf("pli_ide: write prep\n");
+
+    s->fifo_depth = (512 * s->reg_seccnt) / 2;
+    s->fifo_rd = 0;
+    s->fifo_wr = 0;
+
+    s->status = (1<<IDE_STATUS_DRDY)|(1<<IDE_STATUS_DSC) | (1<<IDE_STATUS_DRQ);
+}
+
+static void
+do_ide_write_done(struct state_s *s)
+{
+    int ret;
+
+    vpi_printf("pli_ide: %d (lba %d), seccnt %d (write)\n",
+              s->lba*512, s->lba, s->reg_seccnt);
+
+    ret = lseek(s->file_fd, (off_t)s->lba*512, SEEK_SET);
+    ret = write(s->file_fd, (char *)s->fifo, 512 * s->reg_seccnt);
+    if (ret < 0)
+        perror("write");
+
+    s->status = (1<<IDE_STATUS_DRDY)|(1<<IDE_STATUS_DSC);
 }
 
 /*
@@ -266,12 +308,31 @@ PLI_INT32 pli_ide(void)
 
         case ATA_SECCNT: s->reg_seccnt = bus; break;
         case ATA_SECNUM: s->reg_secnum = bus; break;
-        case ATA_CYLLOW: s->reg_cyllow = bus; break;
-        case ATA_CYLHIGH: s->reg_cylhigh = bus; break;
-        case ATA_DRVHEAD: s->reg_drvhead = bus; break;
+        case ATA_CYLLOW:
+            if (0) vpi_printf("pli_ide: cyllow %04x %s\n", bus, bus_bits);
+            s->reg_cyllow = bus;
+            break;
+        case ATA_CYLHIGH:
+            if (0) vpi_printf("pli_ide: cylhigh %04x %s\n", bus, bus_bits);
+            s->reg_cylhigh = bus;
+            break;
+        case ATA_DRVHEAD:
+            if (0) vpi_printf("pli_ide: drvhead %04x %s\n", bus, bus_bits);
+            s->reg_drvhead = bus;
+            break;
 
         case ATA_DATA:
-            vpi_printf("pli_ide: write data %04x %s\n", bus, bus_bits);
+            s->fifo[s->fifo_wr] = bus;
+
+            if (1) vpi_printf("pli_ide: write data [%d/%d] %o\n",
+                              s->fifo_wr, s->fifo_depth, bus);
+
+            if (s->fifo_wr < s->fifo_depth)
+                s->fifo_wr++;
+
+            if (s->fifo_wr >= s->fifo_depth) {
+                do_ide_write_done(s);
+            }
             break;
 
         case ATA_COMMAND:
@@ -283,6 +344,7 @@ PLI_INT32 pli_ide(void)
                 break;
             case 0x0030:
                 vpi_printf("pli_ide: XXX WRITE\n");
+                do_ide_write(s);
                 break;
             }
             break;
@@ -295,29 +357,28 @@ PLI_INT32 pli_ide(void)
         switch (cs << 3 | da) {
         case ATA_DATA:
             bus = s->fifo[s->fifo_rd];
-            if (0) vpi_printf("pli_ide: read data [%d/%d] %04x\n",
+            if (1) vpi_printf("pli_ide: read data [%d/%d] %o\n",
                               s->fifo_rd, s->fifo_depth, bus);
             if (s->fifo_rd < s->fifo_depth)
                 s->fifo_rd++;
 
             if (s->fifo_rd >= s->fifo_depth) {
                 vpi_printf("pli_ide: fifo empty\n");
-                s->status = 1 << IDE_STATUS_DRDY;
+                s->status = (1<<IDE_STATUS_DRDY)|(1<<IDE_STATUS_DSC);
             }
             break;
 
         case ATA_STATUS:
             bus = s->status;
-            vpi_printf("pli_ide: read status %04x\n", bus);
+            if (0) vpi_printf("pli_ide: read status %04x\n", bus);
             break;
         }
 
-#ifdef __CVER__
-        if (s->bus_aref == 0)
-            s->bus_aref = vpi_put_value(busref, NULL, NULL, vpiAddDriver);
-#else
-        s->bus_aref = busref;
-#endif
+        if (running_cver) {
+            if (s->bus_aref == 0)
+                s->bus_aref = vpi_put_value(busref, NULL, NULL, vpiAddDriver);
+        } else
+            s->bus_aref = busref;
 
         outval.format = vpiIntVal;
         outval.value.integer = bus;
@@ -326,8 +387,8 @@ PLI_INT32 pli_ide(void)
 
     if (read_stop) {
         outval.format = vpiBinStrVal;
-//        outval.value.str = "zzzzzzzzzzzzzzzz";
-        outval.value.str = "0000000000000000";
+        outval.value.str = "zzzzzzzzzzzzzzzz";
+//        outval.value.str = "0000000000000000";
         if (s->bus_aref)
             vpi_put_value(s->bus_aref, &outval, NULL, vpiNoDelay);
     }
@@ -374,19 +435,20 @@ void ide_vpi_compat_bootstrap(void)
 
 void vpi_compat_bootstrap(void)
 {
+    running_cver = 1;
     ide_vpi_compat_bootstrap();
 }
 
 void __stack_chk_fail_local(void) {}
 #endif
 
-#ifdef __MODELSIM__
-static void (*vlog_startup_routines[]) () =
+//#ifdef __MODELSIM__
+/*static*/ void (*vlog_startup_routines[]) () =
 {
  register_my_systfs, 
  0
 };
-#endif
+//#endif
 
 
 /*
