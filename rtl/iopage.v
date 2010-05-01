@@ -192,18 +192,18 @@ output [4:0] rk_state;
 		    .switches(switches));
 
    psw_regs psw_regs(.clk(clk),
-		      .reset(reset),
-		      .iopage_addr(iopage_addr),
-		      .data_in(data_in),
-		      .data_out(psw_data_out),
-		      .decode(psw_decode),
-		      .iopage_rd(iopage_rd),
-		      .iopage_wr(iopage_wr),
-		      .iopage_byte_op(iopage_byte_op),
+		     .reset(reset),
+		     .iopage_addr(iopage_addr),
+		     .data_in(data_in),
+		     .data_out(psw_data_out),
+		     .decode(psw_decode),
+		     .iopage_rd(iopage_rd),
+		     .iopage_wr(iopage_wr),
+		     .iopage_byte_op(iopage_byte_op),
 
-		      // psw i/o
-		      .psw(psw),
-		      .psw_io_wr(psw_io_wr));
+		     // psw i/o
+		     .psw_in(psw),
+		     .psw_io_wr(psw_io_wr));
 
 `ifdef use_rk_model
    rk_regs rk_regs(.clk(clk),

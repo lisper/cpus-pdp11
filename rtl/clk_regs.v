@@ -100,12 +100,14 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 `endif
 	   end
 else
-//if (interrupt_ack)
-if (clk_done)
-begin
-clk_done <= 0;
-$display("clk: reset");
-end	   
+  //if (interrupt_ack)
+  if (clk_done)
+    begin
+       clk_done <= 0;
+`ifdef debug
+       $display("clk: reset");
+`endif
+    end	   
    
    always @(posedge clk)
      if (reset)

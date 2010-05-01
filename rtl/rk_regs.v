@@ -184,7 +184,7 @@ output [4:0] rk_state;
 
    // register read
    always @(clk or decode or iopage_addr or iopage_rd or iopage_byte_op or
-	    rkda or rker or rkwc or rkba or
+	    rkds or rkda or rker or rkwc or rkba or
 	    rkcs_err or rkcs_done or rkcs_ie or rkcs_mex or rkcs_cmd)
      begin
 	if (decode/* && iopage_rd ?? */)
@@ -354,7 +354,7 @@ output [4:0] rk_state;
    always @(rk_state or rkcs_cmd or rkcs_ie or 
 	    rkwc or rkda or rkba or lba or
             ata_done or ata_out or
-	    dma_data_in or dma_ack)
+	    dma_data_in or dma_ack or dma_data_hold)
      begin
 	rk_state_next = rk_state;
 
@@ -396,7 +396,9 @@ output [4:0] rk_state;
 		      end
 		    else
 		      rk_state_next = init0;
-$display("rk: XXX go! rkcs_cmd %b", rkcs_cmd);
+`ifdef debug
+		    $display("rk: XXX go! rkcs_cmd %b", rkcs_cmd);
+`endif
 		 end
 	    end
 	  

@@ -184,6 +184,7 @@ module mmu(clk, reset, soft_reset,
 
  	
    // debug - clear registers
+`ifdef debug
    integer 	i;
    initial
      begin
@@ -195,6 +196,7 @@ module mmu(clk, reset, soft_reset,
 	     par_l[i] = 8'b0;
 	  end
      end
+`endif
    
    //
    // decode logic for pdr bits
