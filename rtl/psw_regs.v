@@ -21,12 +21,12 @@ module psw_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    reg [15:0] 	 psw;
    
    //
-   assign decode = (iopage_addr == 13'o17776 || iopage_addr == 13'o17777) ||
-		   (iopage_addr == 13'o17774 || iopage_addr == 13'o17775);
+   assign decode = (iopage_addr == 13'o17776 || iopage_addr == 13'o17777)
+/*    || (iopage_addr == 13'o17774 || iopage_addr == 13'o17775) */;
    
    assign psw_io_wr = iopage_wr && decode;
 
-   alway @(posedge clk)
+   always @(posedge clk)
      if (reset)
        psw <= 0;
      else

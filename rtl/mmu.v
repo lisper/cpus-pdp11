@@ -129,6 +129,17 @@ module mmu(clk, reset, soft_reset,
 		cpu_va, cpu_pa, mapped_pa_22, unmapped_pa_22);
 `endif
 
+//----
+    always @(posedge clk)
+      if (cpu_va == 16'o54766 && mmr0[0])
+	begin
+	   $display("ZZZ: va %o, pa %o, cm %o, i %o, pxr_index %o",
+		    cpu_va, cpu_pa, cpu_cm, cpu_i_access, pxr_index);
+	   $display("ZZZ: map_adder_22 %o, cpu_paf %o, cpu_df %o",
+		    map_adder_22, cpu_paf, cpu_df);
+	end
+//----
+
    // MMR0_MME bit
    assign mmu_on = mmr0[0];
    assign maint_mode = mmr0[8];
@@ -545,7 +556,7 @@ module mmu(clk, reset, soft_reset,
 		  par_h[pxr_addr_5_0] <= pxr_data_in[15:8];
 	      if (pxr_be[0])
 		  par_l[pxr_addr_5_0] <= pxr_data_in[7:0];
-`ifdef debug_mmu
+`ifdef debug/*_mmu*/
 	      $display("mmu: write par[%o] <- %o; pxr_be %b; %t",
 		       pxr_addr_5_0, pxr_data_in, pxr_be, $time);
 `endif

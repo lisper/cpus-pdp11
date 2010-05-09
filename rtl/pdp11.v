@@ -402,7 +402,15 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 
    assign      enable_execute = istate == e1 &&
 				~is_illegal && ~is_reserved &&
-				~trap_odd && ~trap_abort;
+				~trap_odd && ~trap_abort/*;*/
+&& ~trap_bus;
+
+// maybe we should disble these on any trap...
+wire        enable_d1;
+assign      enable_d1 = istate == d1 && ~trap_abort && ~trap_bus;
+
+wire        enable_s1;
+assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
   
    //
    // execute unit - produces result from decoded instruction
@@ -818,7 +826,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		     (isn_15_6 == 10'o1050)) && 		// clr/clrb
 		   !(isn_15_6 == 10'o0001);			// jmp
 
-   assign is_isn_byte = isn[15] && !(isn_15_12 == 4'o16); 	// sub
+   assign is_isn_byte = isn[15] &&
+			!(isn_15_12 == 4'o16) && 		// sub
+			!is_isn_mtpx && 			// mtpd
+			!is_isn_mfpx;		 		// mfpd
 
    assign is_isn_rdd = 
 		       (isn_15_9 == 7'o004) ||			// jsr
@@ -1075,6 +1086,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 `endif
 
 	       if (ss_post_incr || ss_pre_dec)
+//	       if ((ss_post_incr || ss_pre_dec) && enable_s1)
 		 case (ss_reg)
 		   0: r0 <= new_ss_reg_incdec;
 		   1: r1 <= new_ss_reg_incdec;
@@ -1112,7 +1124,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 		 $display(" R%d <- %o (dd r--)", dd_reg, new_dd_reg_incdec);
 `endif
 
-	       if (dd_post_incr || dd_pre_dec)
+//	       if (dd_post_incr || dd_pre_dec)
+	       if ((dd_post_incr || dd_pre_dec) && enable_d1)
 		 case (dd_reg)
 		   0: r0 <= new_dd_reg_incdec;
 		   1: r1 <= new_dd_reg_incdec;

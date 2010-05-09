@@ -77,6 +77,21 @@ output [4:0] rk_state;
    parameter CSR_BIT_IE = 6;
    parameter CSR_BIT_DONE = 7;
 
+   parameter
+       RKCS_CMD_CTLRESET = 3'd0,
+       RKCS_CMD_WRITE = 3'd1,
+       RKCS_CMD_READ = 3'd2,
+       RKCS_CMD_WCHK = 3'd3,
+       RKCS_CMD_SEEK = 3'd4,
+       RKCS_CMD_RCHK = 3'd5,
+       RKCS_CMD_DRVRESET = 3'd6,
+       RKCS_CMD_WLK = 3'd7;
+
+   parameter
+       RKDS_RK05 = 16'o004000,
+       RKDS_RDY  = 16'o000200,
+       RKDS_RWS  = 16'o000100;
+       
    parameter ATA_ALTER   = 5'b01110;
    parameter ATA_DEVCTRL = 5'b01110; /* bit [2] is a nIEN */
    parameter ATA_DATA    = 5'b10000;
@@ -99,8 +114,9 @@ output [4:0] rk_state;
    parameter IDE_STATUS_IDX =  1;
    parameter IDE_STATUS_ERR =  0;
    
-   parameter ATA_CMD_READ = 16'h0020;
-   parameter ATA_CMD_WRITE = 16'h0030;
+   parameter
+       ATA_CMD_READ = 16'h0020,
+       ATA_CMD_WRITE = 16'h0030;
 
    reg [4:0] rk_state;
    reg [4:0] rk_state_next;
@@ -175,11 +191,6 @@ output [4:0] rk_state;
    assign lba = {(track + track + track), 2'b0} + { 8'b0, sector };
 
    //
-   parameter
-     RKDS_RK05  = 16'o004000,
-       RKDS_RDY  = 16'o000200,
-       RKDS_RWS  = 16'o000100;
-       
    assign rkds = RKDS_RK05 | RKDS_RDY | RKDS_RWS;
 
    // register read
@@ -219,6 +230,7 @@ output [4:0] rk_state;
    assign reg_in = (iopage_byte_op & iopage_addr[0]) ? {8'b0, data_in[15:8]} :
 		   data_in;
 
+`ifdef xxx
    always @(posedge clk)
      if (reset)
        begin
@@ -234,7 +246,7 @@ output [4:0] rk_state;
        end
      else
        begin
-	  if (iopage_wr)
+	  if (iopage_wr && decode)
 	    case (iopage_addr)
 	      //13'o17400:
 	      //13'o17402:
@@ -272,7 +284,6 @@ output [4:0] rk_state;
 		   $display("rk: XXX write rkda %o", data_in);
 `endif
 		end
-
 	    endcase
 	  else
 	    begin
@@ -301,7 +312,7 @@ output [4:0] rk_state;
 		 end
 	       else
 		 if (clear_ba)
-		   rkba <= 0;
+		   rkba <= 18'd0;
 
 	       if (inc_wc)
 		 begin
@@ -310,6 +321,104 @@ output [4:0] rk_state;
 		 end
 	    end
        end
+`endif //  `ifdef xxx
+
+   // RKVS
+   always @(posedge clk)
+     if (reset)
+       begin
+	  rkcs_done <= 0;
+	  rkcs_ie <= 0;
+	  rkba[17:16] <= 0;
+	  rkcs_cmd <= 0;
+	  rkcs_err <= 0;
+       end
+     else
+       if (iopage_wr && decode && iopage_addr == 13'o17404)
+	 begin
+	    rkcs_done <= data_in[7];
+	    rkcs_ie <= data_in[6];
+	    rkba[17:16] <= data_in[5:4];
+	    rkcs_cmd <= data_in[3:0];
+`ifdef debug
+	    $display("rk: write rkcs %o", data_in);
+`endif
+	 end
+       else
+	 begin
+   	    if (clear_err)
+	      rkcs_err <= 0;
+	    else
+	      if (set_err)
+		rkcs_err <= 1;
+	       
+	    if (clear_cmd)
+	      rkcs_cmd <= 0;
+
+	    if (set_done)
+	      rkcs_done <= 1;
+	    else
+	      if (clear_done)
+		rkcs_done <= 0;
+	 end
+
+   // RKWC
+   always @(posedge clk)
+     if (reset)
+       rkwc <= 0;
+     else
+       if (iopage_wr && decode && iopage_addr == 13'o17406)
+	 begin
+	    rkwc <= data_in;
+`ifdef debug
+	    $display("rk: write rkwc %o", data_in);
+`endif
+	 end
+       else
+	 if (inc_wc)
+	   begin
+	      rkwc <= rkwc + 16'd1;
+	      if (0) $display("rk: inc wc %o", rkwc);
+	   end
+
+   // RKBA
+   always @(posedge clk)
+     if (reset)
+       rkba <= 0;
+     else
+       if (iopage_wr && decode && iopage_addr == 13'o17410)
+	 begin
+	    rkba[15:0] <= data_in;
+`ifdef debug
+	    $display("rk: write rkba %o", data_in);
+`endif
+	 end
+       else
+	 if (inc_ba)
+	   begin
+	      rkba <= rkba + 18'd2;
+	      if (0) $display("rk: inc ba %o", rkba);
+	   end
+	 else
+	   if (clear_ba)
+	     rkba <= 18'd0;
+
+   // RKDA
+   always @(posedge clk)
+     if (reset)
+       rkda <= 0;
+     else
+       if (iopage_wr && decode && iopage_addr == 13'o17412)
+	 begin
+	    rkda <= data_in;
+`ifdef debug
+	    $display("rk: XXX write rkda %o", data_in);
+`endif
+	 end
+       else
+   	 if (clear_da)
+	   rkda <= 0;
+	       
 
    assign vector = 8'o220;
 
@@ -388,14 +497,27 @@ output [4:0] rk_state;
 	    begin
 	       if (rkcs_cmd[0])
 		 begin
-		    if (rkcs_cmd[3:1] == 3'b000)
-		      begin
-			 clear_da = 1;
-			 clear_ba = 1;
-			 rk_state_next = done0;
-		      end
-		    else
-		      rk_state_next = init0;
+		    case (rkcs_cmd[3:1])
+		      RKCS_CMD_CTLRESET:
+			begin
+			   clear_da = 1;
+			   clear_ba = 1;
+			   rk_state_next = done0;
+			end
+		      RKCS_CMD_DRVRESET:
+			rk_state_next = done0;
+		      RKCS_CMD_SEEK:
+			rk_state_next = done0;
+		      RKCS_CMD_WCHK, RKCS_CMD_RCHK, RKCS_CMD_WLK:
+			begin
+`ifdef debug
+			   $display("rk: unhandled command %o", rkcs_cmd);
+			   $finish;
+`endif
+			end
+		      default:
+			rk_state_next = init0;
+		      endcase
 `ifdef debug
 		    $display("rk: XXX go! rkcs_cmd %b", rkcs_cmd);
 `endif

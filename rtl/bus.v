@@ -112,7 +112,7 @@ output [4:0] rk_state;
    assign bus_data_out = ram_access ? ram_data_in :
 			 iopage_access ? iopage_out : 16'hffff/*16'b0*/;
 
-   assign ram_addr = grant_cpu ? bus_addr : {6'b0, dma_addr[15:0]};
+   assign ram_addr = grant_cpu ? bus_addr : {4'b0, dma_addr};
    assign ram_data_out = grant_cpu ? bus_data_in : dma_data_out;
    assign ram_rd = grant_cpu ? (bus_rd & ram_access) : dma_rd;
    assign ram_wr = grant_cpu ? (bus_wr & ram_access) : dma_wr;
@@ -236,9 +236,9 @@ output [4:0] rk_state;
    assign ram_present = bus_addr < 22'o160000;
 `else
    // 256k
-//   assign ram_present = bus_addr < 22'o760000;
-   // 128k
-   assign ram_present = bus_addr < 22'o400000;
+   assign ram_present = bus_addr < 22'o760000;
+//   // 128k
+//   assign ram_present = bus_addr < 22'o400000;
 `endif
    
 //   assign ram_bus_error = (ram_rd || ram_wr) && ~ram_present;

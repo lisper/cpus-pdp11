@@ -222,7 +222,17 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
        tti_state <= tti_state_next;
 
 `ifdef sim_time
-   assign tti_state_next = (tti_state == 0 && fake_count <= 9) ? 1 :
+//`define v6_unix
+`define bsd_unix
+
+ `ifdef v6_unix
+   parameter fake_max = 9;
+ `endif
+ `ifdef bsd_unix
+   parameter fake_max = 13;
+ `endif
+   
+   assign tti_state_next = (tti_state == 0 && fake_count <= fake_max) ? 1 :
 			   (tti_state == 1) ? 3 :
 			   (tti_state == 3 && tti_data_rd) ? 0 :
 			   tti_state;
@@ -238,6 +248,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
      if (tti_state == 1)
        begin
 	  case (fake_count)
+`ifdef v6_unix
 	    0: fake_rx_data <= 8'h72; //r
 	    1: fake_rx_data <= 8'h6b; //k
 	    2: fake_rx_data <= 8'h75; //u
@@ -248,6 +259,23 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 	    7: fake_rx_data <= 8'h34; //4
 	    8: fake_rx_data <= 8'h30; //0
 	    9: fake_rx_data <= 8'h0d; //<ret>
+`endif
+`ifdef bsd_unix
+	    0: fake_rx_data <= 8'h72; //r
+	    1: fake_rx_data <= 8'h6b; //k
+	    2: fake_rx_data <= 8'h28; //(
+	    3: fake_rx_data <= 8'h30; //0
+	    4: fake_rx_data <= 8'h2c; //,
+	    5: fake_rx_data <= 8'h30; //0
+	    6: fake_rx_data <= 8'h29; //)
+	    7: fake_rx_data <= 8'h72; //r
+	    8: fake_rx_data <= 8'h6b; //k
+	    9: fake_rx_data <= 8'h75; //u
+	    10: fake_rx_data <= 8'h6e; //n
+	    11: fake_rx_data <= 8'h69; //i
+	    12: fake_rx_data <= 8'h78; //x
+	    13: fake_rx_data <= 8'h0d; //<ret>
+`endif	    
 	    default: ;
 	  endcase
 	  $display("tti: sending fake #%d", fake_count);

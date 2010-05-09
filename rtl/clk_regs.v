@@ -30,7 +30,7 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    assign 	 decode = (iopage_addr == 13'o17546);
 
 `ifdef sim_time
-   parameter CLK_DIV = 100000;
+   parameter CLK_DIV = 10000;
 `else
    parameter SYS_CLK = 26'd50000000;
    parameter CLK_RATE = 26'd60;
@@ -80,7 +80,7 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	  clk_done <= 0;
        end
      else
-       if (iopage_wr)
+       if (iopage_wr && decode)
 	 case (iopage_addr)
 	   13'o17546:
 	     begin
