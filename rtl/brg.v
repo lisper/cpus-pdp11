@@ -12,8 +12,8 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
    parameter BAUD = 16'd9600;
 
 `ifdef sim_time
-   parameter RX_CLK_DIV = 13'd2;
-   parameter TX_CLK_DIV = 13'd2;
+   parameter RX_CLK_DIV = 2;
+   parameter TX_CLK_DIV = 2;
 `else
    parameter RX_CLK_DIV = SYS_CLK / (BAUD * 16 * 2);
    parameter TX_CLK_DIV = SYS_CLK / (BAUD * 2);
@@ -25,6 +25,12 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
    reg 		rx_baud_clk;
 
 
+   wire [31:0] 	rx_clk_div_max;
+   assign 	rx_clk_div_max = RX_CLK_DIV;
+
+   wire [31:0] 	tx_clk_div_max;
+   assign 	tx_clk_div_max = TX_CLK_DIV;
+   
    always @(posedge clk or posedge reset)
      if (reset)
        begin
@@ -32,7 +38,7 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
 	  rx_baud_clk <= 0; 
        end
      else 
-       if (rx_clk_div == RX_CLK_DIV)
+       if (rx_clk_div == rx_clk_div_max[12:0])
 	 begin
 	    rx_clk_div  <= 0;
 	    rx_baud_clk <= ~rx_baud_clk;
@@ -50,7 +56,7 @@ module brg(clk, reset, tx_baud_clk, rx_baud_clk);
 	  tx_baud_clk <= 0; 
        end
      else 
-       if (tx_clk_div == TX_CLK_DIV)
+       if (tx_clk_div == tx_clk_div_max[12:0])
 	 begin
 	    tx_clk_div  <= 0;
 	    tx_baud_clk <= ~tx_baud_clk;

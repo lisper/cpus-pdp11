@@ -39,8 +39,9 @@ module execute(clk, reset, enable,
 		assert_trap_trap, assert_bpt, assert_iot, assert_reset;
    output 	assert_trace_inhibit;
  	
-   output [15:0] e1_result, new_pc;
-   output [15:0] e32_result;
+   output [15:0] e1_result /* verilator isolate_assignments*/;
+   output [15:0] new_pc;
+   output [15:0] e32_result /* verilator isolate_assignments*/;
    output 	 e1_advance;
  	 
    output 	 latch_pc;
@@ -681,6 +682,10 @@ module execute(clk, reset, enable,
 	  begin
 	     if (0) $display("e: isn[15:12] != 0 (%o)", isn[15:12]);
 	     case (isn[15:12])
+	       4'o00:
+		 begin
+		 end
+
 	       4'o01:					    /* mov */
 		 begin
 		    e1_result = ss_data;
@@ -816,7 +821,7 @@ module execute(clk, reset, enable,
 		   2:					    /* ash */
 		     begin
 			shift = dd_data[5:0];
-`ifdef debug
+`ifdef debug_xx
 			$display("e: ASH %o; done %b", shift, shift32_box.done);
 `endif
 			
@@ -1242,6 +1247,10 @@ module execute(clk, reset, enable,
 		    new_cc_c = dd_data < ss_data;
 		    latch_cc = 1;
 		 end // case: 016
+
+	       4'o17:
+		 begin
+		 end
 	     endcase // case(isn[15:12])
 	  end // else: !if(isn[15:12] == 0)
 

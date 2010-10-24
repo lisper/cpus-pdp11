@@ -307,9 +307,9 @@ module mmu(clk, reset, soft_reset,
 `endif
 	      end
 
-`ifdef mmu_1170
 	    3'd5:		// read/write
 	      begin
+`ifdef mmu_1170
 		 update_pdr = 1;
 		 pdr_update_a = 1;	// set a bit
 		 if (traps_enabled)	// trap enable
@@ -321,8 +321,8 @@ module mmu(clk, reset, soft_reset,
 		      $display("zzz: acf=%o, signal trap, wr r/w", pdr_acf);
  `endif
 		   end
-	      end
 `endif
+	      end // case: 3'd5
 	    
 	    3'd6:		// read/write (ok)
 	      begin
@@ -375,9 +375,9 @@ module mmu(clk, reset, soft_reset,
 		     end
 		end
 
-`ifdef mmu_1170
 	      3'd1:		// read-only
 		begin
+`ifdef mmu_1170
 		   update_pdr = 1;
 		   pdr_update_a = 1;	// set a bit
 		   if (traps_enabled) 	// trap enable
@@ -389,8 +389,8 @@ module mmu(clk, reset, soft_reset,
 			$display("zzz: acf=%o, signal trap, rd r-o", pdr_acf);
  `endif
 		     end
-		end
 `endif
+		end
 
 	      3'd4:		// read/write
 		begin
@@ -531,6 +531,7 @@ module mmu(clk, reset, soft_reset,
      else
        if (pxr_wr)
 	 /* verilator lint_off CASEX */
+	 /* verilator lint_off CASEINCOMPLETE */
 	 casex (pxr_addr)
 	   8'b10xxxx00: begin
 	      case (pxr_be)

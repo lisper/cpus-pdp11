@@ -37,6 +37,11 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    parameter CLK_DIV = SYS_CLK / CLK_RATE;
 `endif
 
+   wire [25:0] clk_div;
+
+   assign clk_div = CLK_DIV;
+
+   
    // register read
    always @(clk or decode or iopage_addr or iopage_rd or
 	    clk_int_enable or clk_done)
@@ -70,7 +75,8 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    assign vector = 8'o100;
 
    wire   clk_fired;
-   assign clk_fired = (counter == CLK_DIV) || (counter == CLK_DIV-1);
+   assign clk_fired = (counter == clk_div[19:0]) ||
+		      (counter == clk_div[19:0]-1);
 
    // register write   
    always @(posedge clk)
@@ -113,7 +119,7 @@ else
      if (reset)
        counter <= 0;
      else
-       if (counter == CLK_DIV)
+       if (counter == clk_div[19:0])
 	 counter <= 0;
        else
 	 counter <= counter + 20'd1;

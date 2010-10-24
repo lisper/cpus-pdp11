@@ -93,7 +93,7 @@ output [4:0] rk_state;
    /*reg [3:0] 	grant_count;*/
    wire [2:0] 	grant_state_next;
 
-`ifdef xxx
+`ifdef use_18bit_phys
    // 18 bit physical addressing
    assign 	iopage_access = bus_addr[17:14] == 4'o17;
    

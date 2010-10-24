@@ -51,14 +51,14 @@ module ram_async(clk, reset,
    assign ram_we_n = ~ram_wr_short;
 
    //
-   assign ram1_io = ~ram_oe_n ? /*16'bz*/16'b0 :
+   assign ram1_io = ~ram_oe_n ? 16'bz :
 		    (byte_op ? {data_in[7:0],data_in[7:0]} : data_in);
 
    assign ram1_ce_n = 1'b0;
    assign ram1_ub_n = ~ram1_ub;
    assign ram1_lb_n = ~ram1_lb;
    
-   assign ram2_io = 16'b0;
+   assign ram2_io = 16'bz;
    assign ram2_ce_n = 1'b1;
    assign ram2_ub_n = 1'b1;
    assign ram2_lb_n = 1'b1;

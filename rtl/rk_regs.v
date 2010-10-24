@@ -183,12 +183,18 @@ output [4:0] rk_state;
    //
    wire [3:0] sector;
    wire [9:0] track;
+   wire [11:0] trackx3;
+   wire [15:0] trackx12;
    
    assign sector = rkda[3:0];
    assign track = rkda[13:4];
    
    // (track*12)+sector = 4*(track+track+track) + sector
-   assign lba = {(track + track + track), 2'b0} + { 8'b0, sector };
+   assign trackx3 = {2'b0, track} + {2'b0, track} + {2'b0, track};
+
+   assign trackx12 = {2'b0, trackx3, 2'b0};
+
+   assign lba = trackx12 + { 12'b0, sector };
 
    //
    assign rkds = RKDS_RK05 | RKDS_RDY | RKDS_RWS;
@@ -532,10 +538,16 @@ output [4:0] rk_state;
 		   ~ata_out[IDE_STATUS_BSY] &&
 		   ata_out[IDE_STATUS_DRDY])
 		 rk_state_next = init1;
+`ifdef debug_rk
+	       $display("rk: init0, status %x", ata_out);
+`endif
 	    end
 
 	  init1:
 	    begin
+`ifdef debug_rk
+	       $display("rk: init1");
+`endif
 	       ata_wr = 1;
 	       ata_addr = ATA_DRVHEAD;
 	       ata_in = 16'h0040;
@@ -651,20 +663,17 @@ output [4:0] rk_state;
 	       ata_addr = ATA_STATUS;
 
 	       //if (ata_done) $display("rk: XXX init11 ata_out %x", ata_out);
-	       if (ata_done &&
-		   ~ata_out[IDE_STATUS_BSY] &&
-		   ata_out[IDE_STATUS_DRQ])
+	       if (ata_done && ~ata_out[IDE_STATUS_BSY])
 		 begin
 		    if (rkcs_cmd[3:1] == 3'b001)
 		      rk_state_next = write0;
 		    else
-		    if (rkcs_cmd[3:1] == 3'b010)
+		    if (rkcs_cmd[3:1] == 3'b010 && ata_out[IDE_STATUS_DRQ])
 		      rk_state_next = read0;
 		 end
 
 	       if (ata_out[IDE_STATUS_ERR])
 		    set_err = 1;
-	       
 	    end
 
 	  read0:

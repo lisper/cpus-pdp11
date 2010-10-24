@@ -57,7 +57,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    wire 	 tx_enable, tx_empty;
    wire 	 rx_enable, rx_empty;
    wire [7:0] 	 rx_data;
-`ifdef sim_time
+`ifdef fake_uart
    integer 	 fake_count;
    reg [7:0] 	 fake_rx_data;
 `endif
@@ -97,7 +97,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 	if (iopage_rd && decode)
 	  case (iopage_addr)
 	    13'o17560: reg_out = {8'b0, tti_full, rx_int_enable, 6'b0};
-`ifdef sim_time
+`ifdef fake_uart
     	    13'o17562: reg_out = {8'b0, fake_rx_data};
 `else
     	    13'o17562: reg_out = {8'b0, rx_data};
@@ -180,13 +180,30 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
      else
        tto_state <= tto_state_next;
 
-`ifdef sim_time
+`ifdef fake_uart
    // quick version for sim; don't wait for uart
    assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
 			   (tto_state == 1) ? 0 :
 			   tto_state;
 
-   assign assert_tx_int = tto_state == 1 && tto_state_next == 0;
+//   assign assert_tx_int = tto_state == 1 && tto_state_next == 0;
+
+   integer _tx_delay;
+
+   initial
+     _tx_delay = 0;
+   
+   always @(posedge clk)
+     if (tto_data_wr)
+       _tx_delay = 1000;
+     else
+	  if (_tx_delay > 0)
+	    begin
+	       _tx_delay = _tx_delay - 1;
+	    end
+   
+    assign assert_tx_int = _tx_delay == 0;
+
 `else
    assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
 			   (tto_state == 1 && ld_tx_ack) ? 2 :
@@ -194,7 +211,15 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 			   (tto_state == 3 && tx_empty) ? 0 :
 			   tto_state;
 
-   assign assert_tx_int = tto_state == 3 && tto_state_next == 0;
+   assign assert_tx_int = tto_state == 0;
+
+ `ifdef debug
+   always @(posedge clk)
+     if (tto_state != 0)
+	   $display("tto_state %d ld_tx_ack %b tx_empty %b",
+		    tto_state, ld_tx_ack, tx_empty);
+ `endif
+   
 `endif
 
    assign clear_tx_int =
@@ -221,9 +246,9 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
      else
        tti_state <= tti_state_next;
 
-`ifdef sim_time
+`ifdef fake_uart
 //`define v6_unix
-`define bsd_unix
+//`define bsd_unix
 
  `ifdef v6_unix
    parameter fake_max = 9;
@@ -231,7 +256,10 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
  `ifdef bsd_unix
    parameter fake_max = 13;
  `endif
-   
+ `ifdef no_fake_input
+   parameter fake_max = 0;
+ `endif
+     
    assign tti_state_next = (tti_state == 0 && fake_count <= fake_max) ? 1 :
 			   (tti_state == 1) ? 3 :
 			   (tti_state == 3 && tti_data_rd) ? 0 :
@@ -308,7 +336,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    assign interrupt = asserting_rx_int || asserting_tx_int;
    
    assign asserting_rx_int = rx_int_enable && rx_int;
-   assign asserting_tx_int = rx_int_enable && tx_int;
+   assign asserting_tx_int = tx_int_enable && tx_int;
 
    // assert vector in int priority order
    assign vector = asserting_rx_int ? 8'o60 :
@@ -318,7 +346,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    always @(posedge clk)
      if (reset)
        begin
-	  tx_int <= 0;
+	  tx_int <= 1;
 	  rx_int <= 0;
        end
      else
@@ -336,9 +364,13 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 	      rx_int <= 0;
        end
    
-`ifdef debug_tt_int
+`ifdef debug/*_tt_int*/
    always @(posedge clk)
      begin
+	if (tto_state == 1)
+	  $display("tt: XXX tto_state 1");
+	if (tto_data_wr)
+	  $display("tt: XXX tto_data_wr");
 	if (tx_int == 0 && assert_tx_int)
 	  $display("tt: XXX tx_int+ %b; %t", tx_int, $time);
 	if (tx_int == 1 && clear_tx_int)

@@ -102,6 +102,7 @@ module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    always @(iopage_addr or iopage_rd or iopage_wr or decode)
      begin
 	if (decode && (iopage_rd || iopage_wr))
+	  /* verilator lint_off CASEX */
 	  casex (iopage_addr)
 	    // mmr0-3
 	    13'o17572: pxr_addr = {8'b10000000};
@@ -116,6 +117,7 @@ module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	    
 	    default: pxr_addr = 8'b0;
 	  endcase
+	  /* verilator lint_on CASEX */
 	else
 	  pxr_addr = 8'b0;
      end

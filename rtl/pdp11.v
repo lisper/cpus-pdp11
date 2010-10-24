@@ -248,37 +248,37 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    //
    // main cpu states
    //
-   // f1 fetch;	   	clock isn
+   // f1 fetch;	   	clock isn		clock pc
    // c1 decode;
    //
-   // s1 source1;	clock ss_data
+   // s1 source1;	clock ss_data		clock pc
    // s2 source2;	clock ss_data
    // s3 source3;	clock ss_data
    // s4 source4;	clock ss_data
    //
-   // d1 dest1;	   	clock dd_data
+   // d1 dest1;	   	clock dd_data		clock pc
    // d2 dest2;	   	clock dd_data
    // d3 dest3;	   	clock dd_data
    // d4 dest4;	   	clock dd_data
    //
-   // e1 execute;	clock pc, sp & reg+-
+   // e1 execute;	clock reg+-		clock pc	/clock sp
    // w1 writeback;	clock e1_result
    //
-   // o1 pop pc	   	mem read
-   // o2 pop psw	mem read
+   // o1 pop pc	   	mem read		clock pc	clock sp
+   // o2 pop psw	mem read				clock sp
 //xxx aborts here; flip to kernel mode, jump to t0
-   // o3 pop reg	mem read
+   // o3 pop reg	mem read				clock sp
 //xxx aborts here; flip to kernel mode, jump to t0
    //
-   // p1 push sp	mem write
+   // p1 push sp	mem write				clock sp
 //xxx aborts here; flip to kernel mode, jump to t0
    //
    // t0 save old-pc, old-psw
-   // t1 read pc	mem read
+   // t1 read pc	mem read		clock pc
    // t2 read psw	mem read
 //xxx an mmu abort in t3,t4 should flip to kernel mode and restart from t0
-   // t3 push old-psw	mem write
-   // t4 push old-pc	mem write
+   // t3 push old-psw	mem write				clock sp
+   // t4 push old-pc	mem write				clock sp
 //xxx an mmu abort in t3,t4 should flip to kernel mode and restart from t1
 //xxx update old-psw with psw from t1
    //
@@ -415,7 +415,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
    //
    // execute unit - produces result from decoded instruction
    //
-   execute exec1(.clk(clk), .reset(reset),
+   execute exec(.clk(clk), .reset(reset),
 		 .enable(enable_execute),
 		 .pc(pc), .psw(psw),
 		 .ss_data(ss_data), .dd_data(dd_data),
@@ -661,10 +661,12 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 		     else
 		       psw <= {psw[15:8], new_psw_wr[7:0]};
 `ifdef debug
-	   $display("write psw: bus_data_out %o, new_psw_wr %o, bus_byte_op %o, bus_addr %o",
-		    bus_data_out, new_psw_wr, bus_byte_op, bus_addr);
+		   $display("write psw: bus_data_out %o, new_psw_wr %o, bus_byte_op %o, bus_addr %o",
+			    bus_data_out, new_psw_wr, bus_byte_op, bus_addr);
 `endif
 		end
+	    default:
+	      psw <= psw;
 	  endcase
        end
 
@@ -708,7 +710,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 
    assign no_operand =
 	(isn_15_6 == 10'o0000 && isn_5_0 < 6'o10) ||
-	(isn_15_6 == 10'o0002 && (isn_5_0 >= 6'o30 && isn_5_0 <= 6'o77)) ||
+	(isn_15_6 == 10'o0002 && (isn_5_0 >= 6'o30/*&& isn_5_0 <= 6'o77*/)) ||
 	(isn_15_12 == 0 && (isn_11_6 >= 6'o04 && isn_11_6 <= 6'o37)) ||
 	(isn_15_9 == 7'o104) ||					// trap/emt
 	0;
@@ -1742,7 +1744,9 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 		     (istate == o3) ? bus_data_in :
 		     e1_data;
 
-	  e32_data <= istate == e1  ? e32_result : e32_data;
+//	  e32_data <= istate == e1  ? e32_result : e32_data;
+	  if (istate == e1)
+	    e32_data <= e32_result;
        end
 
    //
@@ -1751,17 +1755,15 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 
 `ifdef minimal_debug
    always @(posedge clk)
+     /* verilator lint_off STMTDLY */
      #2 begin
-   	case (istate)
-	  f1:
-	    if (~trap)
-	    begin
-	       $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o) %b%b%b",
-			pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
-			r0, r1, r2, r3, r4, r5, sp, pc,
-			trap, interrupt, trace_inhibit);
-	    end // case: f1
-	endcase
+   	if (istate == f1 && ~trap)
+	  begin
+	     $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o) %b%b%b",
+		      pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
+		      r0, r1, r2, r3, r4, r5, sp, pc,
+		      trap, interrupt, trace_inhibit);
+	  end // case: f1
      end
 `endif
 

@@ -234,6 +234,7 @@ module uart(clk, reset,
 		    tx_cnt <= 0;
 		    tx_empty <= 1;
 		 end
+		 default: tx_out <= 0;
 	       endcase
 	    end
 

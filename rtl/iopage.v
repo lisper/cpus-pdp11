@@ -3,7 +3,7 @@
 // copyright Brad Parker <brad@heeltoe.com> 2009
 
 
-`define use_rk_model
+`define use_rk_model 1
 //`define use_rk_pli
 
 module iopage(clk, brgclk, reset, address, data_in, data_out,

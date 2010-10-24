@@ -1,9 +1,7 @@
 //
 // pdp-11 in verilog - fpga top level
-// copyright Brad Parker <brad@heeltoe.com> 2009
+// copyright Brad Parker <brad@heeltoe.com> 2009-2010
 //
-
-`define use_rk_model 1
 
 module top(rs232_txd, rs232_rxd,
 	   button, led, sysclk,
@@ -63,7 +61,10 @@ module top(rs232_txd, rs232_rxd,
    
    assign initial_pc = 16'o173000;
 
-`define slower
+`ifndef sim_time
+ `define slower
+`endif
+
 `ifdef slower
    //-----------
    reg clk;
@@ -103,7 +104,7 @@ module top(rs232_txd, rs232_rxd,
 wire [3:0] oled;
 wire [4:0] rk_state;
    
-   debounce reset_sw(.clk(sysclk), .in(button[3]), .out(reset));
+   reset_btn reset_btn(.clk(sysclk), .in(button[3]), .out(reset));
 
    display show_pc(.clk(sysclk), .reset(reset),
 		   .pc(pc), .dots(pc[15:12]),
@@ -236,6 +237,29 @@ wire [4:0] rk_state;
 	    .rs232_tx(rs232_txd),
 	    .rs232_rx(rs232_rxd));
 
+`ifdef no_mmu
+   null_mmu mmu(.clk(clk),
+		.reset(reset),
+		.soft_reset(soft_reset),
+		.cpu_va(bus_addr_v),
+		.cpu_cm(bus_cpu_cm),
+		.cpu_rd(bus_rd),
+		.cpu_wr(bus_wr),
+		.cpu_i_access(bus_i_access),
+		.cpu_d_access(bus_d_access),
+		.cpu_trap(trapped),
+		.cpu_pa(bus_addr_p),
+		.fetch_va(mmu_fetch_va),
+		.trap_odd(mmu_trap_odd),
+		.signal_abort(mmu_abort),
+		.signal_trap(mmu_trap),
+		.pxr_wr(pxr_wr),
+		.pxr_rd(pxr_rd),
+		.pxr_be(pxr_be),
+		.pxr_addr(pxr_addr),
+		.pxr_data_in(pxr_data_in),
+		.pxr_data_out(pxr_data_out));
+`else   
    mmu mmu1(.clk(clk),
 	    .reset(reset),
 	    .soft_reset(soft_reset),
@@ -257,7 +281,7 @@ wire [4:0] rk_state;
 	    .pxr_addr(pxr_addr),
 	    .pxr_data_in(pxr_data_in),
 	    .pxr_data_out(pxr_data_out));
-
+`endif
 
    ram_async ram1(.clk(clk),
 		  .reset(reset),
