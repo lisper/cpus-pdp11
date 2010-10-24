@@ -50,6 +50,7 @@ DAMAGE.
 int             psectid = 0;
 char           *psects[256];
 FILE           *bin = NULL;
+FILE           *mem = NULL;
 int             badbin = 0;
 int             xferad = 1;
 
@@ -259,6 +260,21 @@ void dump_bin(
     return;                            /* Worked okay. */
 }
 
+void dump_mem(
+    unsigned addr,
+    char *buf,
+    int len)
+{
+    int i;
+
+    for (i = 0; i < len; i += 2) {
+        unsigned word = WORD(buf);
+        fprintf(mem, "%06o 0%06o\n", addr, word);
+	buf += 2;
+        addr += 2;
+    }
+}
+
 void trim(
     char *buf)
 {
@@ -398,6 +414,9 @@ void got_text(
 
     if (bin)
         dump_bin(last_text_addr, cp + 4, len - 4);
+
+    if (mem)
+        dump_mem(last_text_addr, cp + 4, len - 4);
 }
 
 void rad50name(
@@ -598,7 +617,7 @@ void got_isd(
     char *cp,
     int len)
 {
-    printf("ISD len=%o\n");
+    printf("ISD len=%o\n", len);
 }
 
 void got_endmod(
@@ -633,11 +652,19 @@ int main(
     fp = fopen(argv[1], "rb");
     if (fp == NULL)
         return EXIT_FAILURE;
+#if 0
     if (argv[2]) {
         bin = fopen(argv[2], "wb");
         if (bin == NULL)
             return EXIT_FAILURE;
     }
+#else
+    if (argv[2]) {
+        mem = fopen(argv[2], "w");
+        if (mem == NULL)
+            return EXIT_FAILURE;
+    }
+#endif
 
     while ((cp = readrec(fp, &len)) != NULL) {
         switch (cp[0] & 0xff) {
@@ -678,6 +705,10 @@ int main(
         fclose(bin);
         if (badbin)
             fprintf(stderr, "Probable errors in binary file\n");
+    }
+
+    if (mem) {
+        fclose(mem);
     }
 
     fclose(fp);

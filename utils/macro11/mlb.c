@@ -299,11 +299,11 @@ void mlb_extract(
 
     for (i = 0; i < mlb->nentries; i++) {
         char            name[32];
-
+	int             ret;
         buf = mlb_entry(mlb, mlb->directory[i].label);
         sprintf(name, "%s.MAC", mlb->directory[i].label);
         fp = fopen(name, "w");
-        fwrite(buf->buffer, 1, buf->length, fp);
+        ret = fwrite(buf->buffer, 1, buf->length, fp);
         fclose(fp);
         buffer_free(buf);
     }

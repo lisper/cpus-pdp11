@@ -316,7 +316,7 @@ int parse_float(
         ufrac += 0x80000000;           /* Round to nearest 32-bit
                                           representation */
 
-        if (ufrac > 0x200000000000) {  /* Overflow? */
+        if (ufrac > 0x200000000000LL) {  /* Overflow? */
             ufrac >>= 1;               /* Normalize */
             exp--;
         }
@@ -509,7 +509,7 @@ char           *get_symbol(
             if (symcp[len - 1] == '$') {
                 char           *newsym = memcheck(malloc(32));  /* Overkill */
 
-                sprintf(newsym, "%d$%d", strtol(symcp, NULL, 10), lsb);
+                sprintf(newsym, "%ld$%d", strtol(symcp, NULL, 10), lsb);
                 free(symcp);
                 symcp = newsym;
                 if (islocal)

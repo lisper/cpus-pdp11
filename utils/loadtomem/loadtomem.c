@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <fcntl.h>
+#include <stdlib.h>
 
 typedef unsigned char u8;
 typedef unsigned short u16;
@@ -67,6 +68,10 @@ main(int argc, char *argv[])
 		usage();
 		exit(1);
 	}
+
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
 
 	fd = open(argv[1], O_RDONLY | O_BINARY);
 	if (fd < 0) {
