@@ -17,7 +17,7 @@ DTESTS := $(filter-out %FKAAC0.mem,$(DTESTS))
 DTESTS := $(filter-out %FKABD0.mem,$(DTESTS))
 DTESTS := $(filter-out %FKACA0.mem,$(DTESTS))
 DTESTS := $(filter-out %FKTGC0.mem,$(DTESTS))
-#DTESTS := $(filter-out %FKTHB0.mem,$(DTESTS))
+DTESTS := $(filter-out %FKTHB0.mem,$(DTESTS))
 
 RTL = \
 	../rtl/pdp11.v ../rtl/ipl_below.v ../rtl/add8.v ../rtl/mmu.v \
@@ -30,29 +30,34 @@ RTL = \
 
 .PHONY: regress basic diags bootrt11
 
-all: rk.dsk regress basic diags bootrt11
+all: rk-test.dsk regress basic diags bootrt11
 
 # booting RT-11
 bootrt11:
 
 #
-rk.dsk:
-	dd if=/dev/zero of=rk.dsk bs=512 count=100
+rk-test.dsk:
+	dd if=/dev/zero of=rk-test.dsk bs=512 count=100
 
 clean:
 	rm -f *.vcd *.log
-	rm -f rk.dsk
+	rm -f rk-test.dsk
 
 #---------------------------------------------------------------------
 
 define checkone_basic_code
-     grep -a f1 $(1) >/tmp/a;
-     grep -a f1 $(2) | sed -e 's/ 077 / 77 /g' -e 's/(077 /(77 /g' >/tmp/b;
-     diff -q /tmp/a /tmp/b;
+     @echo checking $(2)
+     @grep -a f1 $(1) >/tmp/a;
+     @grep -a f1 $(2) | sed -e 's/ 077 / 77 /g' -e 's/(077 /(77 /g' >/tmp/b;
+     @diff -q /tmp/a /tmp/b;
+     @if [ $$? -ne 0 ]; then \
+       echo blah; \
+     fi;
 endef
 
 define runone_basic_code
-    eval "cver +loadvpi=../pli/ide/pli_ide.so:vpi_compat_bootstrap \
+     @echo creating $(2)
+     @eval "cver +loadvpi=../pli/ide/pli_ide.so:vpi_compat_bootstrap \
 	     +loadvpi=../pli/rk/pli_rk.so:vpi_compat_bootstrap \
 	     +loadvpi=../pli/pdp11/pli_pdp11dis.so:vpi_compat_bootstrap \
 	     +test=$(1) +pc=$(3) \
@@ -83,7 +88,7 @@ diags: $(DTEST_LOGS)
 #---------------------------------------------------------------------
 
 define runone_verilog_regression
-	cver $(CVER_FLAGS) $(1) >$(2);
+	IDEIMAGE=rk-test.dsk cver $(CVER_FLAGS) $(1) >$(2);
 	@if grep -q ERROR $(2); then exit 1; fi;
 	@if grep -q FAILURE $(2); then exit 1; fi;
 endef
@@ -94,7 +99,7 @@ $(RTEST_LOGS) : %.log : %.v $(RTL)
 	$(call runone_verilog_regression,$<,$@)
 
 # verilog testbench regression tests
-regress: rk.dsk $(RTEST_LOGS)
+regress: rk-test.dsk $(RTEST_LOGS)
 
 test_bus: test_bus.v
 	$(call runone_verilog_regression,$<,$@)

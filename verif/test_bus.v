@@ -237,16 +237,21 @@ module test_bus;
    endtask
 
    task read_mem;
-      input [16:0] addr;
-
+      input [15:0] addr;
+      output [15:0] result;
+      
       begin
 	 repeat(2)@(posedge clk);
 	 bus_addr = {6'b0, addr};
-	 bus_rd = 1;
 	 bus_byte_op = 0;
+	 #1 bus_rd = 1;
 
+	 @(negedge clk);
+	 result = bus_out;
+	 
 	 @(posedge clk);
-	 bus_rd = 0;
+	 #1 bus_rd = 0;
+	 @(posedge clk);
       end
    endtask
 
@@ -279,12 +284,14 @@ module test_bus;
    endtask
 
    task read_mem_expect;
-      input [16:0] addr;
-      input [16:0] data;
+      input [15:0] addr;
+      input [15:0] data;
 
+      reg [15:0]   result;
+      
       begin
-	 read_mem(addr);
-	 if (bus_out != data)
+	 read_mem(addr, result);
+	 if (result != data)
 	   failure(addr, bus_out, data);
       end
    endtask
@@ -294,20 +301,28 @@ module test_bus;
       integer   b, i, file;
 
       begin
-	 file = $fopen("rk.dsk", "wb");
+	 file = $fopen("rk-test.dsk", "wb");
 
 	 // block 0
 	 for (i = 0; i < 256; i = i + 1)
 	   begin
-		$fwrite(file, "%c%c", i, i);
+      	      $fwriteb(file, "%u", i);
+	      $fwriteb(file, "%u", i);
 	   end
+
+	 // %$%#%$# - can't write zeros!
+	 $fwriteb(file, "%u", i);
+	 $fwriteb(file, "%u", i);
 
 	 // block 1..15
 	 for (b = 1; b < 16; b = b + 1)
 	   begin
 	      v = b;
 	      for (i = 0; i < 256; i = i + 1)
-		$fwrite(file, "%c%c", v, v);
+		begin
+		   $fwrite(file, "%u", v);
+		   $fwrite(file, "%u", v);
+		end
 	   end
 
 	 $fclose(file);
@@ -326,28 +341,30 @@ module test_bus;
 	 // should bus error
          write_mem22(22'o0776000, 16'h0000);
 
-         write_mem(16'h0000, 16'ha5a5);
-	 write_mem(16'h0002, 16'h5a5a);
-	 write_mem(16'h0004, 16'o1234);
-	 write_mem(16'h0006, 16'o177777);
-	 write_mem(16'h0010, 16'o54321);
+	 $display("");
+         write_mem(16'o0000, 16'ha5a5);
+	 write_mem(16'o0002, 16'h5a5a);
+	 write_mem(16'o0004, 16'o1234);
+	 write_mem(16'o0006, 16'o177777);
+	 write_mem(16'o0010, 16'o54321);
 
-	 read_mem_expect(16'h0000, 16'ha5a5);
-	 read_mem_expect(16'h0002, 16'h5a5a);
-	 read_mem_expect(16'h0004, 16'o1234);
-	 read_mem_expect(16'h0006, 16'o177777);
-	 read_mem_expect(16'h0010, 16'o54321);
+	 $display("");
+	 read_mem_expect(16'o0000, 16'ha5a5);
+	 read_mem_expect(16'o0002, 16'h5a5a);
+	 read_mem_expect(16'o0004, 16'o1234);
+	 read_mem_expect(16'o0006, 16'o177777);
+	 read_mem_expect(16'o0010, 16'o54321);
       end
    endtask
    
    task test_bus_ram_retest;
       begin
 	 bus_arbitrate = 0;
-	 read_mem_expect(16'h0000, 16'ha5a5);
-	 read_mem_expect(16'h0002, 16'h5a5a);
-	 read_mem_expect(16'h0004, 16'o1234);
-	 read_mem_expect(16'h0006, 16'o177777);
-	 read_mem_expect(16'h0010, 16'o54321);
+	 read_mem_expect(16'o0000, 16'ha5a5);
+	 read_mem_expect(16'o0002, 16'h5a5a);
+	 read_mem_expect(16'o0004, 16'o1234);
+	 read_mem_expect(16'o0006, 16'o177777);
+	 read_mem_expect(16'o0010, 16'o54321);
       end
    endtask
    
@@ -397,21 +414,22 @@ module test_bus;
    endtask
 
    task rk_check_blk0_pattern;
+      input [15:0] ma;
       reg [15:0] l;
+      reg [15:0] lp1;
       reg [15:0] tv;
 
       begin
 	 // which should contain 0, 1, 2...
-	 for (l = 0; l < 128; l = l + 2)
+	 for (l = 0; l < 256; l = l + 1)
 	   begin
-	      tv = { l[8:1], 8'h11 };
-	      read_mem_expect(l,  tv);
-	   end
+	      lp1 = l + 1;
+	      tv = { lp1[7:0], lp1[7:0] };
 
-	 for (l = 128; l < 256; l = l + 2)
-	   begin
-	      tv = { l[8:1], 8'h22 };
-	      read_mem_expect(l,  tv);
+	      // hack due to inability to write zeros
+	      if (l == 255) tv = 16'h0101;
+	      
+	      read_mem_expect(ma + l*2,  tv);
 	   end
       end
    endtask
@@ -419,95 +437,107 @@ module test_bus;
    task basic_rk_test;
       reg [15:0] l;
       reg [15:0] tv;
+      reg [15:0] ma;
 
       begin
-	 // read sector zero
-	 fill_memory(0, 512, 16'hffff);
-	 rk_write_block(0, 512, 0);
+	 $display("\n--basic rk test");
 
-	 rk_check_blk0_pattern;
+	 ma = 16'o1000;
+	 
+	 $display("\n--1/read sector 0");
+	 fill_memory(ma, 512, 16'hffff);
+	 rk_read_block(0, 512, ma);
 
-	 // write sector 2 with zeros
-	 fill_memory(0, 512, 16'o0);
-	 rk_write_block(2, 512, 0);
+	 rk_check_blk0_pattern(ma);
 
-	 // read sector 0
-	 rk_read_block(0, 512, 0);
+	 $display("\n--2/write sector 2 with zeros");
+	 fill_memory(ma, 512, 16'o0);
+	 rk_write_block(2, 512, ma);
 
-	 rk_check_blk0_pattern;
+	 $display("\n--3/read sector 0");
+	 rk_read_block(0, 512, ma);
 
-	 // read sector 2
-	 rk_read_block(2, 512, 0);
+	 rk_check_blk0_pattern(ma);
+
+	 $display("\n--4/read sector 2");
+	 rk_read_block(2, 512, ma);
 	 
 	 for (l = 0; l < 256; l = l + 2)
-	   read_mem_expect(l,  0);
+	   read_mem_expect(ma + l,  0);
 
-	 // write sector 0 with zeros
-	 fill_memory(0, 512, 16'o0);
-	 rk_write_block(2, 512, 0);
+	 $display("\n--5/write sector 0 with zeros");
+	 fill_memory(ma, 512, 16'o0);
+	 rk_write_block(0, 512, ma);
 
-	 // read sector 0
-	 rk_read_block(0, 512, 0);
+	 $display("\n--6/read sector 0");
+	 rk_read_block(0, 512, ma);
 
 	 for (l = 0; l < 256; l = l + 2)
-	   read_mem_expect(l,  0);
+	   read_mem_expect(ma + l,  0);
 	 
-	 // write sector 4
-	 fill_memory(0, 512, 16'o1234);
-	 rk_write_block(4, 512, 0);
+	 $display("\n--7/write sector 4");
+	 fill_memory(ma, 512, 16'o1234);
+	 rk_write_block(4, 512, ma);
        
-	 // read sector 0
-	 rk_read_block(0, 512, 0);
+	 $display("\n--8/read sector 0");
+	 rk_read_block(0, 512, ma);
        
-	 // read sector 4
-	 rk_read_block(4, 512, 0);
+	 $display("\n--9/read sector 4");
+	 rk_read_block(4, 512, ma);
 
 	 for (l = 0; l < 256; l = l + 2)
-	   read_mem_expect(l,  16'o1234);
+	   read_mem_expect(ma + l,  16'o1234);
+
+	 $display("\n--basic rk test done");
       end
    endtask // basic_rk_test
 
    task odd_rk_test;
+      reg [15:0] ma;
       begin
+	 ma = 16'o2000;
+
 	 // read sector 0
-	 rk_read_block(0, 256, 0);
+	 rk_read_block(0, 256, ma);
 
 	 // read sector 1
-	 rk_read_block(1, 256, 0);
+	 rk_read_block(1, 256, ma);
 
 	 // write sector 0
-	 rk_read_block(0, 256, 0);
+	 rk_read_block(0, 256, ma);
 
 	 // write sector 1
-	 rk_read_block(1, 256, 0);
+	 rk_read_block(1, 256, ma);
       end
    endtask // odd_rk_test
    
    task rk_test;
       integer 	   blk;
+      reg [15:0] ma;
 
       begin
+	 ma = 16'o4000;
+
 	 for (blk = 0; blk < 10; blk = blk + 1)
 	   begin
-	      rk_read_block(blk, 256, 0);
+	      rk_read_block(blk, 256, ma);
 	   end
 
 	 for (blk = 0; blk < 10; blk = blk + 1)
 	   begin
-	      rk_write_block(blk, 256, 0);
+	      rk_write_block(blk, 256, ma);
 	   end
 
 	 for (blk = 0; blk < 10; blk = blk + 1)
 	   begin
-	      rk_read_block(blk, 256, 0);
-	      rk_write_block(blk, 256, 0);
+	      rk_read_block(blk, 256, ma);
+	      rk_write_block(blk, 256, ma);
 	   end
       end
    endtask // odd_rk_test
 
    task test_bus_rk_test;
       begin
-	 prep_rk;
 	 bus_rk_test;
 	 basic_rk_test;
 //       odd_rk_test;
@@ -523,6 +553,8 @@ module test_bus;
 
        $dumpfile("test_bus.vcd");
        $dumpvars(0, test_bus);
+
+       prep_rk;
     end
 
   initial
@@ -543,9 +575,9 @@ module test_bus;
        #1 reset = 1;
        #50 reset = 0;
 
-       test_bus_ram_test;
+//       test_bus_ram_test;
        test_bus_rk_test;
-       test_bus_ram_retest;
+//       test_bus_ram_retest;
        
        $finish;
     end

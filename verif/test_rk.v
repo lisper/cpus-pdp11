@@ -148,7 +148,9 @@ module test_rk;
 
    task basic_rk_test;
       begin
-	 // read sector zero
+	 $display("basic rk05 tests");
+
+	 // write sector zero
 	 rk_write_block(0, 256, 0);
 
 	 // read sector 2
@@ -161,6 +163,8 @@ module test_rk;
 
    task odd_rk_test;
       begin
+	 $display("odd rk05 tests");
+
 	 // read sector 0 short
 	 rk_read_block(0, 128, 0);
 
@@ -202,7 +206,9 @@ module test_rk;
       integer   b, i, file;
 
       begin
-	 file = $fopen("rk.dsk", "wb");
+	 $display("preparing rk-test.dsk");
+	 
+	 file = $fopen("rk-test.dsk", "wb");
 
 	 // block 0
 	 for (i = 0; i < 128; i = i + 1)
@@ -257,7 +263,9 @@ module test_rk;
        basic_rk_test;
        odd_rk_test;
 //       rk_test;
-       
+
+       $display("done");
+
        $finish;
     end
 
