@@ -1,6 +1,6 @@
 // run.v
-// pdp-11 in verilog - sim top level
-// copyright Brad Parker <brad@heeltoe.com> 2009
+// pdp-11 in verilog - cver sim top level
+// copyright Brad Parker <brad@heeltoe.com> 2009-2010
 //
 
 `timescale 1ns / 1ns
@@ -11,17 +11,21 @@
 //`define debug_cycles
 
 // for booting rt-11
-//`define no_mmu
-//`define no_fake_input
-//`define sim_56k
+`define no_mmu
+`define use_18bit_phys
+`define sim_56k
+
+`define no_fake_input
 
 `define minimal_debug 1
 //`define full_debug	1
+
+`define debug_io
 //`define debug_bus	1
-//`define debug_bus_ram	1
-//`define debug_bus_io	1
 //`define debug_bus_state	1
-//`define debug_io
+`define debug_bus_io	1
+`define debug_bus_all 	1
+`define debug_bus_ram	1
 
 //`define debug_vcd
 //`define debug_log
@@ -29,8 +33,10 @@
 
 `define debug_ram	1
 //`define debug_ram_low	1
+
 `define debug_tt_out
 `define debug_tt_int
+
 //`define debug_cpu_int
 
 `define use_rk_model	1
@@ -337,17 +343,25 @@ module test;
 	rs232_rx = 0;
 
 	max_cycles = 2500000;
+
+// 2.9bsd
+max_cycles = 0;
+switches = 16'o40;
 	
+`ifndef verilator
 	#1 reset = 1;
 	repeat(1)@(negedge clk);
 	reset = 0;
+`endif
      end
 
+`ifndef verilator
 `ifdef use_ide_pli
    always @(posedge clk)
      begin
 	$pli_ide(ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da);
      end
+`endif
 `endif
    
    always

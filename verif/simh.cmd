@@ -1,6 +1,6 @@
 set cpu 11/34
-set cpu 128k
-att rk0 rk.dsk
+set cpu 256k
+att rk0 rk2.dsk
 set rha disabled
 set rhb disabled
 set ptr disabled
