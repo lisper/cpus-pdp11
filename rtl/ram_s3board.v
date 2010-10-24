@@ -134,9 +134,9 @@ module ram_s3board(ram_a, ram_oe_n, ram_we_n,
 	  $display("ram_s3board: ce_n %b ub_n %b lb_n %b we_n %b oe_n %b",
 		   ram1_ce_n, ram1_ub_n, ram1_lb_n, ram_we_n, ram_oe_n);
 
-	#2 if (ram_oe_n == 0 && ram_we_n == 1)
+	#3 if (ram_oe_n == 0 && ram_we_n == 1)
 	  $display("ram_s3board: read  [%o] -> %o %t", ram_a*2, ram1_io, $time);
-	#2 if (ram_oe_n == 1 && ram_we_n == 0)
+	#3 if (ram_oe_n == 1 && ram_we_n == 0)
 	  $display("ram_s3board: write [%o] <- %o %t", ram_a*2, ram1_io, $time);
      end
 `endif

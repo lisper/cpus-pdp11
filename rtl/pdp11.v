@@ -661,8 +661,8 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 		     else
 		       psw <= {psw[15:8], new_psw_wr[7:0]};
 `ifdef debug
-		   $display("write psw: bus_data_out %o, new_psw_wr %o, bus_byte_op %o, bus_addr %o",
-			    bus_data_out, new_psw_wr, bus_byte_op, bus_addr);
+		   $display("write psw: bus_data_out %o, new_psw_wr %o, current_mode %b",
+			    bus_data_out, new_psw_wr, current_mode);
 `endif
 		end
 	    default:
@@ -1759,10 +1759,9 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
      #2 begin
    	if (istate == f1 && ~trap)
 	  begin
-	     $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o) %b%b%b",
+	     $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o)",
 		      pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
-		      r0, r1, r2, r3, r4, r5, sp, pc,
-		      trap, interrupt, trace_inhibit);
+		      r0, r1, r2, r3, r4, r5, sp, pc);
 	  end // case: f1
      end
 `endif
