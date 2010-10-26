@@ -95,6 +95,10 @@ output [4:0] rk_state;
    reg [2:0] 	grant_state;
    wire [2:0] 	grant_state_next;
 
+   reg [21:0] 	hold_bus_addr;
+   reg [15:0] 	hold_bus_data_in;
+   reg 		hold_bus_rd, hold_bus_wr, hold_bus_byte_op;
+
 `ifdef use_18bit_phys
    // 18 bit physical addressing
    assign 	iopage_access = bus_addr[17:13] == 5'o37;
@@ -239,11 +243,7 @@ output [4:0] rk_state;
 
    assign bus_error = iopage_bus_error || ram_bus_error;
 
-   // register
-   reg [21:0] hold_bus_addr;
-   reg [15:0] hold_bus_data_in;
-   reg 	      hold_bus_rd, hold_bus_wr, hold_bus_byte_op;
-       
+   // register request from cpu
    always @(posedge clk)
      if (reset)
        begin
@@ -295,12 +295,12 @@ output [4:0] rk_state;
    iopage iopage(.clk(clk),
 		  .brgclk(brgclk),
 		  .reset(reset),
-		  .address(bus_addr),
-		  .data_in(bus_data_in),
+		  .address(hold_bus_addr),
+		  .data_in(hold_bus_data_in),
 		  .data_out(iopage_out),
 		  .iopage_rd(iopage_rd),
 		  .iopage_wr(iopage_wr),
-		  .iopage_byte_op(bus_byte_op),
+		  .iopage_byte_op(hold_bus_byte_op),
 
 		  .no_decode(iopage_bus_error),
 		  .interrupt(bus_int),
