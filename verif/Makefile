@@ -7,15 +7,15 @@ CVER_FLAGS = +loadvpi=../pli/ide/pli_ide.so:vpi_compat_bootstrap
 RTESTS = test_bus test_rk test_tt test_ide test_div test_mul test_shift
 
 BTESTS = $(wildcard ../tests/basic/*.mem)
-BTESTS := $(filter-out %test11.mem,$(BTESTS))
-BTESTS := $(filter-out %test14.mem,$(BTESTS))
-BTESTS := $(filter-out %test15.mem,$(BTESTS))
-BTESTS := $(filter-out %test16.mem,$(BTESTS))
+#current broken
+BTESTS := $(filter-out %test17.mem,$(BTESTS))
 
 DTESTS = $(wildcard ../tests/diags/*.mem)
-DTESTS := $(filter-out %FKAAC0.mem,$(DTESTS))
+#DTESTS := $(filter-out %FKAAC0.mem,$(DTESTS))
+# trap doesn't abort tst (r0)+ increment
 DTESTS := $(filter-out %FKABD0.mem,$(DTESTS))
-DTESTS := $(filter-out %FKACA0.mem,$(DTESTS))
+#DTESTS := $(filter-out %FKACA0.mem,$(DTESTS))
+# ??
 DTESTS := $(filter-out %FKTGC0.mem,$(DTESTS))
 DTESTS := $(filter-out %FKTHB0.mem,$(DTESTS))
 

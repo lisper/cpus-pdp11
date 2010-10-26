@@ -11,11 +11,12 @@
 //`define debug_cycles
 
 // for booting rt-11
-`define no_mmu
-`define use_18bit_phys
-`define sim_56k
+//`define no_mmu
+//`define use_18bit_phys
+//`define sim_56k
 
-`define no_fake_input
+//`define no_fake_input
+`define fake_uart
 
 `define minimal_debug 1
 //`define full_debug	1

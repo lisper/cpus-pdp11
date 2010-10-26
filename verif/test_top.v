@@ -7,17 +7,20 @@
 `define debug		1
 `define sim_time	1
 
-`define no_fake_input
+`define fake_uart
+
 `define debug_tt_out	1
 `define debug_tt_int	1
 `define debug_io 	1
-`define debug_bus_io 	1
+//`define debug_bus_io 	1
 //`define debug_bus_all 	1
 `define debug_bus_ram 	1
 
-`define no_mmu
-`define use_18bit_phys
-`define sim_56k
+`define debug_cpu_int	1
+
+//`define no_mmu
+//`define use_18bit_phys
+//`define sim_56k
 
 `include "../rtl/pdp11.v"
 `include "../rtl/ipl_below.v"
