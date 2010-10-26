@@ -1,5 +1,10 @@
 # s3board
 
+NET "sysclk" TNM_NET = "CLK";
+TIMESPEC "TS_CLK" = PERIOD "CLK" 20 ns HIGH 50 %;
+OFFSET =  IN 10 ns BEFORE "sysclk";
+OFFSET = OUT 20 ns  AFTER "sysclk";
+
 NET "rs232_txd"  LOC = "R13";
 NET "rs232_rxd"  LOC = "T13";
 
