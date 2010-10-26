@@ -27,7 +27,8 @@ module bus(clk, brgclk, reset, bus_addr, bus_data_in, bus_data_out,
 	   bus_arbitrate, bus_ack, bus_error,
 	   bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl,
 	   ram_addr, ram_data_in, ram_data_out, ram_rd, ram_wr, ram_byte_op,
-	   pxr_wr, pxr_rd, pxr_be, pxr_addr, pxr_data_in, pxr_data_out, pxr_trap,
+	   pxr_wr, pxr_rd, pxr_be,
+	   pxr_addr, pxr_data_in, pxr_data_out, pxr_trap,
 	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 	   psw, psw_io_wr, switches, rs232_tx, rs232_rx
 ,rk_state
@@ -88,9 +89,10 @@ output [4:0] rk_state;
    
    wire [15:0] 	dma_data_out;
 
+   wire		bus_req;
+ 	
    wire 	grant_cpu, grant_dma;
    reg [2:0] 	grant_state;
-   /*reg [3:0] 	grant_count;*/
    wire [2:0] 	grant_state_next;
 
 `ifdef use_18bit_phys
@@ -105,17 +107,17 @@ output [4:0] rk_state;
    assign 	ram_access = ~iopage_access;
 `endif
    
-   assign 	iopage_rd = bus_rd & iopage_access;
-   assign 	iopage_wr = bus_wr & iopage_access;
+   assign 	iopage_rd = hold_bus_rd & iopage_access;
+   assign 	iopage_wr = hold_bus_wr & iopage_access;
 
    assign bus_data_out = ram_access ? ram_data_in :
 			 iopage_access ? iopage_out : 16'hffff/*16'b0*/;
 
-   assign ram_addr = grant_cpu ? bus_addr : {4'b0, dma_addr};
-   assign ram_data_out = grant_cpu ? bus_data_in : dma_data_out;
-   assign ram_rd = grant_cpu ? (bus_rd & ram_access) : dma_rd;
-   assign ram_wr = grant_cpu ? (bus_wr & ram_access) : dma_wr;
-   assign ram_byte_op = grant_cpu ? bus_byte_op : 1'b0;
+   assign ram_addr = grant_cpu ? hold_bus_addr : {4'b0, dma_addr};
+   assign ram_data_out = grant_cpu ? hold_bus_data_in : dma_data_out;
+   assign ram_rd = grant_cpu ? (hold_bus_rd & ram_access) : dma_rd;
+   assign ram_wr = grant_cpu ? (hold_bus_wr & ram_access) : dma_wr;
+   assign ram_byte_op = grant_cpu ? hold_bus_byte_op : 1'b0;
 
 
 `ifdef debug_bus_all
@@ -202,24 +204,33 @@ output [4:0] rk_state;
      if (reset)
        grant_state <= 3'd0;
      else
-       begin
-	  grant_state <= grant_state_next;
-`ifdef debug_bus_state
-	  $display("grant_state %b", grant_state_next);
-`endif
-       end
+       grant_state <= grant_state_next;
 
    assign grant_state_next =
-		(grant_state == 3'd0 && dma_req && bus_arbitrate) ? 3'd1 :
-		(grant_state == 3'd1 && dma_req) ? 3'd2 :
-		(grant_state == 3'd2 && dma_req) ? 3'd3 :
-		(grant_state == 3'd3 && dma_req) ? 3'd4 :
+		// cpu 0-3
+		(grant_state == 3'd0 && dma_req && bus_arbitrate) ? 3'd4 :
+		(grant_state == 3'd0 && bus_req) ? 3'd1 :
+		(grant_state == 3'd1) ? 3'd0 :
+		// dma 4-7
+		(grant_state == 3'd4 && dma_req) ? 3'd5 :
+		(grant_state == 3'd5 && dma_req) ? 3'd6:
+		(grant_state == 3'd6 && dma_req) ? 3'd7 :
 		3'd0;
 
-   assign grant_cpu = grant_state == 3'd0;
-   assign grant_dma = grant_state != 3'd0;
+`ifdef debug_bus_state
+   always @(posedge clk)
+     $display("grant_state %b, cpu %b %b, arb %b, dma %b %b; %t",
+	      grant_state, bus_req, bus_ack, bus_arbitrate, dma_req, dma_ack,
+	      $time);
+`endif
    
-   assign bus_ack = grant_cpu;
+   // cpu is requesting bus
+   assign bus_req = bus_rd || bus_wr;
+   
+   assign grant_cpu = grant_state == 3'd1;
+   assign grant_dma = grant_state >= 3'd4;
+   
+   assign bus_ack = ~bus_req || grant_cpu;
    assign dma_ack = grant_dma;
 
    wire   iopage_bus_error;
@@ -228,6 +239,31 @@ output [4:0] rk_state;
 
    assign bus_error = iopage_bus_error || ram_bus_error;
 
+   // register
+   reg [21:0] hold_bus_addr;
+   reg [15:0] hold_bus_data_in;
+   reg 	      hold_bus_rd, hold_bus_wr, hold_bus_byte_op;
+       
+   always @(posedge clk)
+     if (reset)
+       begin
+	  hold_bus_addr <= 0;
+	  hold_bus_data_in <= 0;
+	  hold_bus_rd <= 0;
+	  hold_bus_wr <= 0;
+	  hold_bus_byte_op <= 0;
+       end
+     else
+       if (grant_state == 3'd0)
+	 begin
+	    hold_bus_addr <= bus_addr;
+	    hold_bus_data_in <= bus_data_in;
+	    hold_bus_rd <= bus_rd;
+	    hold_bus_wr <= bus_wr;
+	    hold_bus_byte_op <= bus_byte_op;
+	 end
+
+   
 `ifdef sim_56k
    //
    // for diagnostics, pretend we have 56k of ram

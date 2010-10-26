@@ -248,9 +248,9 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
        tti_state <= tti_state_next;
 
 `ifdef fake_uart
-//`define no_fake_input
+`define no_fake_input
 //`define v6_unix
-`define bsd_unix
+//`define bsd_unix
 //`define rsts
 
  `ifdef v6_unix

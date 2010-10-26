@@ -262,6 +262,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    // d4 dest4;	   	clock dd_data
    //
    // e1 execute;	clock reg+-		clock pc	/clock sp
+   //
    // w1 writeback;	clock e1_result
    //
    // o1 pop pc	   	mem read		clock pc	clock sp
