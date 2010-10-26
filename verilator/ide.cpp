@@ -76,7 +76,16 @@ static struct state_s {
 static void
 do_ide_setup(struct state_s *s)
 {
-    s->file_fd = open("rk.dsk", O_RDWR);
+    char *dif, disk_image_filename[1024];
+
+    /* allow default name to be overridden */
+    strcpy(disk_image_filename, "rk.dsk");
+    if ((dif = getenv("IDEIMAGE")))
+        strncpy(disk_image_filename, dif, sizeof(disk_image_filename));
+
+    s->file_fd = open(disk_image_filename, O_RDWR);
+    if (s->file_fd < 0)
+        perror(disk_image_filename);
 
     s->status = (1<<IDE_STATUS_DRDY)|(1<<IDE_STATUS_DSC);
     s->fifo_depth = 0;
