@@ -236,106 +236,12 @@ output [4:0] rk_state;
    assign reg_in = (iopage_byte_op & iopage_addr[0]) ? {8'b0, data_in[15:8]} :
 		   data_in;
 
-`ifdef xxx
-   always @(posedge clk)
-     if (reset)
-       begin
-	  rker <= 0;
-	  rkwc <= 0;
-	  rkba <= 0;
-	  rkda <= 0;
-
-	  rkcs_err <= 0;
-	  rkcs_done <= 0;
-	  rkcs_ie <= 0;
-	  rkcs_cmd <= 0;
-       end
-     else
-       begin
-	  if (iopage_wr && decode)
-	    case (iopage_addr)
-	      //13'o17400:
-	      //13'o17402:
-	      13'o17404:
-		begin
-		   rkcs_done <= data_in[7];
-		   rkcs_ie <= data_in[6];
-		   rkba[17:16] <= data_in[5:4];
-		   rkcs_cmd <= data_in[3:0];
-`ifdef debug
-		   $display("rk: write rkcs %o", data_in);
-`endif
-		end
-	      
-	      13'o17406:
-		begin
-		   rkwc <= data_in;
-`ifdef debug
-		   $display("rk: write rkwc %o", data_in);
-`endif
-		end
-	      
-	      13'o17410:
-		begin
-		   rkba[15:0] <= data_in;
-`ifdef debug
-		   $display("rk: write rkba %o", data_in);
-`endif
-		end
-	      
-	      13'o17412:
-		begin
-		   rkda <= data_in;
-`ifdef debug
-		   $display("rk: XXX write rkda %o", data_in);
-`endif
-		end
-	    endcase
-	  else
-	    begin
-   	       if (clear_err)
-		 rkcs_err <= 0;
-	       else
-		 if (set_err)
-		   rkcs_err <= 1;
-	       
-	       if (clear_cmd)
-		 rkcs_cmd <= 0;
-
-	       if (set_done)
-		 rkcs_done <= 1;
-	       else
-		 if (clear_done)
-		   rkcs_done <= 0;
-
-	       if (clear_da)
-		 rkda <= 0;
-	       
-	       if (inc_ba)
-		 begin
-		    rkba <= rkba + 18'd2;
-		    if (0) $display("rk: inc ba %o", rkba);
-		 end
-	       else
-		 if (clear_ba)
-		   rkba <= 18'd0;
-
-	       if (inc_wc)
-		 begin
-		    rkwc <= rkwc + 16'd1;
-		    if (0) $display("rk: inc wc %o", rkwc);
-		 end
-	    end
-       end
-`endif //  `ifdef xxx
-
-   // RKVS
+   // RKCS
    always @(posedge clk)
      if (reset)
        begin
 	  rkcs_done <= 0;
 	  rkcs_ie <= 0;
-	  rkba[17:16] <= 0;
 	  rkcs_cmd <= 0;
 	  rkcs_err <= 0;
        end
@@ -344,7 +250,7 @@ output [4:0] rk_state;
 	 begin
 	    rkcs_done <= data_in[7];
 	    rkcs_ie <= data_in[6];
-	    rkba[17:16] <= data_in[5:4];
+	    //rkba[17:16] registed below from data_in[5:4];
 	    rkcs_cmd <= data_in[3:0];
 `ifdef debug
 	    $display("rk: write rkcs %o", data_in);
@@ -392,12 +298,18 @@ output [4:0] rk_state;
      if (reset)
        rkba <= 0;
      else
-       if (iopage_wr && decode && iopage_addr == 13'o17410)
+       if (iopage_wr && decode)
 	 begin
-	    rkba[15:0] <= data_in;
+	    if (iopage_addr == 13'o17410)
+	      begin
+		 rkba[15:0] <= data_in;
 `ifdef debug
-	    $display("rk: write rkba %o", data_in);
+		 $display("rk: write rkba %o", data_in);
 `endif
+	      end
+
+	    if (iopage_addr == 13'o17404)
+	      rkba[17:16] <= data_in[5:4];
 	 end
        else
 	 if (inc_ba)

@@ -62,7 +62,7 @@ module top(rs232_txd, rs232_rxd,
    assign initial_pc = 32'o173000;
 
 `ifndef sim_time
- `define slower
+// `define slower
 `endif
 
 `ifdef slower
@@ -179,7 +179,6 @@ wire [4:0] rk_state;
 
    wire        ram_oe_n, ram_we_n, ram_ce_n;
    wire [15:0] ram1_io, ram2_io;
-   wire        ram_ub, ram_lb;
 
    wire [15:0] switches;
    assign switches = {8'b0, slideswitch};

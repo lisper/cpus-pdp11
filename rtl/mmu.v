@@ -130,6 +130,7 @@ module mmu(clk, reset, soft_reset,
 `endif
 
 //----
+`ifdef debug
     always @(posedge clk)
       if (cpu_va == 16'o54766 && mmr0[0])
 	begin
@@ -138,6 +139,7 @@ module mmu(clk, reset, soft_reset,
 	   $display("ZZZ: map_adder_22 %o, cpu_paf %o, cpu_df %o",
 		    map_adder_22, cpu_paf, cpu_df);
 	end
+`endif
 //----
 
    // MMR0_MME bit
