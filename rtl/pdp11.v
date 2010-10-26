@@ -548,10 +548,14 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 	       (istate == d4) ? bus_data_in :
 	       16'b0;
 
+//cleanup
+//   assign e1_data_mux =
+//	       (istate == e1) ? e1_result :
+//	       16'b0;
    assign e1_data_mux =
 	       (istate == e1) ? e1_result :
-	       16'b0;
-
+	       (istate == o3) ? bus_data_in :
+ 	       16'b0;
 
    //
    // mux sources of pc changes into new pc
@@ -612,9 +616,11 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
    wire [15:0] new_psw_wr;
    wire [15:0] new_psw_wr_kernel;
    wire [15:0] new_psw_wr_user;
-   
-   assign new_psw_wr = current_mode != mode_user ?
-		       new_psw_wr_kernel : new_psw_wr_user;
+
+   // a mistaken notion on my part; mode bits are writeable
+//   assign new_psw_wr = current_mode != mode_user ?
+//		       new_psw_wr_kernel : new_psw_wr_user;
+   assign new_psw_wr = new_psw_wr_kernel;
 
    // wr can set trace, but not clear it
    assign new_psw_wr_kernel = { bus_data_out[15:5],
@@ -657,12 +663,14 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 		     psw <= new_psw_wr;
 		   else
 		     if (bus_addr[0])
-		       psw <= {new_psw_wr[7:0], psw[7:0]};
+		       psw <= {new_psw_wr[15:8], psw[7:0]};
 		     else
 		       psw <= {psw[15:8], new_psw_wr[7:0]};
 `ifdef debug
-		   $display("write psw: bus_data_out %o, new_psw_wr %o, current_mode %b",
-			    bus_data_out, new_psw_wr, current_mode);
+		   $display("write psw: bus_data_out %o, new_psw_wr %o",
+			    bus_data_out, new_psw_wr);
+		   $display("write psw: current_mode %b byte_op %b bus_addr %o",
+			    current_mode, bus_byte_op, bus_addr);
 `endif
 		end
 	    default:
@@ -1480,7 +1488,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 
              $display("trap: set %b", trap);
 
-`ifdef debug
+`ifdef debug_odd
 	     if (trap_odd) $finish;
 `endif
 
@@ -1605,7 +1613,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 		vector, istate, interrupt_ack_ipl);
    
    always @(posedge clk)
-     if (interrupt_ack_ipl)
+     if (interrupt_ack_ipl != 0)
        $display("cpu: XXX cpu int_ack; interrupt_ack_ipl %b, istate %o",
 		interrupt_ack_ipl, istate);
 `endif   
@@ -1710,17 +1718,19 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 		    istate == s1 ||
 		    istate == s2 ||
 		    istate == s3 ||
-		    istate == d1 ||
-		    istate == d2 ||
-		    istate == d3 ||
+//cleanup
+//		    istate == d1 ||
+//		    istate == d2 ||
+//		    istate == d3 ||
 		    istate == t0 ||
 		    istate == t1) ?
 		   ss_ea_mux : ss_ea;
 
 	  dd_ea <= (istate == c1 ||
-		    istate == s1 ||
-		    istate == s2 ||
-		    istate == s3 ||
+//cleanup
+//		    istate == s1 ||
+//		    istate == s2 ||
+//		    istate == s3 ||
 		    istate == d1 ||
 		    istate == d2 ||
 		    istate == d3) ?
@@ -1740,9 +1750,12 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 	  if (istate == c1 || istate == d4)
 	       dd_data <= dd_data_mux;
 
-	  e1_data <= (istate == e1/* || istate == w1*/) ? e1_data_mux :
-		     (istate == o3) ? bus_data_in :
-		     e1_data;
+//cleanup
+// 	  e1_data <= (istate == e1/* || istate == w1*/) ? e1_data_mux :
+//		     (istate == o3) ? bus_data_in :
+//		     e1_data;
+	  if (istate == e1 || istate == o3)
+	    e1_data <= e1_data_mux;
 
 //	  e32_data <= istate == e1  ? e32_result : e32_data;
 	  if (istate == e1)

@@ -172,8 +172,7 @@ module mmu(clk, reset, soft_reset,
 
    // map 18 bit iopage to 22 bit iopage if only doing 18 bit mapping
    // (iopage.v expects full 22 bit mapping - see bus.v)
-   assign pa_is_iopage = ~map22 && (map_adder[17:14] == 4'b1111);
-/* \| (map22 & cpu_pa_mapped[21:18] == 4'b1111) */
+   assign pa_is_iopage = ~map22 && (map_adder[17:13] == 5'b11111);
    
    // complete translation of 16 bit va to 22 bit pa, mapped
    assign mapped_pa_22 = pa_is_iopage ? {6'o77, map_adder[15:0]} : map_adder;

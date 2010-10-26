@@ -48,7 +48,7 @@ module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 				  supr_par_pdr_decode |
 				  kern_par_pdr_decode;
 
-   assign 	 decode_reg = (iopage_addr == 13'o17516) |
+   assign 	 decode_reg = (iopage_addr == 13'o12516) |
 			      (iopage_addr == 13'o17572) |
 			      (iopage_addr == 13'o17574) |
 			      (iopage_addr == 13'o17576);
@@ -108,7 +108,7 @@ module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	    13'o17572: pxr_addr = {8'b10000000};
 	    13'o17574: pxr_addr = {8'b10000001};
 	    13'o17576: pxr_addr = {8'b10000010};
-	    13'o17516: pxr_addr = {8'b10000011};
+	    13'o12516: pxr_addr = {8'b10000011};
 
 	    // kernel, supervisor and user par & pdr registers
 	    13'o176xx: pxr_addr = {1'b0,iopage_addr[5],2'b11,iopage_addr[4:1]};

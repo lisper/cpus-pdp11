@@ -46,7 +46,7 @@ module top(rs232_txd, rs232_rxd,
 
    //
    wire         reset;
-   wire [15:0] 	initial_pc;
+   wire [31:0] 	initial_pc/*verilator public_flat*/;
    wire [15:0] 	pc;
    wire 	halted;
    wire 	waited;
@@ -59,7 +59,7 @@ module top(rs232_txd, rs232_rxd,
    wire 	mmu_trap;
    wire 	mmu_wr_inhibit;
    
-   assign initial_pc = 16'o173000;
+   assign initial_pc = 32'o173000;
 
 `ifndef sim_time
  `define slower
@@ -139,7 +139,7 @@ wire [4:0] rk_state;
    
    pdp11 cpu(.clk(clk),
 	     .reset(reset),
-	     .initial_pc(initial_pc),
+	     .initial_pc(initial_pc[15:0]),
 	     .halted(halted),
 	     .waited(waited),
 	     .trapped(trapped),

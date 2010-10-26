@@ -169,8 +169,9 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    // state 1 - wait for tx_ack to assert
    // state 2 - wait for tx_ack to deassert
    // state 3 - wait for tx_empty to assert
-   reg [1:0] tto_state;
-   wire [1:0] tto_state_next;
+   // state 4 - 
+   reg [2:0] tto_state;
+   wire [2:0] tto_state_next;
    
    assign tto_data_wr = iopage_wr && (iopage_addr == 13'o17566);
    
@@ -181,12 +182,13 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
        tto_state <= tto_state_next;
 
 `ifdef fake_uart
-   // quick version for sim; don't wait for uart
+   // quicker version for sim; don't wait for uart
    assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
-			   (tto_state == 1) ? 0 :
+			   (tto_state == 1) ? 2 :
+			   (tto_state == 2) ? 3 :
+			   (tto_state == 3 && _tx_delay == 0) ? 4 :
+			   (tto_state == 4) ? 0 :
 			   tto_state;
-
-//   assign assert_tx_int = tto_state == 1 && tto_state_next == 0;
 
    integer _tx_delay;
 
@@ -195,23 +197,18 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    
    always @(posedge clk)
      if (tto_data_wr)
-       _tx_delay = 1000;
+         _tx_delay = 100;
      else
-	  if (_tx_delay > 0)
-	    begin
-	       _tx_delay = _tx_delay - 1;
-	    end
-   
-    assign assert_tx_int = _tx_delay == 0;
+       if (_tx_delay > 0)
+	 _tx_delay = _tx_delay - 1;
 
 `else
    assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
 			   (tto_state == 1 && ld_tx_ack) ? 2 :
 			   (tto_state == 2 && ~ld_tx_ack) ? 3 :
-			   (tto_state == 3 && tx_empty) ? 0 :
+			   (tto_state == 3 && tx_empty) ? 4 :
+			   (tto_state == 4) ? 0 :
 			   tto_state;
-
-   assign assert_tx_int = tto_state == 0;
 
  `ifdef debug
    always @(posedge clk)
@@ -222,9 +219,12 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    
 `endif
 
+   assign  assert_tx_int = (tto_state == 3) ||
+		   (tto_state == 0 && 
+		    iopage_wr && (iopage_addr == 13'o17564) && reg_in[6]);
+
    assign clear_tx_int =
-		(interrupt_ack && asserting_tx_int && !asserting_rx_int) ||
-		(tto_state == 0 && tto_state_next == 1);
+		(interrupt_ack && asserting_tx_int && !asserting_rx_int);
 
    assign ld_tx_req = tto_state == 1;
    assign tto_empty = tto_state == 0;
@@ -235,8 +235,9 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    // state 1 - wait for rx_empty to assert
    // state 2 - wait for rx_empty to deassert
    // state 3 - wait for iopage read of uart (tti)
-   reg [1:0] tti_state;
-   wire [1:0] tti_state_next;
+   // state 4 - assert interrupt
+   reg [2:0] tti_state;
+   wire [2:0] tti_state_next;
 
    assign tti_data_rd = iopage_rd && (iopage_addr == 13'o17562);
    
@@ -247,8 +248,10 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
        tti_state <= tti_state_next;
 
 `ifdef fake_uart
+//`define no_fake_input
 //`define v6_unix
-//`define bsd_unix
+`define bsd_unix
+//`define rsts
 
  `ifdef v6_unix
    parameter fake_max = 9;
@@ -256,13 +259,17 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
  `ifdef bsd_unix
    parameter fake_max = 13;
  `endif
+ `ifdef rsts
+   parameter fake_max = 21;
+ `endif
  `ifdef no_fake_input
    parameter fake_max = 0;
  `endif
      
    assign tti_state_next = (tti_state == 0 && fake_count <= fake_max) ? 1 :
 			   (tti_state == 1) ? 3 :
-			   (tti_state == 3 && tti_data_rd) ? 0 :
+			   (tti_state == 3 && tti_data_rd) ? 4 :
+			   (tti_state == 4) ? 0 :
 			   tti_state;
 
    initial
@@ -276,6 +283,30 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
      if (tti_state == 1)
        begin
 	  case (fake_count)
+`ifdef rsts
+	    0: fake_rx_data <= 8'h53; //S
+	    1: fake_rx_data <= 8'h54; //T
+	    2: fake_rx_data <= 8'h41; //A
+	    3: fake_rx_data <= 8'h52; //R
+	    4: fake_rx_data <= 8'h54; //T
+	    5: fake_rx_data <= 8'h0d; //<ret>
+	    6: fake_rx_data <= 8'h30;//0
+	    7: fake_rx_data <= 8'h31;//1
+	    8: fake_rx_data <= 8'h2d;//-
+	    9: fake_rx_data <= 8'h4a;//J
+	    10: fake_rx_data <= 8'h41;//A
+	    11: fake_rx_data <= 8'h4e;//N
+	    12: fake_rx_data <= 8'h2d;//-
+	    13: fake_rx_data <= 8'h38;//8
+	    14: fake_rx_data <= 8'h35;//5
+	    15: fake_rx_data <= 8'h0d;//<ret>
+	    16: fake_rx_data <= 8'h31;//1
+	    17: fake_rx_data <= 8'h30;//0
+	    18: fake_rx_data <= 8'h3a;//:
+	    19: fake_rx_data <= 8'h31;//1
+	    20: fake_rx_data <= 8'h30;//0
+	    21: fake_rx_data <= 8'h0d;//<ret>
+`endif
 `ifdef v6_unix
 	    0: fake_rx_data <= 8'h72; //r
 	    1: fake_rx_data <= 8'h6b; //k
@@ -319,7 +350,8 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    assign tti_state_next = (tti_state == 0 && ~rx_empty) ? 1 :
 			   (tti_state == 1 && uld_rx_ack) ? 2 :
 			   (tti_state == 2 && ~uld_rx_ack) ? 3 :
-			   (tti_state == 3 && tti_data_rd) ? 0 :
+			   (tti_state == 3 && tti_data_rd) ? 4 :
+			   (tti_state == 4) ? 0 :
 			   tti_state;
 `endif
    
@@ -328,9 +360,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    
    assign assert_rx_int = tti_full;
 
-   assign clear_rx_int = (interrupt_ack && asserting_rx_int) ||
-			 (tti_state == 3 && tti_state_next == 0);
-
+   assign clear_rx_int = (interrupt_ack && asserting_rx_int);
 
    // interrupts
    assign interrupt = asserting_rx_int || asserting_tx_int;

@@ -95,14 +95,13 @@ output [4:0] rk_state;
 
 `ifdef use_18bit_phys
    // 18 bit physical addressing
-   assign 	iopage_access = bus_addr[17:14] == 4'o17;
+   assign 	iopage_access = bus_addr[17:13] == 5'o37;
    
    assign 	ram_access = ~iopage_access;
 `else
    // 22 bit physical addressing
-   assign 	iopage_access = (bus_addr[21:13] == 9'o776) ||
-				(bus_addr[21:13] == 9'o777);
-
+   assign 	iopage_access = (bus_addr[21:13] == 9'o777);
+  
    assign 	ram_access = ~iopage_access;
 `endif
    
@@ -241,7 +240,6 @@ output [4:0] rk_state;
 //   assign ram_present = bus_addr < 22'o400000;
 `endif
    
-//   assign ram_bus_error = (ram_rd || ram_wr) && ~ram_present;
    assign ram_bus_error = ram_access && (bus_rd || bus_wr) && ~ram_present;
 
 `ifdef debug
