@@ -111,14 +111,18 @@ output [4:0] rk_state;
    assign 	ram_access = ~iopage_access;
 `endif
    
-   assign 	iopage_rd = hold_bus_rd & iopage_access;
-   assign 	iopage_wr = hold_bus_wr & iopage_access;
+   assign 	iopage_rd = grant_cpu & hold_bus_rd & iopage_access;
+   assign 	iopage_wr = grant_cpu & hold_bus_wr & iopage_access;
 
    assign bus_data_out = ram_access ? ram_data_in :
 			 iopage_access ? iopage_out : 16'hffff/*16'b0*/;
 
-   assign ram_addr = grant_cpu ? hold_bus_addr : {4'b0, dma_addr};
-   assign ram_data_out = grant_cpu ? hold_bus_data_in : dma_data_out;
+   wire   cpu_drives;
+
+   assign cpu_drives = grant_state < 3'd4 /*grant_cpu*/;
+   
+   assign ram_addr = cpu_drives ? hold_bus_addr : {4'b0, dma_addr};
+   assign ram_data_out = cpu_drives ? hold_bus_data_in : dma_data_out;
    assign ram_rd = grant_cpu ? (hold_bus_rd & ram_access) : dma_rd;
    assign ram_wr = grant_cpu ? (hold_bus_wr & ram_access) : dma_wr;
    assign ram_byte_op = grant_cpu ? hold_bus_byte_op : 1'b0;
@@ -232,9 +236,17 @@ output [4:0] rk_state;
    assign bus_req = bus_rd || bus_wr;
    
    assign grant_cpu = grant_state == 3'd1;
-   assign grant_dma = grant_state >= 3'd4;
-   
+   assign grant_dma = grant_state >= 3'd5;
+
+//   reg 	  bus_ack;
+//   always @(posedge clk)
+//     if (reset)
+//       bus_ack <= 0;
+//     else
+//       bus_ack <= ~bus_req || grant_cpu;
+//   assign bus_ack = ~bus_req || grant_cpu;
    assign bus_ack = ~bus_req || grant_cpu;
+
    assign dma_ack = grant_dma;
 
    wire   iopage_bus_error;

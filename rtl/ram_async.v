@@ -1,5 +1,5 @@
 //
-// interface to async sram
+// sync interface to async sram
 // used on s3board
 //
 // multiplexes between to high speed SRAMs
@@ -29,8 +29,13 @@ module ram_async(clk, reset,
    wire [15:0]  ram1_io;
 
    //
-   wire 	 ram1_ub, ram1_lb;
-   wire 	 ram_wr_short;
+   reg [17:0] ram_a;
+   reg [15:0] ram_d;
+   reg 	      ram_we_n;
+   reg 	      ram_oe_n;
+   reg 	      ram1_ub_n;
+   reg 	      ram1_lb_n;
+   wire       ram1_ub, ram1_lb;
 
    //
    assign ram1_ub = ~byte_op || (byte_op && addr[0]);
@@ -39,25 +44,30 @@ module ram_async(clk, reset,
    assign data_out = ~byte_op ? ram1_io :
 		     {8'b0, addr[0] ? ram1_io[15:8] : ram1_io[7:0]};
 
-   //
-   assign ram_a = {1'b0, addr[17:1]};
-   assign ram_oe_n = ~rd;
-
-   //
-   // make sure ram_wr deasserts and
-   // also give time (1/2 cycle) for mmu to assert wr_inhibit
-   //
-   assign ram_wr_short = (wr & ~clk) && ~wr_inhibit;
-   assign ram_we_n = ~ram_wr_short;
-
-   //
-   assign ram1_io = ~ram_oe_n ? 16'bz :
-		    (byte_op ? {data_in[7:0],data_in[7:0]} : data_in);
-
-   assign ram1_ce_n = 1'b0;
-   assign ram1_ub_n = ~ram1_ub;
-   assign ram1_lb_n = ~ram1_lb;
+   // one hopes for IOBs...
+   always @(posedge clk)
+     if (reset)
+       begin
+	  ram_a <= 0;
+	  ram_d <= 0;
+	  ram_we_n <= 1;
+	  ram_oe_n <= 1;
+	  ram1_ub_n <= 1;
+	  ram1_lb_n <= 1;
+       end
+     else
+       begin
+	  ram_a <= {1'b0, addr[17:1]};
+	  ram_d <= (byte_op ? {data_in[7:0],data_in[7:0]} : data_in);
+	  ram_we_n <= ~(wr && ~wr_inhibit);
+	  ram_oe_n <= ~rd;
+	  ram1_ub_n <= ~ram1_ub;
+	  ram1_lb_n <= ~ram1_lb;
+       end
    
+   assign ram1_io = ~ram_oe_n ? 16'bz : ram_d;
+   
+   assign ram1_ce_n = 1'b0;
    assign ram2_io = 16'bz;
    assign ram2_ce_n = 1'b1;
    assign ram2_ub_n = 1'b1;

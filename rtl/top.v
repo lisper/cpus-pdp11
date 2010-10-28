@@ -97,7 +97,7 @@ module top(rs232_txd, rs232_rxd,
      end
    //-----------
 `else
-   wire 	clk;
+   wire 	clk/* verilator public_flat_rw @(sysclk) */;
    assign clk = sysclk;
 `endif
 

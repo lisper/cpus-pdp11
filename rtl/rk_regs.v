@@ -213,11 +213,13 @@ output [4:0] rk_state;
 		 reg_out = { rkcs_err, 7'b0,
 			      rkcs_done, rkcs_ie, rkcs_mex,
 			      rkcs_cmd };
-//		 if (reg_out != 16'o5)
-//		 $display("rk: XXX read rkcs %o",
-//			  { rkcs_err, 7'b0,
-//			    rkcs_done, rkcs_ie, rkcs_mex,
-//			    rkcs_cmd });
+`ifdef debug_rk_regs
+		 if (reg_out != 16'o5)
+		   $display("rk: XXX read rkcs %o",
+			    { rkcs_err, 7'b0,
+			      rkcs_done, rkcs_ie, rkcs_mex,
+			      rkcs_cmd });
+`endif
 	      end
 	    13'o17406: reg_out = rkwc;
 	    13'o17410: reg_out = rkba[15:0];
