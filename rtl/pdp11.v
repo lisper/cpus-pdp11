@@ -35,20 +35,22 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    output 	soft_reset;
  	
    output [15:0] bus_addr;
+   reg [15:0] 	 bus_addr;
    input [15:0]  bus_data_in;
    output [15:0] bus_data_out;
+   reg [15:0] 	 bus_data_out;
+   
    output 	 bus_rd, bus_wr, bus_byte_op;
+//   reg 		 bus_rd, bus_wr, bus_byte_op;
    output 	 bus_arbitrate;
    input 	 bus_ack, bus_error;
    input 	 bus_int;
    input [7:0] 	 bus_int_ipl, bus_int_vector;
    output [7:0]  interrupt_ack_ipl;
+   reg [7:0] 	 interrupt_ack_ipl;
    output [15:0] psw;
    output [15:0] pc;
    input 	 psw_io_wr;
-
-   reg 		 interrupt;
-   reg [7:0] 	 interrupt_ack_ipl;
 
    output 	 bus_i_access;
    output 	 bus_d_access;
@@ -59,6 +61,12 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    output 	 mmu_wr_inhibit;
    input 	 mmu_abort;
    input 	 mmu_trap;
+
+   //
+   reg 		 interrupt;
+   wire [15:0] 	 bus_addr_mux;
+   wire [15:0] 	 bus_data_out_mux;
+   wire 	 bus_rd_r, bus_wr_r, bus_byte_op_r;
    
    // state
    reg 		halted;
@@ -624,15 +632,15 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
    assign new_psw_wr = new_psw_wr_kernel;
 
    // wr can set trace, but not clear it
-   assign new_psw_wr_kernel = { bus_data_out[15:5],
+   assign new_psw_wr_kernel = { bus_data_out_mux[15:5],
 				bus_data_in[4] | psw[4],
-				bus_data_out[3:0] };
+				bus_data_out_mux[3:0] };
 
    // wr must stay in user mode
-   assign new_psw_wr_user = { psw[15:12] | bus_data_out[15:12],
+   assign new_psw_wr_user = { psw[15:12] | bus_data_out_mux[15:12],
 			      7'b0,
-			      bus_data_out[4] | psw[4],
-			      bus_data_out[3:0] };
+			      bus_data_out_mux[4] | psw[4],
+			      bus_data_out_mux[3:0] };
 
    always @(posedge clk)
      if (reset)
@@ -660,10 +668,10 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 	    w1:
 	      if (psw_io_wr)
 		begin
-		   if (~bus_byte_op)
+		   if (~bus_byte_op_r)
 		     psw <= new_psw_wr;
 		   else
-		     if (bus_addr[0])
+		     if (bus_addr_mux[0])
 		       psw <= {new_psw_wr[15:8], psw[7:0]};
 		     else
 		       psw <= {psw[15:8], new_psw_wr[7:0]};
@@ -754,7 +762,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 
    assign odd_pc = pc[0];
    
-   assign odd_fetch = (bus_rd || bus_wr) && bus_addr[0] && ~bus_byte_op;
+   assign odd_fetch = (bus_rd_r || bus_wr_r) && bus_addr_mux[0] && ~bus_byte_op_r;
 
    assign assert_trap_odd = odd_fetch;			// fetch from odd
 
@@ -962,19 +970,19 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 
 
    // memory i/o
-   assign bus_rd =
+   assign bus_rd_r =
 		  istate == f1 ||
 		  (istate == s2 || istate == s3 || istate == s4) ||
 		  (istate == d2 || istate == d3 || istate == d4) ||
 		  (istate == o1 || istate == o2 || istate == o3) ||
 		  (istate == t1 || istate == t2);
 	   
-   assign bus_wr =
+   assign bus_wr_r =
 		  (istate == w1 && store_result && dd_dest_mem) ||
 		  istate == p1 ||
 		  (istate == t3 || istate == t4);
 
-   assign bus_data_out =
+   assign bus_data_out_mux =
 		  istate == w1 ? e1_data :
 		  istate == p1 ? (is_isn_mfpx ?			// mfpi/mfpd
 				  dd_data : ss_reg_value) :
@@ -982,7 +990,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
    		  istate == t4 ? trap_pc :
 		  16'b0;
    
-   assign bus_addr =
+   assign bus_addr_mux =
 		    istate == f1 ? pc :
 		    istate == s2 ? ss_ea :
 		    istate == s3 ? ss_ea :
@@ -1000,10 +1008,43 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 		    istate == t3 ? sp - 16'd2 :
 		    istate == t4 ? sp - 16'd2 :
 		    16'b0;
-   
 
-   assign bus_byte_op = (istate == w1 || istate == s4 || istate == d4) ?
-			is_isn_byte: 1'b0;
+//   always @(posedge clk)
+//     if (reset)
+//       begin
+//	  bus_rd <= 0;
+//	  bus_wr <= 0;
+//	  bus_byte_op <= 0;
+//       end
+//     else
+//       begin
+//	  bus_rd <= bus_rd_r;
+//	  bus_wr <= bus_wr_r;
+//	  bus_byte_op <= bus_byte_op_r;
+//       end
+
+   assign bus_rd = bus_rd_r;
+   assign bus_wr = bus_wr_r;
+   assign bus_byte_op = bus_byte_op_r;
+   
+   wire   bus_addr_valid;
+   assign bus_addr_valid = bus_rd || bus_wr;
+   
+   always @(posedge clk)
+     if (reset)
+       begin
+	  bus_addr <= initial_pc;
+	  bus_data_out <= 0;
+       end
+     else
+       if (bus_addr_valid)
+	 begin
+	    bus_addr <= bus_addr_mux;
+	    bus_data_out <= bus_data_out_mux;
+	 end
+   
+   assign bus_byte_op_r = (istate == w1 || istate == s4 || istate == d4) ?
+			  is_isn_byte: 1'b0;
 
    assign bus_i_access = istate == f1 ||
 			 (istate == s1 && (ss_mode == 6 || ss_mode == 7)) ||

@@ -111,8 +111,8 @@ output [4:0] rk_state;
    assign 	ram_access = ~iopage_access;
 `endif
    
-   assign 	iopage_rd = grant_cpu & hold_bus_rd & iopage_access;
-   assign 	iopage_wr = grant_cpu & hold_bus_wr & iopage_access;
+   assign 	iopage_rd = grant_cpu & /*hold_*/bus_rd & iopage_access;
+   assign 	iopage_wr = grant_cpu & /*hold_*/bus_wr & iopage_access;
 
    assign bus_data_out = ram_access ? ram_data_in :
 			 iopage_access ? iopage_out : 16'hffff/*16'b0*/;
@@ -121,11 +121,11 @@ output [4:0] rk_state;
 
    assign cpu_drives = grant_state < 3'd4 /*grant_cpu*/;
    
-   assign ram_addr = cpu_drives ? hold_bus_addr : {4'b0, dma_addr};
-   assign ram_data_out = cpu_drives ? hold_bus_data_in : dma_data_out;
-   assign ram_rd = grant_cpu ? (hold_bus_rd & ram_access) : dma_rd;
-   assign ram_wr = grant_cpu ? (hold_bus_wr & ram_access) : dma_wr;
-   assign ram_byte_op = grant_cpu ? hold_bus_byte_op : 1'b0;
+   assign ram_addr = cpu_drives ? /*hold_*/bus_addr : {4'b0, dma_addr};
+   assign ram_data_out = cpu_drives ? /*hold_*/bus_data_in : dma_data_out;
+   assign ram_rd = grant_cpu ? (/*hold_*/bus_rd & ram_access) : dma_rd;
+   assign ram_wr = grant_cpu ? (/*hold_*/bus_wr & ram_access) : dma_wr;
+   assign ram_byte_op = grant_cpu ? /*hold_*/bus_byte_op : 1'b0;
 
 
 `ifdef debug_bus_all
@@ -307,12 +307,12 @@ output [4:0] rk_state;
    iopage iopage(.clk(clk),
 		  .brgclk(brgclk),
 		  .reset(reset),
-		  .address(hold_bus_addr),
-		  .data_in(hold_bus_data_in),
+		  .address(/*hold_*/bus_addr),
+		  .data_in(/*hold_*/bus_data_in),
 		  .data_out(iopage_out),
 		  .iopage_rd(iopage_rd),
 		  .iopage_wr(iopage_wr),
-		  .iopage_byte_op(hold_bus_byte_op),
+		  .iopage_byte_op(/*hold_*/bus_byte_op),
 
 		  .no_decode(iopage_bus_error),
 		  .interrupt(bus_int),
