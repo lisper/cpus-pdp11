@@ -22,10 +22,12 @@ struct stddev_context_s {
 
 static int _io_has_reset;
 
+extern int show_i;
+
 void
 _io_reset(void)
 {
-    printf("_io_reset()\n");
+    if (show_i) printf("_io_reset()\r\n");
     stddev_context[0].tto_csr = CSR_DONE;
     stddev_context[1].tto_csr = CSR_DONE;
 
@@ -109,14 +111,41 @@ void _io_cpu_int_set(struct stddev_context_s *s, int bit)
 
 u16 _io_tti_read(struct stddev_context_s *s, u22 addr)
 {
+    u16 data;
+    static int count = 0;
+
     _io_check_reset();
-    printf("_io_tti_read(%o) %s\n", addr, s->name);
 
     if (addr & 2) {
         s->tti_csr &= ~CSR_DONE;
         _io_cpu_int_clear(s, 1);
+
+#if 1
+{
+	static int state = 0;
+	//printf("STATE %d\r\n", state);
+#if 1
+	if (state <= 9) {
+            s->tti_data = "rkunix.40\r"[state++];
+            s->tti_csr |= CSR_DONE;
+        }
+#endif
+#if 0
+	if (state <= 13) {
+            s->tti_data = "rk(0,0)rkunix\r"[state++];
+            s->tti_csr |= CSR_DONE;
+        }
+#endif
+}
+#endif
+
+        if (show_i) printf("_io_tti_read(%o) %s data %o\r\n",
+                           addr, s->name, s->tti_data);
         return s->tti_data;
     } else {
+        if (show_i) printf("_io_tti_read(%o) %s csr %o\e\n",
+                           addr, s->name,
+                           s->tti_csr & (CSR_DONE | CSR_IE));
         return s->tti_csr & (CSR_DONE | CSR_IE);
     }
 }
@@ -124,7 +153,8 @@ u16 _io_tti_read(struct stddev_context_s *s, u22 addr)
 void _io_tti_write(struct stddev_context_s *s, u22 addr, u16 data)
 {
     _io_check_reset();
-    printf("_io_tti_write() addr=%o, data=%o; %s\n", addr, data, s->name);
+    if (show_i) printf("_io_tti_write() addr=%o, data=%o; %s\r\n",
+                       addr, data, s->name);
 
     if ((addr & 2) == 0) {
         if (addr & 1)
@@ -143,11 +173,15 @@ void _io_tti_write(struct stddev_context_s *s, u22 addr, u16 data)
 u16 _io_tto_read(struct stddev_context_s *s, u22 addr)
 {
     _io_check_reset();
-    printf("_io_tto_read(%o) %s\n", addr, s->name);
 
     if (addr & 2) {
+        if (show_i) printf("_io_tto_read(%o) %s data %o\r\n",
+                           addr, s->name, s->tto_data);
         return s->tto_data;
     } else {
+        if (show_i) printf("_io_tto_read(%o) %s csr %or\r\n",
+                           addr, s->name,
+                           s->tto_csr & (CSR_DONE | CSR_IE));
         return s->tto_csr & (CSR_DONE | CSR_IE);
     }
 }
@@ -155,8 +189,8 @@ u16 _io_tto_read(struct stddev_context_s *s, u22 addr)
 void _io_tto_write(struct stddev_context_s *s, u22 addr, u16 data)
 {
     _io_check_reset();
-    if (1) printf("_io_tto_write() addr=%o data=%o; %s\n",
-                  addr, data, s->name);
+    if (show_i) printf("_io_tto_write() addr=%o data=%o; %s\r\n",
+                       addr, data, s->name);
 
     if (addr & 2) {
         if ((addr & 1) == 0) {

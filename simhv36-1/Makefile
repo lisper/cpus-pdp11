@@ -10,7 +10,7 @@ PDP11_SRC = \
 	PDP11/pdp11_hk.c PDP11/pdp11_xq.c PDP11/pdp11_xu.c PDP11/pdp11_vh.c \
 	PDP11/pdp11_rh.c PDP11/pdp11_tu.c PDP11/pdp11_cpumod.c PDP11/pdp11_cr.c \
 	PDP11/pdp11_rf.c PDP11/pdp11_dl.c PDP11/pdp11_ke.c \
-	PDP11/private_rk.c PDP11/private_stddev.c 
+	PDP11/private_rk.c PDP11/private_stddev.c PDP11/stubs.c
 
 SIMH_SRC = \
 	scp.c sim_console.c sim_fio.c sim_timer.c sim_sock.c sim_tmxr.c \
@@ -38,4 +38,5 @@ PDP11_OPT = ${CFLAGS} -DWITH_MAIN
 LDFLAGS = 
 
 BIN/pdp11: ${PDP11_SRC} ${SIMH_SRC}
-	${CC} ${PDP11_SRC} PDP11/stubs.c ${SIMH_SRC} ${PDP11_OPT} -o $@ ${LDFLAGS}
+	${CC} ${PDP11_SRC} ${SIMH_SRC} ${PDP11_OPT} -o $@ ${LDFLAGS}
+#PDP11/stubs.c 

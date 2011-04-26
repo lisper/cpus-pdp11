@@ -213,6 +213,7 @@
 
 #include "pdp11_defs.h"
 #include "pdp11_cpumod.h"
+#include "stubs.h"
 
 #define PCQ_SIZE        64                              /* must be 2**n */
 #define PCQ_MASK        (PCQ_SIZE - 1)
@@ -246,6 +247,11 @@ typedef struct {
 /* Global state */
 
 extern FILE *sim_log;
+extern int max_cycles;
+extern int show_i;
+extern int isn_count;
+static int isn_last;
+static int need_stop;
 
 uint16 *M = NULL;                                       /* memory */
 int32 REGFILE[6][2] = { 0 };                            /* R0-R5, two sets */
@@ -586,6 +592,7 @@ MTAB cpu_mod[] = {
     { UNIT_MSIZE, 16384, NULL, "16K", &cpu_set_size},
     { UNIT_MSIZE, 32768, NULL, "32K", &cpu_set_size},
     { UNIT_MSIZE, 49152, NULL, "48K", &cpu_set_size},
+    { UNIT_MSIZE, 57344, NULL, "56K", &cpu_set_size},
     { UNIT_MSIZE, 65536, NULL, "64K", &cpu_set_size},
     { UNIT_MSIZE, 98304, NULL, "96K", &cpu_set_size},
     { UNIT_MSIZE, 131072, NULL, "128K", &cpu_set_size},
@@ -702,6 +709,15 @@ while (reason == 0)  {
     int32 src, src2, dst, ea;
     int32 i, t, sign, oldrs, trapnum;
 
+#if 1
+	if (need_stop) {
+		printf("\r\nxxx %u stop\n", isn_count);
+		reason = STOP_HALT;
+		if (1) { sim_ttclose(); exit(0); }
+		break;
+	}
+#endif
+
     if (cpu_astop) {
         cpu_astop = 0;
         reason = SCPE_STOP;
@@ -747,6 +763,10 @@ while (reason == 0)  {
    7. If not stack overflow, check for stack overflow
 */
 
+#if 1
+	if (wait_state)
+		printf("exit wait\n");
+#endif
         wait_state = 0;                                 /* exit wait state */
         STACKFILE[cm] = SP;
         PSW = get_PSW ();                               /* assemble PSW */
@@ -755,10 +775,26 @@ while (reason == 0)  {
             if (update_MM) MMR2 = trapea;               /* save vector */
             MMR0 = MMR0 & ~MMR0_IC;                     /* clear IC */
             }
+#if 1
+	if (show_i || 1) {
+		printf("int/trap: %o\n", trapea);
+		printf("old IR %o\n", IR);
+		//show_i = 1;
+	}
+#endif
         src = ReadW (trapea | calc_ds (MD_KER));        /* new PC */
         src2 = ReadW ((trapea + 2) | calc_ds (MD_KER)); /* new PSW */
         t = (src2 >> PSW_V_CM) & 03;                    /* new cm */
         trapea = ~t;                                    /* flag pushes */
+#if 1
+	if (show_i || 1) {
+		printf("push: %o <- %o\n", 
+		       ((STACKFILE[t] - 2) & 0177777) | calc_ds (t), PSW);
+		printf("push: %o <- %o\n",
+		       ((STACKFILE[t] - 4) & 0177777) | calc_ds (t), PC);
+		printf("int/trap: %o\n", trapea);
+	}
+#endif
         WriteW (PSW, ((STACKFILE[t] - 2) & 0177777) | calc_ds (t));
         WriteW (PC, ((STACKFILE[t] - 4) & 0177777) | calc_ds (t));
         trapea = 0;                                     /* clear trap flag */
@@ -823,6 +859,26 @@ simh_report_pc(PC, IR);
         hst_p = (hst_p + 1);
         if (hst_p >= hst_lnt) hst_p = 0;
         }
+#if 1
+    {
+	    unsigned short psw;
+	    psw = get_PSW();
+	    if (show_i)
+	    printf("f1: pc=%o, sp=%o, psw=%o ipl%d n%d z%d v%d c%d (%o %o %o %o %o %o %o %o)\r\n",
+		   PC, SP, psw, (psw >> 5)&7,
+		   (psw>>3)&1, (psw>>2)&1, (psw>>1)&1, (psw>>0)&1,
+		   R[0], R[1], R[2], R[3], R[4], R[5], SP, PC);
+	    isn_count++;
+	    isn_last++;
+	    if (isn_last >= 100000) {
+		    isn_last = 0;
+		    if (show_i)
+		    printf("f0: isn count %d\r\n", isn_count);
+	    }
+	    if (max_cycles && isn_count >= max_cycles)
+		need_stop = 1;
+    }
+#endif
     PC = (PC + 2) & 0177777;                            /* incr PC, mod 65k */
     switch ((IR >> 12) & 017) {                         /* decode IR<15:12> */
 
@@ -847,6 +903,10 @@ simh_report_pc(PC, IR);
                 else setTRAP (TRAP_ILL);                /* no, ill inst */
                 break;
             case 1:                                     /* WAIT */
+	    {
+		    extern int show_i;
+		    if (show_i) printf("WAIT\n");
+	    }
                 if (wait_enable) wait_state = 1;
                 break;
             case 3:                                     /* BPT */
@@ -1835,6 +1895,12 @@ simh_report_pc(PC, IR);
             break;
 
         default:
+#if 1
+		{
+			extern int show_i;
+			if (show_i) printf("throwing TRAP_ILL, IR %o (default)\n", IR);
+		}
+#endif
             setTRAP (TRAP_ILL);
             break;
             }                                           /* end switch SOPs */
@@ -1949,7 +2015,15 @@ simh_report_pc(PC, IR);
 
     case 017:
         if (CPUO (OPT_FPP)) fp11 (IR);                  /* call fpp */
-        else setTRAP (TRAP_ILL);
+        else {
+#if 1
+		{
+			extern int show_i;
+			if (show_i) printf("throwing TRAP_ILL, IR %o (fp17)\n", IR);
+		}
+#endif
+		setTRAP (TRAP_ILL);
+	}
         break;                                          /* end case 017 */
         }                                               /* end switch op */
     }                                                   /* end main loop */
@@ -2599,6 +2673,7 @@ switch ((pa >> 1) & 3) {                                /* decode pa<2:1> */
 
     case 1:                                             /* MMR0 */
         *data = MMR0 & cpu_tab[cpu_model].mm0;
+ if (show_i) printf("mmu: read mmr0 %o\n", *data);
         break;
 
     case 2:                                             /* MMR1 */
@@ -2621,6 +2696,7 @@ switch ((pa >> 1) & 3) {                                /* decode pa<2:1> */
         return SCPE_NXM;
 
     case 1:                                             /* MMR0 */
+if (show_i) printf("mmu: write mmr0 %o\n", data);
         if (access == WRITEB) data = (pa & 1)?
             (MMR0 & 0377) | (data << 8): (MMR0 & ~0377) | data;
         data = data & cpu_tab[cpu_model].mm0;
@@ -2641,6 +2717,7 @@ return SCPE_OK;
 t_stat MMR3_wr (int32 data, int32 pa, int32 access)     /* MMR3 */
 {
 if (pa & 1) return SCPE_OK;
+if (show_i) printf("mmu: write mmr3 %o\n", data);
 MMR3 = data & cpu_tab[cpu_model].mm3;
 cpu_bme = (MMR3 & MMR3_BME) && (cpu_opt & OPT_UBM);
 dsenable = calc_ds (cm);
@@ -2682,6 +2759,7 @@ t_stat APR_wr (int32 data, int32 pa, int32 access)
 {
 int32 left, idx, curr;
 
+if (show_i) printf("mmu: apr_wr [%o] <- %o\n", pa, data);
 idx = (pa >> 1) & 017;                                  /* dspace'page */
 left = (pa >> 5) & 1;                                   /* PDR vs PAR */
 if ((pa & 0100) == 0) idx = idx | 020;                  /* 1 for super, user */
@@ -2751,6 +2829,9 @@ return SCPE_OK;
 
 void put_PSW (int32 val, t_bool prot)
 {
+#if 1
+printf("put_PSW %o prot=%d\r\n", val, prot);
+#endif
 val = val & cpu_tab[cpu_model].psw;                     /* mask off invalid bits */
 if (prot) {                                             /* protected? */
     cm = cm | ((val >> PSW_V_CM) & 03);                 /* or to cm,pm,rs */
@@ -2862,6 +2943,10 @@ if (pcq_r) pcq_r->qptr = 0;
 else return SCPE_IERR;
 sim_brk_types = sim_brk_dflt = SWMASK ('E');
 set_r_display (0, MD_KER);
+#if 1
+if (getenv("Q")) show_i = 0;
+if (getenv("M")) max_cycles = atoi(getenv("M"));
+#endif
 return SCPE_OK;
 }
 

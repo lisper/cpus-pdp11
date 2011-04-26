@@ -698,6 +698,12 @@ if (reg == 7) exta = isenable;                          /* choose I,D */
 else exta = dsenable;
 if (IR & 000740) {                                      /* defined? */
     if (CPUT (CPUT_03)) ReadW (exta | R[reg]);          /* 11/03 reads word */
+#if 1
+    {
+	    extern int show_i;
+	    if (show_i) printf("throwing TRAP_ILL, IR %o (fis11)\n", IR);
+    }
+#endif
     ABORT (TRAP_ILL);
 	}
 FEC = 0;                                                /* no errors */

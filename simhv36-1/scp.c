@@ -1,5 +1,4 @@
 /* scp.c: simulator control program
-
    Copyright (c) 1993-2006, Robert M Supnik
 
    Permission is hereby granted, free of charge, to any person obtaining a

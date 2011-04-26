@@ -213,7 +213,7 @@ DEVICE tto_dev = {
 */
 
 DIB clk_dib = {
-#if 0
+#if 1
     IOBA_CLK, IOLN_CLK, &clk_rd, &clk_wr,
 #else
     IOBA_CLK, IOLN_CLK, &private_clk_rd, &private_clk_wr,
@@ -439,6 +439,7 @@ t_stat clk_svc (UNIT *uptr)
 {
 int32 t;
 
+{ extern int show_i; if (show_i) printf("clk: done\n"); }
 clk_csr = clk_csr | CSR_DONE;                           /* set done */
 if ((clk_csr & CSR_IE) || clk_fie) SET_INT (CLK);
 t = sim_rtcn_calb (clk_tps, TMR_CLK);                   /* calibrate clock */

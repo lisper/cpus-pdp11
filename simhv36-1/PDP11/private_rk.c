@@ -12,6 +12,9 @@
 
 #include "pdp11_defs.h"
 
+UNIT rk_unit[];
+#define LOCAL_IO
+
 //typedef int int32;
 typedef unsigned short u16;
 typedef unsigned int u22;
@@ -272,13 +275,17 @@ void rk_service(struct rk_context_s *rk)
 //        rker |= RKER_OVR;
 //    }
 
-//    printf("rk: seek %d\n", da * sizeof(short));
-    printf("rk: seek %s %d\n",
+    printf("rk: seek %s %d (0x%x)\n",
            rk == &rk_context[1] ? "rtl" :
            rk == &rk_context[0] ? "simh" :
-           "unknown", da * sizeof(short));
+           "unknown", da * sizeof(short), da * sizeof(short));
 
+#ifdef LOCAL_IO
     err = lseek(rk->rk_fd, da * sizeof(short), SEEK_SET);
+#else
+    err = fseek (rk_unit[0].fileref, da * sizeof (int16), SEEK_SET);
+#endif
+
     if (wc && (err >= 0)) {
         err = 0;
 
@@ -297,7 +304,11 @@ void rk_service(struct rk_context_s *rk)
                 }
             } else {
 printf("rk: read() wc %d\n", wc);
+#ifdef LOCAL_IO
                 i = read(rk->rk_fd, rk->rkxb, sizeof(short)*wc);
+#else
+	        i = fxread (rk->rkxb, sizeof (int16), wc, rk_unit[0].fileref);
+#endif
 printf("rk: read() ret %d\n", i);
                 if (i >= 0 && i < sizeof(short)*wc) {
                     i /= 2;
@@ -310,7 +321,7 @@ printf("rk: read() ret %d\n", i);
                 rk_raw_write_memory(rk, ma, rk->rkxb[wc - 1]);
             } else {
 int oldma = ma;
-printf("rk: read(), dma wc=%d, ma=%o\n", wc, ma);
+printf("rk: read() dma wc=%d, ma=%o\n", wc, ma);
 printf("rk: buffer %06o %06o %06o %06o\n",
        rk->rkxb[0], rk->rkxb[1], rk->rkxb[2], rk->rkxb[3]);
                 for (i = 0; i < wc; i++) {
@@ -335,11 +346,19 @@ printf("rk: buffer %06o %06o %06o %06o\n",
 
             awc = (wc + (256 - 1)) & ~(256 - 1);
 printf("rk: write()\n");
+#ifdef LOCAL_IO
 	    ret = write(rk->rk_fd, rk->rkxb, awc*2);
+#else
+	    ret = fxwrite (rk->rkxb, sizeof (int16), awc, rk_unit[0].fileref);
+#endif
             break;
 
         case RKCS_WCHK:
+#ifdef LOCAL_IO
             i = read(rk->rk_fd, rk->rkxb, sizeof(short)*wc);
+#else
+	    i = fxread (rk->rkxb, sizeof (int16), wc, rk_unit[0].fileref);
+#endif
             if (i < 0) {
                 wc = 0;
                 break;
@@ -570,17 +589,20 @@ int private_rk_inta(void)
     int i;
     extern int int_req[];
 
+
     for (i = 0; i < 2; i++) {
         if (rk->rkintq & (1 << i)) {
             rk->rkintq = rk->rkintq & ~(1 << i);
             if (rk->rkintq)
                 SET_INT(RK);
+            printf("rk: inta 0220\n");
             return 0220;
         }
     }
 
     rk->rkintq = 0;
 
+    printf("rk: inta 0\n");
     return 0;
 }
 

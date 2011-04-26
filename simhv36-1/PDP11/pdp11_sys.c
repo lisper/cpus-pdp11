@@ -241,6 +241,7 @@ while ((i = getc (fileref)) != EOF) {
             }
         count = count - 6;
         state = 6;
+	printf("origin %o, count %d\n", origin, count);
         break;
 
     case 6:                                             /* data */

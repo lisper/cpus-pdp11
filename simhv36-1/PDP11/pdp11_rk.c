@@ -373,14 +373,20 @@ switch ((PA >> 1) & 07) {                               /* decode PA<3:1> */
         if (access == WRITEB) data = (PA & 1)?
             (rkwc & 0377) | (data << 8): (rkwc & ~0377) | data;
         rkwc = data;
-//fprintf(sim_deb, "rk: rkwc <- %o\n", rkwc);
+	{
+		extern int show_i;
+		if (show_i) printf("rk: rkwc <- %o\n", rkwc);
+	}
         return SCPE_OK;
 
     case 4:                                             /* RKBA */
         if (access == WRITEB) data = (PA & 1)?
             (rkba & 0377) | (data << 8): (rkba & ~0377) | data;
         rkba = data & RKBA_IMP;
-//fprintf(sim_deb, "rk: rkba <- %o\n", rkba);
+	{
+		extern int show_i;
+		if (show_i) printf("rk: rkba <- %o\n", rkba);
+	}
         return SCPE_OK;
 
     case 5:                                             /* RKDA */
@@ -388,7 +394,10 @@ switch ((PA >> 1) & 07) {                               /* decode PA<3:1> */
         if (access == WRITEB) data = (PA & 1)?
             (rkda & 0377) | (data << 8): (rkda & ~0377) | data;
         rkda = data;
-//fprintf(sim_deb, "rk: rkda <- %o\n", rkda);
+	{
+		extern int show_i;
+		if (show_i) printf("rk: rkda <- %o\n", rkda);
+	}
         return SCPE_OK;
 
     default:
@@ -516,11 +525,24 @@ if (cyl >= RK_NUMCY) {                                  /* bad cyl? */
 ma = ((rkcs & RKCS_MEX) << (16 - RKCS_V_MEX)) | rkba;   /* get mem addr */
 da = GET_DA (rkda) * RK_NUMWD;                          /* get disk addr */
 wc = 0200000 - rkwc;                                    /* get wd cnt */
+    {
+	    extern int show_i;
+	    if (show_i) printf("rk: rkwc %o, wc=%d\n", rkwc, wc);
+    }
 if ((da + wc) > (int32) uptr->capac) {                  /* overrun? */
     wc = uptr->capac - da;                              /* trim transfer */
     rker = rker | RKER_OVR;                             /* set overrun err */
+    {
+	    extern int show_i;
+	    if (show_i) printf("rk: overrun; capac %o, da %o, wc %o\n",
+			       uptr->capac, da, wc);
+    }
     }
 
+{
+extern int show_i;
+if (show_i) printf("rk: seek %d (lba %d)\n", da *2, (da*2)/512);
+}
 err = fseek (uptr->fileref, da * sizeof (int16), SEEK_SET);
 if (wc && (err == 0)) {                                 /* seek ok? */
     switch (uptr->FUNC) {                               /* case on function */
@@ -539,6 +561,14 @@ if (wc && (err == 0)) {                                 /* seek ok? */
             }                                           /* end if format */
         else {                                          /* normal read */
             i = fxread (rkxb, sizeof (int16), wc, uptr->fileref);
+{
+extern int show_i;
+if (show_i) {
+	printf("rk: read(), dma wc=%d, ma=%o\n", wc, ma);
+	printf("rk: buffer %06o %06o %06o %06o\n",
+	       rkxb[0], rkxb[1], rkxb[2], rkxb[3]);
+}
+}
             err = ferror (uptr->fileref);               /* read file */
             for ( ; i < wc; i++) rkxb[i] = 0;           /* fill buf */
             }
@@ -573,6 +603,14 @@ if (wc && (err == 0)) {                                 /* seek ok? */
         if (wc) {                                       /* any xfer? */
             awc = (wc + (RK_NUMWD - 1)) & ~(RK_NUMWD - 1);      /* clr to */
             for (i = wc; i < awc; i++) rkxb[i] = 0;     /* end of blk */
+{
+extern int show_i;
+if (show_i) {
+	printf("rk: write(), dma wc=%d, ma=%o\n", awc*2, ma);
+	printf("rk: buffer %06o %06o %06o %06o\n",
+	       rkxb[0], rkxb[1], rkxb[2], rkxb[3]);
+}
+}
             fxwrite (rkxb, sizeof (int16), awc, uptr->fileref);
             err = ferror (uptr->fileref);
             }
