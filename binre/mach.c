@@ -62,6 +62,11 @@ void mul16by16(u16 *pr0, u16 *pr1, u16 r0, u16 r2)
     mul_result_sign = (int)v < 0 ? 1 : 0;;
 }
 
+void xor16(u16 *pr0, u16 r0, u16 r2)
+{
+    *pr0 = r0 ^ r2;
+}
+
 int m_current_mode(void)
 {
     return current_mode;
@@ -87,14 +92,14 @@ void m_state_dump(void)
            psw&8?1:0, psw&4?1:0, psw&2?1:0, psw&1?1:0,
            regs[0], regs[1], regs[2], regs[3],
            regs[4], regs[5], r6, regs[7]);
-    printf("r0 %07o r1 %07o r2 %07o r3 %07o\n",
-           regs[0], regs[1], regs[2], regs[3]);
-    printf("r4 %07o r5 %07o r6 %07o r7 %07o\n",
-           regs[4], regs[5], regs[6], regs[7]);
-    printf("S0 %07o S1 %07o S2 %07o\n",
-           regs[8], regs[9], regs[10]);
-    printf("D0 %07o D1 %07o D2 %07o\n",
-           regs[11], regs[12], regs[13]);
+    printf("r0 %07o r1 %07o r2 %07o r3 %07o   r6-00 %07o\n",
+           regs[0], regs[1], regs[2], regs[3], regs[R_SP(0)]);
+    printf("r4 %07o r5 %07o r6 %07o r7 %07o   r6-01 %07o\n",
+           regs[4], regs[5], regs[6], regs[7], regs[R_SP(1)]);
+    printf("S0 %07o S1 %07o S2 %07o              r6-10 %07o\n",
+           regs[8], regs[9], regs[10], regs[R_SP(2)]);
+    printf("D0 %07o D1 %07o D2 %07o              r6-11 %07o\n",
+           regs[11], regs[12], regs[13], regs[R_SP(3)]);
     printf("R0 %07o R1 %07o\n",
            regs[14], regs[15]);
 }
@@ -115,88 +120,103 @@ void m_dis_op(u32 isn, char *str)
     case M_WAIT:      sprintf(str, "wait"); break;
     case M_RESET:     sprintf(str, "reset"); break;
 
-    case M_LOAD:      sprintf(str, "load   %d,%d", d, s1); break;
-    case M_LOADSR:    sprintf(str, "loadsr %d,%d", d, v); break;
-    case M_LOADB:     sprintf(str, "loadb  %d,%d", d, s1); break;
-    case M_LOADI:     sprintf(str, "load   %d,#0%o", d, v); break;
-    case M_LOADIB:    sprintf(str, "loadb  %d,#0%o", d, v); break;
-    case M_LOADIND:   sprintf(str, "load   %d,@%d", d, s1); break;
-    case M_LOADINDPM: sprintf(str, "load   %d,pm-@%d", d, s1); break;
-    case M_LOADINDB:  sprintf(str, "loadb  %d,@%d", d, s1); break;
-    case M_LOADPSW:   sprintf(str, "load   psw,%d,%d", s1,s2); break;
+    case M_LOAD:      sprintf(str, "load    %d,%d", d, s1); break;
+    case M_LOADSR:    sprintf(str, "loadsr  %d,%d", d, v); break;
+    case M_LOADB:     sprintf(str, "loadb   %d,%d", d, s1); break;
+    case M_LOADI:     sprintf(str, "load    %d,#0%o", d, v); break;
+    case M_LOADIB:    sprintf(str, "loadb   %d,#0%o", d, v); break;
+    case M_LOADIND:   sprintf(str, "load    %d,@%d", d, s1); break;
+    case M_LOADINDPM: sprintf(str, "load    %d,pm-@%d", d, s1); break;
+    case M_LOADINDB:  sprintf(str, "loadb   %d,@%d", d, s1); break;
+    case M_LOADPSW:   sprintf(str, "load    psw,%d,%d", s1,s2); break;
 
-    case M_STOREIND:  sprintf(str, "store  @%d,%d", d, s1); break;
-    case M_STOREINDPM:sprintf(str, "store  pm-@%d,%d", d, s1); break;
-    case M_STOREINDB: sprintf(str, "storeb @%d,%d", d, s1); break;
-    case M_STOREPSW:  sprintf(str, "store  %d,psw", d); break;
+    case M_STOREB:    sprintf(str, "storeb  %d,%d", d, s1); break;
+    case M_STOREIND:  sprintf(str, "store   @%d,%d", d, s1); break;
+    case M_STOREINDPM:sprintf(str, "store   pm-@%d,%d", d, s1); break;
+    case M_STOREINDB: sprintf(str, "storeb  @%d,%d", d, s1); break;
+    case M_STOREPSW:  sprintf(str, "store   %d,psw", d); break;
+    case M_STORESP:   sprintf(str, "storesp r6-%d", v, s1); break;
 
     case M_ADD:
         if (r2)
-                      sprintf(str, "add    %d,%d,%d", d, s1, s2);
+                      sprintf(str, "add     %d,%d,%d", d, s1, s2);
         else
-                      sprintf(str, "add    %d,%d", d, s1); break;
-    case M_ADDI:      sprintf(str, "addi   %d,#0%o", d, v); break;
-    case M_ADDIB:     sprintf(str, "addib  %d,#0%o", d, v); break;
+                      sprintf(str, "add     %d,%d", d, s1); break;
+    case M_ADDI:      sprintf(str, "addi    %d,#0%o", d, v); break;
+    case M_ADDIB:     sprintf(str, "addib   %d,#0%o", d, v); break;
 
-    case M_ADDC:      sprintf(str, "addc   %d", d); break;
-    case M_ADDCB:     sprintf(str, "addcb  %d", d); break;
+    case M_ADDC:      sprintf(str, "addc    %d", d); break;
+    case M_ADDCB:     sprintf(str, "addcb   %d", d); break;
         
     case M_SUB:
         if (r2)
-                      sprintf(str, "sub    %d,%d,%d", d, s1, s2);
+                      sprintf(str, "sub     %d,%d,%d", d, s1, s2);
         else
-                      sprintf(str, "sub    %d,%d", d, s1); break;
+                      sprintf(str, "sub     %d,%d", d, s1); break;
 
-    case M_SUBB:      sprintf(str, "subb   %d,%d,%d", d, s1, s2); break;
+    case M_SUBB:      sprintf(str, "subb    %d,%d,%d", d, s1, s2); break;
 
-    case M_SUBI:      sprintf(str, "subi   %d,#0%o", d, v); break;
-    case M_SUBIB:     sprintf(str, "subib  %d,#0%o", d, v); break;
+    case M_SUBI:      sprintf(str, "subi    %d,#0%o", d, v); break;
+    case M_SUBIB:     sprintf(str, "subib   %d,#0%o", d, v); break;
+    case M_SUBC:      sprintf(str, "subc    %d", d); break;
 
     case M_AND:
         if (r2)
-                      sprintf(str, "and    %d,%d,%d", d, s1, s2);
+                      sprintf(str, "and     %d,%d,%d", d, s1, s2);
         else
-                      sprintf(str, "and    %d,%d", d, s1); break;
+                      sprintf(str, "and     %d,%d", d, s1); break;
 
     case M_ANDB:      sprintf(str, "andb    %d,%d,%d", d, s1, s2); break;
 
     case M_OR:
         if (r2)
-                      sprintf(str, "or     %d,%d,%d", d, s1, s2);
+                      sprintf(str, "or      %d,%d,%d", d, s1, s2);
         else
-                      sprintf(str, "or     %d,%d", d, s1); break;
+                      sprintf(str, "or      %d,%d", d, s1); break;
 
-    case M_ORB:       sprintf(str, "orb    %d,%d,%d", d, s1, s2); break;
+    case M_ORB:       sprintf(str, "orb     %d,%d,%d", d, s1, s2); break;
 
-    case M_NOT:       sprintf(str, "not    %d,%d", d, s1); break;
-    case M_NOTB:      sprintf(str, "notb   %d,%d", d, s1); break;
+    case M_NOT:       sprintf(str, "not     %d,%d", d, s1); break;
+    case M_NOTB:      sprintf(str, "notb    %d,%d", d, s1); break;
 
-    case M_SXT:       sprintf(str, "sxt    %d,%d", d, s1); break;
+    case M_SXT:       sprintf(str, "sxt     %d,%d", d, s1); break;
 
-    case M_DIV:       sprintf(str, "div    %d,%d", d, s1); break;
-    case M_MUL:       sprintf(str, "mul    %d,%d", d, s1); break;
+    case M_DIV:       sprintf(str, "div     %d,%d", d, s1); break;
+    case M_MUL:       sprintf(str, "mul     %d,%d", d, s1); break;
 
-    case M_FLAGS:     sprintf(str, "flags  %d,%d,#0%o", d, s1, v); break;
-    case M_FLAGMUX:   sprintf(str, "flgmux %d,%d,#0%o", d, s1, v); break;
+    case M_XOR:       sprintf(str, "xor     %d,%d", d, s1); break;
 
-    case M_BR:        sprintf(str, "br     %d,#0%o", d, v); break;
-    case M_JMP:       sprintf(str, "jmp    %d", d); break;
-    case M_SWAB:      sprintf(str, "swab   %d,%d", d, s1); break;
+    case M_FLAGS:     sprintf(str, "flags   %d,%d,#0%o", d, s1, v); break;
+    case M_FLAGMUX:   sprintf(str, "flgmux  %d,%d,#0%o", d, s1, v); break;
+    case M_CHECKSP:   sprintf(str, "checksp %d", v); break;
+    case M_INHIBIT:   sprintf(str, "inhibit %d", v); break;
+
+    case M_BR:        sprintf(str, "br      %d,#0%o", d, v); break;
+    case M_JMP:       sprintf(str, "jmp     %d", d); break;
+    case M_SWAB:      sprintf(str, "swab    %d,%d", d, s1); break;
 
     case M_SHIFT:
         if (r2)
-                      sprintf(str, "shift  %d,%d,%d", d, s1, s2);
+                      sprintf(str, "shift   %d,%d,%d", d, s1, s2);
         else
-                      sprintf(str, "shift  %d,%d,#%d", d, s1, v); break;
+                      sprintf(str, "shift   %d,%d,#%d", d, s1, v); break;
 
-    case M_SHIFT32:   sprintf(str, "shift  %d,%d,%d", d, s1, s2); break;
+    case M_SHIFT32:   sprintf(str, "shift   %d,%d,%d", d, s1, s2); break;
 
-    case M_ROTATE:    sprintf(str, "rot    %d,%d,#%d", d, s1, v); break;
-    case M_ASR:       sprintf(str, "ashift %d,%d,#%d", d, s1, v); break;
+    case M_ROTATE:    sprintf(str, "rot     %d,%d,#%d", d, s1, v); break;
+    case M_ROTATEB:   sprintf(str, "rotb    %d,%d,#%d", d, s1, v); break;
+    case M_ASR:       sprintf(str, "ashift  %d,%d,#%d", d, s1, v); break;
 
     default:
         strcat(str, "???"); break;
     }
+}
+
+static int new_r6;
+
+void m_psw_changed(void)
+{
+    new_r6 = 0;
 }
 
 void m_execute_isn(u32 isn)
@@ -210,8 +230,7 @@ void m_execute_isn(u32 isn)
     int vs = (short)((isn >>  0) & 0xffff);
     int offset, take_jump;
     int new_cc_n, new_cc_z, new_cc_v, new_cc_c;
-    int cc_c, cc_n;
-    int new_r6;
+    int cc_c, cc_n, cc_v, cc_z;
 
     /* in hardware this would be a mux for reads */
     regs[6] = regs[R_SP(current_mode)];
@@ -239,7 +258,8 @@ void m_execute_isn(u32 isn)
         break;
 
     case M_LOADB:
-        regs[d] = (signed char)(regs[s] & 0xff);
+//        regs[d] = (signed char)(regs[s] & 0xff);
+        regs[d] = (regs[d] & 0xff00) | (regs[s] & 0xff);
         if (debug) printf("r%d <- r%d (byte 0%o)\n", d, s, regs[s] & 0xff);
         break;
 
@@ -252,6 +272,11 @@ void m_execute_isn(u32 isn)
         break;
 
     case M_LOADIND:
+        if (regs[s] & 1) {
+            mach_signals_odd();
+            break;
+        }
+
         if (cpu_read(current_mode, 0, regs[s], &v) == 0) {
             regs[d] = v;
             if (debug) printf("r%d <- (@%o) 0%o\n", d, regs[s], v);
@@ -262,6 +287,10 @@ void m_execute_isn(u32 isn)
         break;
 
     case M_LOADINDPM:
+        if (regs[s] & 1) {
+            mach_signals_odd();
+            break;
+        }
         if (cpu_read(previous_mode, 0, regs[s], &v) == 0) {
             regs[d] = v;
             if (debug) printf("r%d <- (pm-@%o) 0%o\n", d, regs[s], v);
@@ -295,11 +324,27 @@ void m_execute_isn(u32 isn)
 
         case 1:
             // exception
-            psw = (regs[s] & ~0030000) | (current_mode << 12) | (psw & 020);
+//            psw = (regs[s] & ~0030000) | (current_mode << 12) | (psw & 020);
+            psw = (regs[s] & ~0030000) | (current_mode << 12);
+            break;
+
+        case 2:
+            // mtps
+            if (current_mode == mode_user)
+                psw = (regs[s] & 000037) | (0170000) | (psw&0340) | (psw&020);
+            else {
+                psw = ((regs[s] & 0xff) & ~020) | (psw & 020);
+                if (debug) printf("new psw %o (from %o)\n", psw, regs[s]);
+            }
             break;
         }
 
         new_r6 = 0;
+        break;
+
+    case M_STOREB:
+        regs[d] = (signed char)(regs[s] & 0xff);
+        if (debug) printf("r%d <- r%d (byte 0%o)\n", d, s, regs[s] & 0xff);
         break;
 
     case M_STOREIND:
@@ -321,6 +366,10 @@ void m_execute_isn(u32 isn)
         regs[d] = psw;
         break;
 
+    case M_STORESP:
+        regs[R_SP(v)] = regs[s];
+        break;
+
     case M_ADD:
         if (r2) {
             if (debug) printf("r%d <- %o (%o + %o)\n",
@@ -338,11 +387,14 @@ void m_execute_isn(u32 isn)
         break;
 
     case M_ADDIB:
+        if (debug) printf("addib %o <- %o\n",
+                          (regs[d] & 0xff00) | ((regs[d] + v) & 0xff),
+                          regs[d]);
         regs[d] = (regs[d] & 0xff00) | ((regs[d] + v) & 0xff);
         break;
 
     case M_ADDC:
-        regs[d] += psw & CC_C ? 1 : 0;
+        regs[d] += (psw & CC_C) ? 1 : 0;
         break;
 
     case M_ADDCB:
@@ -371,7 +423,7 @@ void m_execute_isn(u32 isn)
         break;
 
     case M_SUBC:
-        regs[d] -= psw & CC_C ? 1 : 0;
+        regs[d] -= (psw & CC_C) ? 1 : 0;
         break;
 
     case M_AND:
@@ -401,6 +453,10 @@ void m_execute_isn(u32 isn)
         break;
 
     case M_NOTB:
+        if (debug) printf("notb d %o s %o result %o\n",
+                          regs[d], regs[s], 
+                          (regs[d] & 0xff00) | ((~regs[s]) & 0xff));
+
         regs[d] = (regs[d] & 0xff00) | ((~regs[s]) & 0xff);
         break;
 
@@ -414,6 +470,10 @@ void m_execute_isn(u32 isn)
 
     case M_MUL:
         mul16by16(&regs[d], &regs[d+1], regs[d], regs[s]);
+        break;
+
+    case M_XOR:
+        xor16(&regs[d], regs[d], regs[s]);
         break;
 
     case M_FLAGS:
@@ -437,6 +497,8 @@ void m_execute_isn(u32 isn)
     case M_FLAGMUX:
         cc_n = psw & CC_N ? 1 : 0;
         cc_c = psw & CC_C ? 1 : 0;
+        cc_v = psw & CC_V ? 1 : 0;
+        cc_z = psw & CC_Z ? 1 : 0;
         psw &= ~017;
 
         if (v & 0x80) {
@@ -475,7 +537,9 @@ void m_execute_isn(u32 isn)
             new_cc_c = shift_out;
             break;
         case FM_ASL:
-            new_cc_c = regs[s]&0x8000 ? 1 : 0;
+            if (debug) printf("FM_ASL: shift_out %d, new_cc_n %d\n",
+                              shift_out, new_cc_n);
+            new_cc_c = shift_out ? 1 : 0;
             new_cc_v = new_cc_n ^ new_cc_c;
             break;
         case FM_ASR:
@@ -550,8 +614,14 @@ void m_execute_isn(u32 isn)
             new_cc_c = cc_c;            /* unchanged */
             break;
         case FM_MTPS:
+            if (debug) printf("old psw %o\n", psw);
+            new_cc_n = cc_n;
+            new_cc_z = cc_z;
+            new_cc_v = cc_v;
+            new_cc_c = cc_c;
             break;
         case FM_MTPD:
+        case FM_MTPI:
             new_cc_c = cc_c;            /* unchanged */
             break;
         case FM_MUL:
@@ -574,8 +644,10 @@ void m_execute_isn(u32 isn)
             new_cc_v = new_cc_n ^ new_cc_c;
             break;
         case FM_SBC:
-            new_cc_v = (cc_c && (regs[R_R0] == 0077777)) ? 1 : 0;
-            new_cc_c = (cc_c && (regs[R_R0] == 0177777)) ? 1 : 0;
+            new_cc_v = (cc_c && (regs[R_S0] == 0077777)) ? 1 : 0;
+            new_cc_c = (cc_c && (regs[R_S0] == 0177777)) ? 1 : 0;
+            if (debug) printf("FM_SBC: cc_c %d, regs[R_S0] %o; new_cc_c %d\n",
+                              cc_c, regs[R_S0], new_cc_c);
             break;
         case FM_SUB:
             new_cc_v =
@@ -597,7 +669,7 @@ void m_execute_isn(u32 isn)
             break;
 
         case FM_ASLB:
-            new_cc_c = (regs[s] & 0x80) ? 1 : 0;
+            new_cc_c = shift_out ? 1 : 0;
             new_cc_v = new_cc_n ^ new_cc_c;
             break;
         case FM_ADCB:
@@ -626,8 +698,8 @@ void m_execute_isn(u32 isn)
             new_cc_v = new_cc_n ^ new_cc_c;
             break;
         case FM_SBCB:
-            new_cc_v = (cc_c && ((u8)regs[R_R0] == 0177)) ? 1 : 0;
-            new_cc_c = (cc_c && ((u8)regs[R_R0] == 0377)) ? 1 : 0;
+            new_cc_v = (cc_c && ((u8)regs[R_S0] == 0177)) ? 1 : 0;
+            new_cc_c = (cc_c && ((u8)regs[R_S0] == 0377)) ? 1 : 0;
             break;
         case FM_SWAB:
             new_cc_v = 0;
@@ -639,6 +711,34 @@ void m_execute_isn(u32 isn)
         if (new_cc_z) psw |= CC_Z; /* cc_z */
         if (new_cc_v) psw |= CC_V; /* cc_v */
         if (new_cc_c) psw |= CC_C; /* cc_c */
+        break;
+
+    case M_CHECKSP:
+        switch (v) {
+        case 0:
+            if (regs[6] < 0400) {
+                mach_signals_oflo_next();
+            }
+            break;
+        case 1:
+            if (regs[6] < 0400) {
+                mach_signals_oflo();
+            }
+            break;
+        case 2:
+            if (regs[6] <= 0400) {
+                mach_signals_oflo();
+            }
+            break;
+        }
+        break;
+
+    case M_INHIBIT:
+        switch (v) {
+        case 1:
+            mach_trace_inhibit();
+            break;
+        }
         break;
 
     case M_JMP:
@@ -659,23 +759,25 @@ void m_execute_isn(u32 isn)
         switch (d) {
         case B_ALWAYS: take_jump = 1; break;
 
+#define BITSET(v, mask)	( ((v) & mask) ? 1 : 0 )
+
         case B_NE: take_jump = (psw & CC_Z) ? 0 : 1; break;
         case B_EQ: take_jump = (psw & CC_Z) ? 1 : 0; break;
 
-        case B_GT: take_jump = ((psw & CC_Z) ||
-                                ((psw & CC_N) ^ (psw & CC_V))) ? 0 : 1; break;
+        case B_GT: take_jump = (BITSET(psw, CC_Z) ||
+                                (BITSET(psw, CC_N) ^ BITSET(psw, CC_V))) ? 0 : 1; break;
 
-        case B_GE: take_jump = ((psw & CC_N) ^ (psw & CC_V)) ? 0 : 1; break;
+        case B_GE: take_jump = (BITSET(psw, CC_N) ^ BITSET(psw, CC_V)) ? 0 : 1; break;
 
-        case B_LT: take_jump = ((psw & CC_N) ^ (psw & CC_V)) ? 1 : 0; break;
+        case B_LT: take_jump = (BITSET(psw, CC_N) ^ BITSET(psw, CC_V)) ? 1 : 0; break;
 
-        case B_LE: take_jump = ((psw & CC_Z) ||
-                                ((psw & CC_N) ^ (psw & CC_V))) ? 1 : 0; break;
+        case B_LE: take_jump = (BITSET(psw, CC_Z) ||
+                                (BITSET(psw, CC_N) ^ BITSET(psw, CC_V))) ? 1 : 0; break;
 
         case B_PL: take_jump = (psw & CC_N) ? 0 : 1; break;
         case B_MI: take_jump = (psw & CC_N) ? 1 : 0; break;
-        case B_HI: take_jump = ((psw & CC_C) | (psw & CC_Z)) ? 0 : 1; break;
-        case B_LO: take_jump = ((psw & CC_C) | (psw & CC_Z)) ? 1 : 0; break;
+        case B_HI: take_jump = (BITSET(psw, CC_C) | BITSET(psw, CC_Z)) ? 0 : 1; break;
+        case B_LO: take_jump = (BITSET(psw, CC_C) | BITSET(psw, CC_Z)) ? 1 : 0; break;
         case B_VC: take_jump = (psw & CC_V) ? 0 : 1; break;
         case B_VS: take_jump = (psw & CC_V) ? 1 : 0; break;
         case B_CC: take_jump = (psw & CC_C) ? 0 : 1; break;
@@ -730,8 +832,14 @@ void m_execute_isn(u32 isn)
             }
         } else {
             if (vs > 0) {
+                if (debug)
+                    printf("r%o <- r%o (%o) << %d", d, s, regs[s], v);
+                shift_out = (((u32)regs[s]) << v) & 0x10000;
                 regs[d] = regs[s] << v;
             } else {
+                if (debug)
+                    printf("r%o <- r%o (%o) >> %d", d, s, regs[s], -vs);
+                shift_out = (regs[s] >> (-vs - 1)) & 1;
                 regs[d] = regs[s] >> -vs;
             }
         }
@@ -778,6 +886,23 @@ void m_execute_isn(u32 isn)
         psw = (psw & ~017);
         if (regs[d] & 0x8000)    psw |= CC_N;
         if (regs[d] == 0)        psw |= CC_Z;
+        if (new_cc_c)            psw |= CC_C;
+        if (((psw & CC_N)?1:0) ^ ((psw & CC_C)?1:0)) psw |= CC_V;
+        break;
+
+    case M_ROTATEB:
+        regs[d] &= 0xff00;
+        if (vs > 0) {
+            regs[d] |= ((regs[s]&0x7f) << 1) | (psw & CC_C ? 1 : 0);
+            new_cc_c = regs[s] & 0x80;
+        } else {
+            regs[d] |= (psw & CC_C ? 0x80 : 0) | ((regs[s]&0xff) >> 1);
+            new_cc_c = regs[s] & 1;
+        }
+
+        psw = (psw & ~017);
+        if (regs[d] & 0x80)      psw |= CC_N;
+        if ((regs[d]&0xff) == 0) psw |= CC_Z;
         if (new_cc_c)            psw |= CC_C;
         if (((psw & CC_N)?1:0) ^ ((psw & CC_C)?1:0)) psw |= CC_V;
         break;
@@ -924,6 +1049,12 @@ void m_loadpsw(int sr, int v)
     m_push_isn(M_LOADPSW, 0, sr, v);
 }
 
+void m_storeb(int dr, int sr)
+{
+    /* sign extends */
+    m_push_isn(M_STOREB, dr, sr, 0);
+}
+
 void m_storeind(int dr, int sr)
 {
     m_push_isn(M_STOREIND, dr, sr, 0);
@@ -942,6 +1073,11 @@ void m_storeindb(int dr, int sr)
 void m_storepsw(int dr)
 {
     m_push_isn(M_STOREPSW, dr, 0, 0);
+}
+
+void m_storesp(int v, int sr)
+{
+    m_push_isn(M_STORESP, 0, sr, v);
 }
 
 void m_add(int dr, int sr)
@@ -1007,6 +1143,16 @@ void m_flags(int dr, int sr, int v)
 void m_flagmux(int dr, int sr, int v)
 {
     m_push_isn(M_FLAGMUX, dr, sr, v);
+}
+
+void m_checksp(int v)
+{
+    m_push_isn(M_CHECKSP, 0, 0, v);
+}
+
+void m_inhibit(int v)
+{
+    m_push_isn(M_INHIBIT, 0, 0, v);
 }
 
 void m_br(int code, int v)
@@ -1104,11 +1250,18 @@ void encode_rti(void)
     m_loadpsw(R_S0, 0);
 }
 
+void encode_trace_inhibit(void)
+{
+    m_inhibit(1);
+}
+
 void encode_rtt(void)
 {
     if (debug) {
         printf("encode_rtt\n");
     }
+
+    encode_trace_inhibit();
 
     /* pop pc */
     m_loadind(7, 6);
@@ -1148,8 +1301,23 @@ void encode_spl(int spl)
 {
 }
 
-void encode_mark(int m)
+void encode_mark(int nn)
 {
+    /*
+     * sp <- pc + 2*nn
+     * pc <- r5
+     * r5 <- (sp)+
+     */
+
+    m_load(R_S0, 7);
+    m_addi(R_S0, 2*nn);
+    m_load(6, R_S0);
+
+    m_load(7, 5);
+
+    m_load(R_S0, 6);
+    m_addi(6, 2);
+    m_loadind(5, R_S0);
 }
 
 void __encode_ea_from_spec(int dest, int rmode, int reg, u16 arg,
@@ -1196,6 +1364,11 @@ void __encode_ea_from_spec(int dest, int rmode, int reg, u16 arg,
         }
 m_nop();
         return;
+    }
+
+    if (dest > 13) {
+        printf("__encode_ea_from_spec() dest=%d; DEST TOO BIG!\n", dest);
+        exit(1);
     }
 
     switch (rmode) {
@@ -1265,7 +1438,10 @@ void __encode_load_from_spec(int dest, int mode, int reg, u16 arg, int byte)
             break;
         case 3:
             m_loadi(dest+1, arg);
-            m_loadind(dest, dest+1);
+            if (byte)
+                m_loadindb(dest, dest+1);
+            else
+                m_loadind(dest, dest+1);
             m_addi(reg, 2);
             break;
         case 4:
@@ -1274,7 +1450,10 @@ void __encode_load_from_spec(int dest, int mode, int reg, u16 arg, int byte)
             break;
         case 5:
             m_loadi(dest+1, arg);
-            m_loadind(dest, dest+1);
+            if (byte)
+                m_loadindb(dest, dest+1);
+            else
+                m_loadind(dest, dest+1);
             m_subi(reg, 2);
             break;
         case 6:
@@ -1313,6 +1492,11 @@ m_nop();
         else
             m_loadind(dest, dest+1);
     }
+
+    /* check stack pointer */
+    if (reg == 6 && (mode == 4 || mode == 5))
+        m_checksp(0);
+
 m_nop();
 }
 
@@ -1450,10 +1634,15 @@ void encode_movb(int smode, int sreg, int dmode, int dreg, u16 src, u16 dst)
     /* S0 <- ss */
     _encode_load_from_spec_byte(R_S0, smode, sreg, src);
 
-    /* S0 -> dd */
-    _encode_ea_from_spec_byte(R_D0, dmode, dreg, dst);
+    if (dmode == 0) {
+        /* need to sign extend */
+        m_storeb(dreg, R_S0);
+    } else {
+        /* S0 -> dd */
+        _encode_ea_from_spec_byte(R_D0, dmode, dreg, dst);
 
-    _encode_store_result_byte(R_S0, R_D1, dmode, dreg, dst);
+        _encode_store_result_byte(R_S0, R_D1, dmode, dreg, dst);
+    }
 
     m_flagmux(R_S0, R_D0, FM_MOVB);
 }
@@ -1666,37 +1855,41 @@ void encode_clr(int dmode, int dreg, u16 dst)
     if (dreg == 7) {
         switch (dmode) {
         case 0:
-            m_loadi(dreg, 0);
             m_flagmux(dreg, 0, FM_CLR);
+            m_loadi(dreg, 0);
             break;
         case 1:
+            m_flagmux(R_S0, 0, FM_CLR);
+            m_storeind(dreg, R_S0);
+            break;
         case 2:
         case 4:
-            m_storeind(dreg, R_S0);
             m_flagmux(R_S0, 0, FM_CLR);
+            m_storeind(R_S1, R_S0);
+            break;
         case 3:
         case 5:
-            m_storeind(R_S1, R_S0);
             m_flagmux(R_S0, 0, FM_CLR);
+            m_storeind(R_S1, R_S0);
             break;
         case 6:
-            m_storeind(R_S1, R_S0);
             m_flagmux(R_S0, 0, FM_CLR);
+            m_storeind(R_S1, R_S0);
             break;
         case 7:
-            m_storeind(R_S1, R_S0);
             m_flagmux(R_S0, 0, FM_CLR);
+            m_storeind(R_S1, R_S0);
             break;
         }
     } else {
         switch (dmode) {
         case 0:
-            m_loadi(dreg, 0);
             m_flagmux(dreg, 0, FM_CLR);
+            m_loadi(dreg, 0);
             break;
         case 1:
-            m_storeind(dreg, R_S0);
             m_flagmux(R_S0, 0, FM_CLR);
+            m_storeind(dreg, R_S0);
             break;
         case 2:
         case 3:
@@ -1704,8 +1897,8 @@ void encode_clr(int dmode, int dreg, u16 dst)
         case 5: 
         case 6:
         case 7:
-            m_storeind(R_S1, R_S0);
             m_flagmux(R_S0, 0, FM_CLR);
+            m_storeind(R_S1, R_S0);
             break;
         }
     }
@@ -1729,43 +1922,43 @@ void encode_clrb(int dmode, int dreg, u16 dst)
     if (dreg == 7) {
         switch (dmode) {
         case 0:
-            m_loadib(dreg, 0);
             m_flagmux(dreg, 0, FM_CLRB);
+            m_loadib(dreg, 0);
             break;
         case 1:
         case 2:
         case 4:
-            m_storeindb(dreg, R_S0);
             m_flagmux(R_S0, 0, FM_CLRB);
+            m_storeindb(dreg, R_S0);
         case 3:
         case 5:
             m_loadi(R_D1, dst);
-            m_storeindb(R_D1, R_S0);
             m_flagmux(R_S0, 0, FM_CLRB);
+            m_storeindb(R_D1, R_S0);
             break;
         case 6:
             m_loadi(R_D1, dst);
             m_add(R_D1, dreg);
-            m_storeindb(R_D1, R_S0);
             m_flagmux(R_S0, 0, FM_CLRB);
+            m_storeindb(R_D1, R_S0);
             break;
         case 7:
             m_loadi(R_D2, dst);
             m_add(R_D2, dreg);
             m_loadind(R_D1, R_D2);
-            m_storeindb(R_D1, R_S0);
             m_flagmux(R_S0, 0, FM_CLRB);
+            m_storeindb(R_D1, R_S0);
             break;
         }
     } else {
         switch (dmode) {
         case 0:
-            m_loadib(dreg, 0);
             m_flagmux(dreg, 0, FM_CLRB);
+            m_loadib(dreg, 0);
             break;
         case 1:
-            m_storeindb(dreg, R_S0);
             m_flagmux(R_S0, R_S0, FM_CLRB);
+            m_storeindb(dreg, R_S0);
             break;
         case 2:
         case 3:
@@ -1773,8 +1966,8 @@ void encode_clrb(int dmode, int dreg, u16 dst)
         case 5: 
         case 6:
         case 7:
-            m_storeindb(R_S1, R_S0);
             m_flagmux(R_S0, R_S0, FM_CLRB);
+            m_storeindb(R_S1, R_S0);
             break;
         }
     }
@@ -1808,6 +2001,7 @@ void encode_sob(int reg, u8 offset6)
 
 void encode_mfpi(int smode, int sreg, u16 src)
 {
+    if (debug) printf("encode_mfpi %o%o %o\n", smode, sreg, src);
     if (smode == 0 && sreg == 6) {
         m_loadsr(R_S0, R_SP(previous_mode));
     } else {
@@ -1822,13 +2016,15 @@ void encode_mfpi(int smode, int sreg, u16 src)
 
 void encode_mtpi(int dmode, int dreg, u16 dst)
 {
+    if (debug) printf("encode_mtpi %o%o %o\n", dmode, dreg, dst);
+
     /* pop */
     m_loadind(R_S0, 6);
     m_addi(6, 2);
-    m_flagmux(R_S0, R_S0, FM_MFPI);
+    m_flagmux(R_S0, R_S0, FM_MTPI);
 
     if (dmode == 0 && dreg == 6) {
-        m_load(R_SP(previous_mode), R_S0);
+        m_storesp(previous_mode, R_S0);
     } else {
         __encode_ea_from_spec(R_D0, dmode, dreg, dst, 0, 1);
         m_storeindpm(R_D1, R_S0);
@@ -1838,6 +2034,16 @@ void encode_mtpi(int dmode, int dreg, u16 dst)
 
 void encode_mtps(int smode, int sreg, u16 src)
 {
+    if (debug) printf("encode_mtps: ss %o%o s=%o\n", smode, sreg, src);
+
+    if (smode == 0) {
+        m_loadpsw(sreg, 2);
+    } else {
+        _encode_load_from_spec_byte(R_S0, smode, sreg, src);
+        m_loadpsw(R_S0, 2);
+    }
+
+    m_flagmux(0, 0, FM_MTPS);
 }
 
 void encode_mfpd(int smode, int sreg, u16 src)
@@ -1917,6 +2123,15 @@ void encode_rol(int dmode, int dreg, u16 dst)
     m_flagmux(R_R0, R_S0, FM_ROL);
 }
 
+void encode_rolb(int dmode, int dreg, u16 dst)
+{
+    /* S0 <- ss */
+    _encode_load_from_spec_byte(R_S0, dmode, dreg, dst);
+    m_push_isn(M_ROTATEB, R_R0, R_S0, 1);
+    _encode_store_result_byte(R_R0, R_S1, dmode, dreg, dst);
+    m_flagmux(R_R0, R_S0, FM_ROLB);
+}
+
 void encode_neg(int dmode, int dreg, u16 dst)
 {
     if (debug) {
@@ -1930,6 +2145,21 @@ void encode_neg(int dmode, int dreg, u16 dst)
     m_addi(R_R0, 1);
     _encode_store_result(R_R0, R_S1, dmode, dreg, dst);
     m_flagmux(R_R0, 0, FM_NEG);
+}
+
+void encode_negb(int dmode, int dreg, u16 dst)
+{
+    if (debug) {
+        printf("encode_negb: dd %o%o d=%o\n",
+               dmode, dreg, dst);
+    }
+
+    /* S0 <- ss */
+    _encode_load_from_spec_byte(R_S0, dmode, dreg, dst);
+    m_notb(R_R0, R_S0);
+    m_addib(R_R0, 1);
+    _encode_store_result_byte(R_R0, R_S1, dmode, dreg, dst);
+    m_flagmux(R_R0, 0, FM_NEGB);
 }
 
 void encode_jmp(int dmode, int dreg, u16 dst)
@@ -1990,9 +2220,9 @@ void encode_adc(int dmode, int dreg, u16 dst)
 
     /* S0 <- ss */
     _encode_load_from_spec(R_S0, dmode, dreg, dst);
-    m_addc(R_R0, R_S0);
-    _encode_store_result(R_R0, R_S1, dmode, dreg, dst);
-    m_flagmux(R_R0, 0, FM_ADC);
+    m_addc(R_S0, R_S0);
+    _encode_store_result(R_S0, R_S1, dmode, dreg, dst);
+    m_flagmux(R_S0, 0, FM_ADC);
 }
 
 void encode_adcb(int dmode, int dreg, u16 dst)
@@ -2041,9 +2271,9 @@ void encode_incb(int dmode, int dreg, u16 dst)
         m_addib(dreg, 1);
         m_flagmux(dreg, 0, FM_INCB);
     } else {
-        _encode_load_from_spec(R_S0, dmode, dreg, dst);
+        _encode_load_from_spec_byte(R_S0, dmode, dreg, dst);
         m_addib(R_S0, 1);
-        _encode_store_result(R_S0, R_S1, dmode, dreg, dst);
+        _encode_store_result_byte(R_S0, R_S1, dmode, dreg, dst);
         m_flagmux(R_S0, 0, FM_INCB);
     }
 }
@@ -2079,9 +2309,9 @@ void encode_decb(int dmode, int dreg, u16 dst)
         m_subib(dreg, 1);
         m_flagmux(dreg, 0, FM_DECB);
     } else {
-        _encode_load_from_spec(R_S0, dmode, dreg, dst);
+        _encode_load_from_spec_byte(R_S0, dmode, dreg, dst);
         m_subib(R_S0, 1);
-        _encode_store_result(R_S0, R_S1, dmode, dreg, dst);
+        _encode_store_result_byte(R_S0, R_S1, dmode, dreg, dst);
         m_flagmux(R_S0, 0, FM_DECB);
     }
 }
@@ -2121,8 +2351,19 @@ void encode_com(int dmode, int dreg, u16 dst)
     m_flagmux(R_R0, 0, FM_COM);
 }
 
-encode_comb() {}
+void encode_comb(int dmode, int dreg, u16 dst)
+{
+    if (debug) {
+        printf("encode_comb: dd %o%o d=%o\n",
+               dmode, dreg, dst);
+    }
 
+    /* S0 <- ss */
+    _encode_load_from_spec_byte(R_S0, dmode, dreg, dst);
+    m_notb(R_S0, R_S0);
+    _encode_store_result_byte(R_S0, R_S1, dmode, dreg, dst);
+    m_flagmux(R_S0, 0, FM_COMB);
+}
 
 encode_rorb() {}
 
@@ -2174,24 +2415,40 @@ void encode_sbc(int dmode, int dreg, u16 dst)
 
     /* S0 <- ss */
     _encode_load_from_spec(R_S0, dmode, dreg, dst);
-    m_subc(R_R0, R_S0);
-    _encode_store_result(R_R0, R_S1, dmode, dreg, dst);
-    m_flagmux(R_R0, 0, FM_SBC);
+    m_subc(R_S0, R_S0);
+    _encode_store_result(R_S0, R_S1, dmode, dreg, dst);
+    m_flagmux(R_S0, 0, FM_SBC);
 }
 
-encode_mfpt() {}
+void encode_xor(int reg, int dmode, int dreg, u16 dst)
+{
+    _encode_load_from_spec(R_S0, dmode, dreg, dst);
+    m_load(R_R0, reg);
+    m_push_isn(M_XOR, R_R0, R_S0, 0);
+    _encode_store_result(R_R0, R_S0, dmode, dreg, dst);
+    m_flagmux(R_R0, 0, FM_XOR);
+}
+
+
+void encode_mfps(int dmode, int dreg, u16 dst)
+{
+    m_storepsw(R_S0);
+    _encode_ea_from_spec_byte(R_S0, dmode, dreg, dst);
+    _encode_store_result_byte(R_S0, R_S1, dmode, dreg, dst);
+    if (dmode == 0) {
+        m_storeb(dreg, dreg);
+    }
+    m_flagmux(R_S0, 0, FM_MFPS);
+}
+
+encode_mtpd() {}
+
 encode_csm() {}
 
-encode_negb() {}
 encode_sbcb() {}
-encode_rolb() {}
 encode_arsb() {}
 encode_aslb() {}
 
-encode_mtpd() {}
-encode_mfps() {}
-
-encode_xor() {}
 
 void encode_exception(u8 vector)
 {
@@ -2228,13 +2485,24 @@ void encode_exception(u8 vector)
     m_subi(6, 2);
     m_storeind(6, 7);
 
+if (vector != 4) m_checksp(0);
+
     /* jump to new-pc */
     m_push_isn(M_JMP, R_R0, 0, 0);
 }
 
 void encode_trap(int vector, int op)
 {
+//    /* check stack before trap exception */
+//    m_checksp(2); 
+
     encode_exception(vector);
+}
+
+void encode_mfpt(void)
+{
+    /* on 11/34, trap 10 */
+    encode_exception(010);
 }
 
 

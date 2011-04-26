@@ -10,6 +10,8 @@
 #include "isn.h"
 #include "support.h"
 
+extern int initial_pc;
+
 /* register offsets */
 #define	CS	0
 #define	BA	2
@@ -658,7 +660,7 @@ void io_rl_bootrom(void)
         addr += 2;
     }
 
-    tb_pc_set(02002);
+    initial_pc = 02002;
 }
 
 

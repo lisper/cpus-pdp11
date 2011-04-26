@@ -13,6 +13,7 @@ enum {
 	M_STOREIND,
 	M_STOREINDPM,
 	M_STOREPSW,
+	M_STORESP,
 	M_ADD,
 	M_ADDI,
 	M_ADDC,
@@ -21,6 +22,8 @@ enum {
 	M_SUBC,
 	M_FLAGS,
 	M_FLAGMUX,
+	M_CHECKSP,
+	M_INHIBIT,
 	M_BR,
 	M_JMP,
 	M_SWAB,
@@ -34,10 +37,12 @@ enum {
 	M_SXT,
 	M_DIV,
 	M_MUL,
+	M_XOR,
 
 	M_LOADB = 128,
 	M_LOADIB,
 	M_LOADINDB,
+	M_STOREB,
 	M_STOREINDB,
 	M_ADDCB,
 	M_ADDIB,
@@ -46,6 +51,7 @@ enum {
 	M_ANDB,
 	M_ORB,
 	M_SUBB,
+	M_ROTATEB,
 };
 
 enum {
@@ -100,6 +106,7 @@ enum {
 	FM_MOV,
 	FM_MTPS,
 	FM_MTPD,
+	FM_MTPI,
 	FM_MUL,
 	FM_NEG,
 	FM_ROL,

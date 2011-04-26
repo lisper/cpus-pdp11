@@ -229,8 +229,8 @@ mmu_map(int cpu_mode, int cpu_fetch, int cpu_write, int cpu_trap, int trap_odd,
     signal_trap = 0;
 
 
-    printf("zzz: vaddr %o, pxr_index %o, cpu_write %d, mapped_pa_22 %o, acf %o\n",
-           vaddr, pxr_index, cpu_write, mapped_pa_22, pdr_acf);
+    printf("zzz: vaddr %o, pxr_index %o, cpu_write %d, mapped_pa_22 %o, acf %o (cpu_paf<<6 %o, cpu_df %o)\n",
+           vaddr, pxr_index, cpu_write, mapped_pa_22, pdr_acf, cpu_paf << 6, cpu_df);
     fflush(stdout);
 
     if (cpu_write) {

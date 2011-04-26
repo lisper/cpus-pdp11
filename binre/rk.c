@@ -8,6 +8,8 @@
 #include "isn.h"
 #include "support.h"
 
+extern int initial_pc;
+
 static u16 rkds;
 static u16 rkcs;
 static u16 rkda;
@@ -205,7 +207,7 @@ void rk_service(void)
 //        rker |= RKER_OVR;
 //    }
 
-    printf("rk: seek %d\n", da * sizeof(short));
+    printf("rk: seek %d (0x%x)\n", da * sizeof(short), da * sizeof(short));
     err = lseek(rk_fd, da * sizeof(short), SEEK_SET);
     if (wc && (err >= 0)) {
         err = 0;
@@ -456,7 +458,7 @@ io_rk_reset(const char *fn)
 {
     rkcs = CSR_DONE;
 
-    rk_fd = open(fn, O_RDONLY);
+    rk_fd = open(fn, O_RDWR/*O_RDONLY*/);
 }
 
 static const u16 boot_rom[] = {
@@ -497,7 +499,7 @@ void io_rk_bootrom(void)
         addr += 2;
     }
 
-    tb_pc_set(02002);
+    initial_pc = 02002;
 }
 
 

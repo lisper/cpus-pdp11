@@ -28,14 +28,17 @@ unsigned int max_cycles;
 unsigned int cycles;
 int selftest;
 char *image_filename;
+char *mem_filename;
 int use_rl02;
 int use_rk05;
+int initial_pc;
 
 u_char cc_c, cc_n, cc_z, cc_v;
 
 /* wires */
 int trap_odd;
 int trap_bus;
+int trap_res;
 int trap_ill;
 int trap_iot;
 int trap_emt;
@@ -44,6 +47,10 @@ int trap_bpt;
 int trap_trap;
 int trap_interrupt;
 int trap_abort;
+int trap_oflo;
+int trap_trace;
+
+int trace_inhibit;
 
 int assert_wait;
 int assert_halt;
@@ -53,11 +60,15 @@ int assert_iot;
 int assert_int;
 int assert_trap_odd;
 int assert_trap_ill;
+int assert_trap_res;
 int assert_trap_priv;
 int assert_trap_emt;
 int assert_trap_trap;
 int assert_trap_bus;
 int assert_trap_abort;
+int assert_trap_oflo;
+
+int assert_trace_inhibit;
 
 u16 assert_int_vec;
 u16 assert_int_ipl_bits;
@@ -67,7 +78,7 @@ u16 memory[4 * 1024 * 1024];
 u16 psw;
 
 u_char r_none, r_8off, r_r, r_n, r_nn, r_ss, r_dd, r_rss, r_rdd, r_ssdd;
-u_char r_illegal;
+u_char r_illegal, r_reserved;
 
 void mem_signals_bus_error(u32 addr)
 {
@@ -93,6 +104,31 @@ void mmu_signals_trap(void)
 {
     assert_trap_abort = 1;
     m_pipe_flush();
+}
+
+void mach_signals_odd(void)
+{
+    assert_trap_odd = 1;
+    m_pipe_flush();
+}
+
+void mach_signals_oflo(void)
+{
+    if (debug) printf("mach_signals_oflo\n");
+    assert_trap_oflo = 1;
+    m_pipe_flush();
+}
+
+void mach_signals_oflo_next(void)
+{
+    if (debug) printf("mach_signals_oflo_next\n");
+    assert_trap_oflo = 1;
+}
+
+void mach_trace_inhibit(void)
+{
+    if (debug) printf("mach_trace_inhibit\n");
+    assert_trace_inhibit = 1;
 }
 
 void
@@ -127,6 +163,28 @@ static int ipl_below(int psw_ipl, int ipl_bits)
 int
 is_exception(void)
 {
+    if (pc & 1) {
+        if (debug) printf("is_exception: odd pc\n");
+        trap_odd = 1;
+        return 1;
+    }
+
+    /* trace */
+    if (assert_trace_inhibit) {
+        if (debug) printf("is_exception: assert_trace_inhibit\n");
+        trace_inhibit = 1;
+        assert_trace_inhibit = 0;
+    }
+
+    if (psw & 020) {
+        if (!trace_inhibit) {
+            if (debug) printf("is_exception: trace\n");
+            trap_trace = 1;
+            return 1;
+        }
+    }
+
+    /* interrupt */
     int ipl = (psw >> 5) & 7;
 
     if (assert_int && ipl_below(ipl, assert_int_ipl_bits)) {
@@ -142,21 +200,46 @@ is_exception(void)
                (u_short)~((1 << ipl) - 1), assert_int_ipl_bits);
     }
 
+    /* other exceptions */
     if (assert_trap_bus) { 
+        if (debug) printf("is_exception: assert_trap_bus\n");
         trap_bus = 1;
         assert_trap_bus = 0;
         return 1;
     }
 
     if (assert_trap_ill) {
+        if (debug) printf("is_exception: assert_trap_ill\n");
         trap_ill = 1;
         assert_trap_ill = 0;
         return 1;
     }
 
+    if (assert_trap_res) { 
+        if (debug) printf("is_exception: assert_trap_res\n");
+        trap_res = 1;
+        assert_trap_res = 0;
+        return 1;
+    }
+
     if (assert_trap_abort) {
+        if (debug) printf("is_exception: assert_trap_abort\n");
         trap_abort = 1;
         assert_trap_abort = 0;
+        return 1;
+    }
+
+    if (assert_trap_odd) {
+        if (debug) printf("is_exception: assert_trap_odd\n");
+        trap_odd = 1;
+        assert_trap_odd = 0;
+        return 1;
+    }
+
+    if (assert_trap_oflo) {
+        if (debug) printf("is_exception: assert_trap_oflo\n");
+        trap_oflo = 1;
+        assert_trap_oflo = 0;
         return 1;
     }
 
@@ -168,44 +251,52 @@ tb_exception(void)
 {
     int vector = 0;
 
-    if (trap_odd || trap_bus) {
-        vector = 004;
+    if (debug) {
+        printf("tb_exception: sp %o\n", regs[6]);
+        printf("tb_exception: odd %d, bus %d, res %d, oflo %d, ill %d, priv %d\n",
+               trap_odd, trap_bus, trap_res, trap_oflo, trap_ill, trap_priv);
     }
 
+    if (trap_odd || trap_bus || trap_res || trap_oflo) {
+        vector = 004;
+    }
+    else
     if (trap_ill || trap_priv) {
         vector = 010;
     }
-
-    if (trap_bpt) {
+    else
+    if (trap_bpt || trap_trace) {
         vector = 014;
     }
-
+    else
     if (trap_iot) {
         vector = 020;
     }
-
+    else
     if (trap_emt) {
         vector = 030;
     }
-
+    else
     if (trap_trap) {
         vector = 034;
     }
-
+    else
     if (trap_abort) {
         vector = 0250;
     }
-
+    else
     if (trap_interrupt) {
         vector = assert_int_vec;
 support_clear_int_bits();
     }
 
+do_exception:
     printf("encoding exception; vector %o\n", vector);
     encode_exception(vector);
 
     trap_odd = 0;
     trap_bus = 0;
+    trap_res = 0;
     trap_ill = 0;
     trap_priv = 0;
     trap_bpt = 0;
@@ -214,6 +305,10 @@ support_clear_int_bits();
     trap_trap = 0;
     trap_interrupt = 0;
     trap_abort = 0;
+    trap_oflo = 0;
+    trap_trace = 0;
+
+    trace_inhibit = 0;
 }
 
 void
@@ -251,7 +346,7 @@ tb_decode(void)
         (opl >= 0230 && opl <= 0237);
 
     r_nn =
-        op == 06400;
+        op >= 06400 && op <= 06477;
 
     op_15_6 = (op & 0177700) >> 6;
 
@@ -270,7 +365,8 @@ tb_decode(void)
         op_15_6 == 00003 ||
         (op_15_6 >= 00050 && op_15_6 <= 00063) ||
         (op_15_6 >= 00066 && op_15_6 <= 00070) ||
-        (op_15_6 >= 01050 && op_15_6 <= 01067);
+        (op_15_6 >= 01050 && op_15_6 <= 01063) ||
+        (op_15_6 >= 01066 && op_15_6 <= 01067);
 
     op_15_9 = (op & 0177000) >> 9;
 
@@ -293,13 +389,21 @@ tb_decode(void)
 
     r_illegal =
 	(op_15_6 == 0000 && op_5_0 > 007) ||
-	(op_15_6 == 0001 && op_5_0 < 010) ||		/* jmp rx */
+	(op_15_6 == 0000 && op_5_0 == 007) ||		// trapa/mfpt
 	(op_15_6 == 0002 && (op_5_0 >= 010 && op_5_0 <= 027)) ||
 	(op_15_12 == 007 && (op_11_9 == 5 || op_11_9 == 6)) ||
-	(op_15_12 == 017);
+	(op_15_12 == 017) ||
+   	(op_15_6 == 00047 && op_5_0 <= 007);		// jsp rx
+
+    r_reserved =
+	(op_15_6 == 0001 && op_5_0 <= 007) ||		/* jmp rx */
+   	(op_15_9 == 0004 && op_5_0 <= 007);		// jsp rx
 
     if (r_illegal)
         assert_trap_ill++;
+    else
+    if (r_reserved)
+        assert_trap_res++;
 
     if (debug) {
         printf("decode: ");
@@ -360,7 +464,7 @@ tb_recompile(void)
         case 01: /*wait*/ encode0(M_WAIT); break;
         case 02: /*rti*/  encode_rti(); break;
         case 03: /*bpt*/  encode_trap(014); break;
-        case 04: /*iot*/  encode_trap(020); break;
+        case 04: /*iot*/  encode_trace_inhibit(); encode_trap(020); break;
         case 05: /*reset*/encode0(M_RESET); break;
         case 06: /*rtt*/  encode_rtt(); break;
         case 07: /*mfpt*/ encode_mfpt(); break;
@@ -402,11 +506,6 @@ tb_recompile(void)
             break;
 
         default:
-            if (op >= 0006400 && op <= 0006477) { /*mark*/
-                encode_mark(op & 077);
-                break;
-            }
-            else
             if (op >= 0104000 && op <= 0104377) { /*emt*/
                 encode_trap(030, op & 077);
                 break;
@@ -420,6 +519,14 @@ tb_recompile(void)
                 printf("r_none? %o\n", op);
             }
             break;
+        }
+    }
+
+    if (r_nn) {
+        if (debug) printf("r_nn %o\n", op);
+
+        if (op >= 0006400 && op <= 0006477) { /*mark*/
+            encode_mark(op & 077);
         }
     }
 
@@ -999,7 +1106,7 @@ cpu_read(int mode, int fetch, int addr, u16 *pval)
     }
 
     /* 256k */
-    if (addr2 > 01000000) {
+    if (addr2 >= 01000000) {
         mem_signals_bus_error(addr);
         return -1;
     }
@@ -1039,11 +1146,11 @@ cpu_write_byte(int mode, int addr, u8 val)
     }
 
     if (debug) {
-        printf("mem: writeb %o <- %o\n", addr, val);
+        printf("mem: writeb %o <- %o (loc %o=%o)\n", addr, val, (addr2/2)*2, new);
     }
 
     /* 256k */
-    if (addr2 > 01000000) {
+    if (addr2 >= 01000000) {
         mem_signals_bus_error(addr);
         return -1;
     }
@@ -1073,7 +1180,7 @@ cpu_write(int mode, int addr, u16 val)
     }
 
     /* 256k */
-    if (addr2 > 01000000) {
+    if (addr2 >= 01000000) {
         mem_signals_bus_error(addr);
         return -1;
     }
@@ -1140,6 +1247,11 @@ void
 tb_execute(void)
 {
     m_fifo_execute();
+
+    if (psw & 020) {
+        if (debug) printf("tb_execute: reset trace_inhibit\n");
+        trace_inhibit = 0;
+    }
 }
 
 void
@@ -1179,6 +1291,30 @@ run(void)
     }
 }
 
+int load_memfile(char *mem_filename)
+{
+    FILE *f;
+    char line[1024];
+
+    printf("loading memory from %s\n", mem_filename);
+
+    f = fopen(mem_filename, "r");
+    if (f) {
+        while (fgets(line, sizeof(line), f)) {
+            int n, maddr, mval;
+            n = sscanf(line, "%o %o", &maddr, &mval);
+            if (n == 2) {
+                memory[maddr/2] = mval;
+            }
+        }
+        fclose(f);
+    }
+
+    memory[042/2] = 040000;
+
+    return 0;
+}
+
 void
 init(void)
 {
@@ -1186,16 +1322,21 @@ init(void)
 
     if (selftest) {
         fill_test_code();
-    } else {
-        if (use_rk05)
-            io_rk_bootrom();
-        if (use_rl02)
-            io_rl_bootrom();
-    }
+    } else
+        if (mem_filename) {
+            load_memfile(mem_filename);
+        } else
+            if (image_filename) {
+                if (use_rk05)
+                    io_rk_bootrom();
+                if (use_rl02)
+                    io_rl_bootrom();
+            }
 
     reset_support();
 
     psw = 0340;
+    pc = initial_pc;
 }
 
 extern int optind;
@@ -1208,22 +1349,29 @@ main(int argc, char *argv[])
     debug = 1;
     max_cycles = 5;
     image_filename = NULL;
+    mem_filename = NULL;
     use_rk05 = 1;
     use_rl02 = 0;
 
-    while ((c = getopt(argc, argv, "dm:f:r:")) != -1) {
+    while ((c = getopt(argc, argv, "c:dm:f:m:p:r:")) != -1) {
         switch (c) {
         case 'd':
             debug++;
             break;
-        case 'm':
+        case 'c':
             max_cycles = atoi(optarg);
+            break;
+        case 'm':
+            mem_filename = strdup(optarg);
             break;
         case 's':
             selftest++;
             break;
         case 'f':
             image_filename = strdup(optarg);
+            break;
+        case 'p':
+            sscanf(optarg, "%o", &initial_pc);
             break;
         case 'r':
             if (optarg && optarg[0] == 'k') {

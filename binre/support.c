@@ -194,6 +194,10 @@ void io_psw_write(u32 addr, u16 data, int writeb)
 {
     extern u16 psw;
     printf("psw: write; data %o, writeb %d\n", data, writeb);
+
+    data &= ~020;
+    data |= psw & 020;
+
     if (writeb) {
         if (addr & 1)
             psw = (psw & 0xff) | (data << 8);
@@ -201,6 +205,8 @@ void io_psw_write(u32 addr, u16 data, int writeb)
             psw = (psw & 0xff00) | (data & 0xff);
     } else
         psw = data;
+
+    m_psw_changed();
     printf("psw: new %o\n", psw);
 }
 

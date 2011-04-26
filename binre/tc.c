@@ -1,5 +1,7 @@
 #include "binre.h"
 
+extern int initial_pc;
+
 u_short test_code[] = {
     000500, 0012706,
     000502, 0000500,
@@ -43,7 +45,7 @@ fill_test_code(void)
     for (i = 0; test_code[i]; i += 2) {
         memory[ test_code[i]/2 ] = test_code[i+1];
     }
-    pc = 0500;
+    initial_pc = 0500;
 
     for (i = 0; i < 7; i++)
         regs[i] = -1;
