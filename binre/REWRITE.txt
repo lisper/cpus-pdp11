@@ -1,0 +1,203 @@
+r0 0
+r1 1
+...
+r7 7
+s0 8 (scratch 0)    source value
+s1 9 (scratch 1)    source value (if 32 bit)
+s2 10 (scratch 2)
+s3 11 (scrtach 3)
+
+8       4     4     16
+opcode  d-reg s-reg signed-const
+
+--------------------------------
+
+MOV SSDD
+ smode
+ sreg
+
+ RESULT IN s0...
+
+0	s0 = reg
+
+	-> load s0,reg
+
+1       src_addr = regs[sreg] / 2
+
+        -> load-indirect s0,reg
+
+2       src_addr = regs[sreg] / 2
+        regs[sreg] += 2
+
+        -> load-indirect s0,reg
+        if dreg > 5
+	-> add-immed reg,2
+
+3       src = memory[ regs[sreg] / 2 ] / 2;
+        regs[sreg] += 2;
+
+        -> load-indirect s1,reg
+        -> load-indirect s0,s1
+        if dreg > 5
+	-> add-immed reg,2
+
+4       regs[sreg] -= 2;
+        src = regs[sreg];
+
+        if sreg > 5;
+	-> add-immed reg,-2
+        -> load-indirect s0,reg
+
+5       regs[sreg] -= 2;
+        src = memory[ regs[sreg] / 2 ];
+
+        if sreg > 5;
+	-> add-immed reg,-2
+        -> load-indirect s1,reg
+        -> load-indirect s0,s1
+
+6       src = regs[sreg] + memory[ pc / 2 ];
+        pc += 2;
+
+        -> load s1,s-arg
+        -> add s1,reg
+        -> load-indirect s0,s1
+
+7       src = memory[ regs[sreg] + memory[ pc / 2 ] ];
+        pc += 2;
+
+        -> load s2,s-arg
+        -> adda s2,reg
+        -> load-indirect s1,s2
+        -> load-indirect s0,s1
+
+ dmode
+ dreg
+
+0	dest = reg
+
+	-> store s0,reg
+
+1       dest_addr = regs[dreg] / 2
+
+        -> store-indirect s0,reg
+
+2       dest_addr = regs[dreg] / 2
+        regs[dreg] += regdelta;
+
+        -> store-indirect s0,reg
+        if dreg > 5
+	-> add-immed reg,2
+
+3       dest = memory[ regs[dreg] / 2 ] / 2;
+        regs[dreg] += regdelta;
+
+        -> load-indirect s1,reg
+        -> store-indirect s0,s1
+        if dreg > 5
+	-> add-immed reg,2
+
+4       regs[dreg] -= regdelta;
+        dest = regs[dreg];
+
+        if dreg > 5;
+	-> add-immed reg,-2
+        -> store-indirect s0,reg
+
+5       regs[dreg] -= regdelta;
+        dest = memory[ regs[dreg] / 2 ];
+
+        if dreg > 5;
+	-> add-immed reg,-2
+        -> load-indirect s1,reg
+        -> store-indirect s0,s1
+
+6       dest = regs[dreg] + memory[ pc / 2 ];
+        pc += 2;
+
+        -> load s1,d-arg
+        -> add s1,reg
+        -> store-indirect s0,s1
+
+7       dest = memory[ regs[dreg] + memory[ pc / 2 ] ];
+        pc += 2;
+
+        -> load s2,d-arg
+        -> adda s2,reg
+        -> load-indirect s1,s2
+        -> store-indirect s0,s1
+
+
+--------------------------------
+
+SWAB DD
+ dmode
+ dreg
+
+0	dest = reg
+
+	-> swab reg
+
+1       dest_addr = regs[dreg] / 2
+
+        -> load-indirect s0,reg
+        -> swab s0
+        -> store-indirect s0,reg
+
+2       dest_addr = regs[dreg] / 2
+        regs[dreg] += regdelta;
+
+        -> load-indirect s0,reg
+        -> swab s0
+        -> store-indirect s0,reg
+        if dreg > 5
+	-> add-immed reg,2
+
+3       dest = memory[ regs[dreg] / 2 ] / 2;
+        regs[dreg] += regdelta;
+
+        -> load-indirect s1,reg
+        -> load-indirect s0,s1
+        -> swab s0
+        -> store-indirect s0,s1
+        if dreg > 5
+	-> add-immed reg,2
+
+4       regs[dreg] -= regdelta;
+        dest = regs[dreg];
+
+        if dreg > 5;
+	-> add-immed reg,-2
+        -> load-indirect s0,reg
+        -> swab s0
+        -> store-indirect s0,reg
+
+5       regs[dreg] -= regdelta;
+        dest = memory[ regs[dreg] / 2 ];
+
+        if dreg > 5;
+	-> add-immed reg,-2
+        -> load-indirect s1,reg
+        -> load-indirect s0,s1
+        -> swab s0
+        -> store-indirect s0,s1
+
+6       dest = regs[dreg] + memory[ pc / 2 ];
+        pc += 2;
+
+        -> load s1,d-arg
+        -> add s1,reg
+        -> load-indirect s0,s1
+        -> swab s0
+        -> store-indirect s0,s1
+
+7       dest = memory[ regs[dreg] + memory[ pc / 2 ] ];
+        pc += 2;
+
+        -> load s2,d-arg
+        -> adda s2,reg
+        -> load-indirect s1,s2
+        -> load-indirect s0,s1
+        -> swab s0
+        -> store-indirect s0,s1
+

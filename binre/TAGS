@@ -1,0 +1,614 @@
+
+binre.h,186
+typedef unsigned char u_char;1,0
+typedef unsigned short u_short;2,30
+typedef unsigned int u32;4,63
+typedef unsigned short u16;5,89
+typedef unsigned char u8;6,117
+#define pc 11,185
+
+isn.h,2505
+    ISN_HALT,2,7
+    ISN_WAIT,3,21
+    ISN_RTI,4,35
+    ISN_BPT,5,48
+    ISN_IOT,6,61
+    ISN_RESET,7,74
+    ISN_RTT,8,89
+    ISN_MFPT,9,102
+    ISN_JMP,10,116
+    ISN_RTS,11,129
+    ISN_SPL,12,142
+    ISN_C,13,155
+    ISN_CLC,14,166
+    ISN_CLV,15,179
+    ISN_CLZ,16,192
+    ISN_CLN,17,205
+    ISN_CCC,18,218
+    ISN_S,19,231
+    ISN_SEC,20,242
+    ISN_SEV,21,255
+    ISN_SEZ,22,268
+    ISN_SEN,23,281
+    ISN_SCC,24,294
+    ISN_SWAB,25,307
+    ISN_BR,26,321
+    ISN_BNE,27,333
+    ISN_BEQ,28,346
+    ISN_BGE,29,359
+    ISN_BLT,30,372
+    ISN_BGT,31,385
+    ISN_BLE,32,398
+    ISN_JSR,33,411
+    ISN_CLR,34,424
+    ISN_COM,35,437
+    ISN_INC,36,450
+    ISN_DEC,37,463
+    ISN_NEG,38,476
+    ISN_ADC,39,489
+    ISN_SBC,40,502
+    ISN_TST,41,515
+    ISN_ROR,42,528
+    ISN_ROL,43,541
+    ISN_ASR,44,554
+    ISN_ASL,45,567
+    ISN_MARK,46,580
+    ISN_MFPI,47,594
+    ISN_MTPI,48,608
+    ISN_SXT,49,622
+    ISN_CSM,50,635
+    ISN_MOV,51,648
+    ISN_CMP,52,661
+    ISN_BIT,53,674
+    ISN_BIC,54,687
+    ISN_BIS,55,700
+    ISN_ADD,56,713
+    ISN_MUL,57,726
+    ISN_DIV,58,739
+    ISN_ASH,59,752
+    ISN_ASHC,60,765
+    ISN_XOR,61,779
+    ISN_SOB,62,792
+    ISN_BPL,63,805
+    ISN_BMI,64,818
+    ISN_BHI,65,831
+    ISN_BLOS,66,844
+    ISN_BVC,67,858
+    ISN_BVS,68,871
+    ISN_BCC,69,884
+    ISN_BHIS,70,897
+    ISN_BCS,71,911
+    ISN_BLO,72,924
+    ISN_EMT,73,937
+    ISN_TRAP,74,950
+    ISN_CLRB,75,964
+    ISN_COMB,76,978
+    ISN_INCB,77,992
+    ISN_DECB,78,1006
+    ISN_NEGB,79,1020
+    ISN_ADCB,80,1034
+    ISN_SBCB,81,1048
+    ISN_TSTB,82,1062
+    ISN_RORB,83,1076
+    ISN_ROLB,84,1090
+    ISN_ASRB,85,1104
+    ISN_ASLB,86,1118
+    ISN_MTPS,87,1132
+    ISN_MFPD,88,1146
+    ISN_MTPD,89,1160
+    ISN_MFPS,90,1174
+    ISN_MOVB,91,1188
+    ISN_CPMB,92,1202
+    ISN_BITB,93,1216
+    ISN_BICB,94,1230
+    ISN_BISB,95,1244
+    ISN_SUB,96,1258
+    I_SO 100,1282
+    I_SOB,101,1296
+    I_DO,102,1307
+    I_DOB,103,1317
+    I_MS,104,1328
+    I_PC,105,1338
+    I_CC,106,1348
+    R_NONE 110,1369
+    R_DD,111,1385
+    R_SS,112,1395
+    R_SSDD,113,1405
+    R_R,114,1417
+    R_RSS,115,1426
+    R_RDD,116,1437
+    R_N,117,1448
+    R_NN,118,1457
+    R_8OFF,119,1467
+    R_R8OFF,120,1479
+} raw_isn_t;131,1628
+    M_REG 134,1649
+    M_REG_DEF 135,1664
+    M_AUTOINC 136,1683
+    M_AUTOINC_DEF 137,1702
+    M_AUTODEC 138,1725
+    M_AUTODEC_DEF 139,1744
+    M_INDEXED 140,1767
+    M_INDEX_DEF 141,1786
+
+mach.h,576
+	M_HALT,3,8
+	M_WAIT,4,17
+	M_RESET,5,26
+	M_LOAD,6,36
+	M_LOADI,7,45
+	M_LOADIND,8,55
+	M_STOREI,9,67
+	M_STOREIND,10,78
+	M_ADD,11,91
+	M_ADDI,12,99
+	M_ADDIND,13,108
+	M_SUB,14,119
+	M_SUBI,15,127
+	M_FLAGS,16,136
+	M_BR,17,146
+	R_S0 21,164
+	R_S1 22,175
+	R_S2 23,186
+	R_D0 24,198
+	R_D1 25,210
+	R_D2 26,222
+	R_R0 27,234
+	R_R1 28,246
+	B_ALWAYS,32,269
+	B_NE,33,280
+	B_EQ,34,287
+	B_GE,35,294
+	B_LT,36,301
+	B_GT,37,308
+	B_LE,38,315
+	B_PL,39,322
+	B_MI,40,329
+	B_HI,41,336
+	B_LO,42,343
+	B_VC,43,350
+	B_VS,44,357
+	B_CC,45,364
+	B_CS,46,371
+	B_REGZERO47,378
+
+pdp11_isn.h,2505
+    ISN_HALT,2,7
+    ISN_WAIT,3,21
+    ISN_RTI,4,35
+    ISN_BPT,5,48
+    ISN_IOT,6,61
+    ISN_RESET,7,74
+    ISN_RTT,8,89
+    ISN_MFPT,9,102
+    ISN_JMP,10,116
+    ISN_RTS,11,129
+    ISN_SPL,12,142
+    ISN_C,13,155
+    ISN_CLC,14,166
+    ISN_CLV,15,179
+    ISN_CLZ,16,192
+    ISN_CLN,17,205
+    ISN_CCC,18,218
+    ISN_S,19,231
+    ISN_SEC,20,242
+    ISN_SEV,21,255
+    ISN_SEZ,22,268
+    ISN_SEN,23,281
+    ISN_SCC,24,294
+    ISN_SWAB,25,307
+    ISN_BR,26,321
+    ISN_BNE,27,333
+    ISN_BEQ,28,346
+    ISN_BGE,29,359
+    ISN_BLT,30,372
+    ISN_BGT,31,385
+    ISN_BLE,32,398
+    ISN_JSR,33,411
+    ISN_CLR,34,424
+    ISN_COM,35,437
+    ISN_INC,36,450
+    ISN_DEC,37,463
+    ISN_NEG,38,476
+    ISN_ADC,39,489
+    ISN_SBC,40,502
+    ISN_TST,41,515
+    ISN_ROR,42,528
+    ISN_ROL,43,541
+    ISN_ASR,44,554
+    ISN_ASL,45,567
+    ISN_MARK,46,580
+    ISN_MFPI,47,594
+    ISN_MTPI,48,608
+    ISN_SXT,49,622
+    ISN_CSM,50,635
+    ISN_MOV,51,648
+    ISN_CMP,52,661
+    ISN_BIT,53,674
+    ISN_BIC,54,687
+    ISN_BIS,55,700
+    ISN_ADD,56,713
+    ISN_MUL,57,726
+    ISN_DIV,58,739
+    ISN_ASH,59,752
+    ISN_ASHC,60,765
+    ISN_XOR,61,779
+    ISN_SOB,62,792
+    ISN_BPL,63,805
+    ISN_BMI,64,818
+    ISN_BHI,65,831
+    ISN_BLOS,66,844
+    ISN_BVC,67,858
+    ISN_BVS,68,871
+    ISN_BCC,69,884
+    ISN_BHIS,70,897
+    ISN_BCS,71,911
+    ISN_BLO,72,924
+    ISN_EMT,73,937
+    ISN_TRAP,74,950
+    ISN_CLRB,75,964
+    ISN_COMB,76,978
+    ISN_INCB,77,992
+    ISN_DECB,78,1006
+    ISN_NEGB,79,1020
+    ISN_ADCB,80,1034
+    ISN_SBCB,81,1048
+    ISN_TSTB,82,1062
+    ISN_RORB,83,1076
+    ISN_ROLB,84,1090
+    ISN_ASRB,85,1104
+    ISN_ASLB,86,1118
+    ISN_MTPS,87,1132
+    ISN_MFPD,88,1146
+    ISN_MTPD,89,1160
+    ISN_MFPS,90,1174
+    ISN_MOVB,91,1188
+    ISN_CPMB,92,1202
+    ISN_BITB,93,1216
+    ISN_BICB,94,1230
+    ISN_BISB,95,1244
+    ISN_SUB,96,1258
+    I_SO 100,1282
+    I_SOB,101,1296
+    I_DO,102,1307
+    I_DOB,103,1317
+    I_MS,104,1328
+    I_PC,105,1338
+    I_CC,106,1348
+    R_NONE 110,1369
+    R_DD,111,1385
+    R_SS,112,1395
+    R_SSDD,113,1405
+    R_R,114,1417
+    R_RSS,115,1426
+    R_RDD,116,1437
+    R_N,117,1448
+    R_NN,118,1457
+    R_8OFF,119,1467
+    R_R8OFF,120,1479
+} raw_isn_t;131,1628
+    M_REG 134,1649
+    M_REG_DEF 135,1664
+    M_AUTOINC 136,1683
+    M_AUTOINC_DEF 137,1702
+    M_AUTODEC 138,1725
+    M_AUTODEC_DEF 139,1744
+    M_INDEXED 140,1767
+    M_INDEX_DEF 141,1786
+
+support.h,462
+#define IOPAGEBASE	3,17
+#define IOBASE_TTI	5,47
+#define IOBASE_TTO	6,104
+#define VECTOR_TTI	7,161
+#define VECTOR_TTO	8,185
+#define IPL_TTI	9,209
+#define IPL_TTO	10,228
+#define IOBASE_CLK	12,248
+#define VECTOR_CLK	13,302
+#define IPL_CLK	14,326
+#define IOBASE_PCLK	16,346
+#define VECTOR_PCLK	17,401
+#define IPL_PCLK	18,426
+#define IOBASE_RK	20,446
+#define VECTOR_RK	21,498
+#define IPL_RK	22,521
+#define IOBASE_SR	24,540
+#define IOBASE_PSW	26,591
+
+binre.c,1339
+u16 fetch[fetch21,320
+u_char fetch_valid[fetch_valid22,334
+int halted;24,358
+int debug;25,370
+unsigned int max_cycles;26,381
+unsigned int cycles;27,406
+u_char cc_c,29,428
+u_char cc_c, cc_n,29,428
+u_char cc_c, cc_n, cc_z,29,428
+u_char cc_c, cc_n, cc_z, cc_v;29,428
+int assert_int;31,460
+u16 assert_int_vec;32,476
+u16 assert_int_ipl;33,496
+u16 regs[regs35,517
+u16 memory[memory36,530
+u16 psw;37,559
+u_char r_none,39,569
+u_char r_none, r_8off,39,569
+u_char r_none, r_8off, r_r,39,569
+u_char r_none, r_8off, r_r, r_n,39,569
+u_char r_none, r_8off, r_r, r_n, r_nn,39,569
+u_char r_none, r_8off, r_r, r_n, r_nn, r_ss,39,569
+u_char r_none, r_8off, r_r, r_n, r_nn, r_ss, r_dd,39,569
+u_char r_none, r_8off, r_r, r_n, r_nn, r_ss, r_dd, r_rss,39,569
+u_char r_none, r_8off, r_r, r_n, r_nn, r_ss, r_dd, r_rss, r_rdd,39,569
+u_char r_none, r_8off, r_r, r_n, r_nn, r_ss, r_dd, r_rss, r_rdd, r_ssdd;39,569
+tb_pc_flush(42,648
+tb_pc_set(47,676
+tb_decode(54,778
+tb_recompile(126,2230
+mmu_map(708,16405
+u32 se_addr(715,16521
+cpu_read(722,16617
+cpu_write_byte(743,16905
+u16 raw_read_memory(770,17342
+void raw_write_memory(775,17404
+cpu_write(782,17483
+isn_fetch(800,17733
+tb_show(825,18201
+tb_dump(831,18244
+tb_execute(837,18288
+void support_signals_bus_error(842,18332
+run(847,18383
+init(874,18797
+main(883,18898
+
+dis.c,544
+typedef unsigned short u16;14,192
+typedef unsigned char u8;15,220
+u8 *code;code19,265
+int code_len;20,275
+int dist_threshold;22,290
+struct ref_s 27,380
+struct label_s 33,453
+struct ref_s **refs;refs41,559
+struct label_s *labels;labels42,580
+init_refs(45,609
+make_ref(61,918
+add_ref_at(78,1176
+dump_refs(89,1333
+scan_refs(112,1755
+has_refs_from(225,4475
+has_refs_to(239,4651
+has_refs_from_fwd(253,4825
+fmt_reg_mode(267,5023
+scan_code(315,6014
+read_code_file(490,10417
+scan_file(514,10787
+usage(534,11040
+main(541,11098
+
+isn.c,215
+typedef unsigned char u_char;3,20
+typedef unsigned short u_short;4,50
+u_short isn_dispatch[isn_dispatch8,101
+raw_isn_t *isn_decode[isn_decode10,133
+raw_isn_t raw_isns[raw_isns12,166
+make_isn_table(112,4990
+
+mach.c,2218
+int m_fifo_depth;7,78
+u32 m_fifo[m_fifo8,96
+u16 regs[regs13,151
+void m_state_dump(23,278
+void m_dis_op(38,752
+void m_execute_isn(78,2207
+#define CC_N 184,4533
+#define CC_Z 185,4550
+#define CC_V 186,4567
+#define CC_C 187,4584
+void m_fifo_execute(231,6076
+void m_fifo_dump(243,6234
+void m_fifo_push(265,6651
+void m_fifo_reset(274,6803
+void m_push_isn(279,6854
+void m_load(284,6961
+void m_loadind(289,7029
+void m_loadi(294,7103
+void m_storeind(299,7175
+void m_add(304,7251
+void m_add2(309,7317
+void m_addi(314,7400
+void m_addind(319,7470
+void m_sub(324,7542
+void m_sub2(329,7608
+void m_subi(334,7691
+void m_flags(339,7761
+void m_br(344,7838
+void m_br_reg(349,7904
+void encode0(372,8417
+void encode_pop_pc_psw(377,8472
+void encode_trap(381,8506
+void encode_new_cc(385,8540
+void encode_rts(389,8574
+void encode_spl(393,8604
+void encode_mark(397,8634
+void _encode_load_from_reg(401,8663
+void encode_mov(449,9696
+void encode_cmp(504,10896
+void encode_bit(521,11311
+void encode_bic(525,11348
+void encode_bis(529,11385
+void encode_add(533,11422
+void encode_clr(574,12256
+void encode_branch(630,13383
+void encode_sob(641,13556
+void encode_mfpi(653,13759
+void encode_mtps(657,13802
+void encode_mfpd(661,13845
+encode_mfpt(665,13888
+encode_jmp(666,13905
+encode_swab(667,13921
+encode_com(668,13938
+encode_inc(669,13954
+encode_dec(670,13970
+encode_neg(671,13986
+encode_adc(672,14002
+encode_sbc(673,14018
+encode_tst(674,14034
+encode_ror(675,14050
+encode_rol(676,14066
+encode_asr(677,14082
+encode_asl(678,14098
+encode_mtpi(679,14114
+encode_sxt(680,14131
+encode_csm(681,14147
+encode_clrb(682,14163
+encode_comb(683,14180
+encode_incb(684,14197
+encode_decb(685,14214
+encode_negb(686,14231
+encode_adcb(687,14248
+encode_sbcb(688,14265
+encode_tstb(689,14282
+encode_rorb(690,14299
+encode_rolb(691,14316
+encode_arsb(692,14333
+encode_aslb(693,14350
+encode_mtpd(694,14367
+encode_mfps(695,14384
+encode_mul(696,14401
+encode_div(697,14417
+encode_ash(698,14433
+encode_ashc(699,14449
+encode_xor(700,14466
+encode_jsr(701,14482
+encode_movb(702,14498
+encode_cmpb(703,14515
+encode_bitb(704,14532
+encode_bicb(705,14549
+encode_bisb(706,14566
+encode_sub(707,14583
+
+pdp11.c,254
+typedef unsigned short u16;13,159
+typedef unsigned char u8;14,187
+static inited 18,238
+static raw_isn_t *isn_decode[isn_decode20,258
+static raw_isn_t raw_isns[raw_isns22,298
+fmt_reg_mode(122,5129
+make_isn_table(169,6106
+void pdp11_dis(228,7625
+
+rk.c,1800
+static u16 rkds;12,129
+static u16 rkcs;13,146
+static u16 rkda;14,163
+static u16 rkwc;15,180
+static u16 rkba;16,197
+static u16 rker;17,214
+int rk_write_prot;19,232
+int rk_func;20,251
+int rk_fd;21,264
+static unsigned short rkxb[rkxb23,276
+static int sect;25,313
+static int cyl;26,330
+static int rkintq;28,347
+#define CSR_GO	30,367
+#define CSR_IE	31,392
+#define CSR_DONE	32,417
+#define CSR_BUSY	33,443
+#define RKDS_SC	37,483
+#define RKDS_ON_SC	38,529
+#define RKDS_WLK	39,572
+#define RKDS_RWS	40,616
+#define RKDS_RDY	41,664
+#define RKDS_SC_OK	42,707
+#define RKDS_INC	43,749
+#define RKDS_UNSAFE	44,796
+#define RKDS_RK05	45,837
+#define RKDS_PWR	46,874
+#define RKDS_ID	47,915
+#define RKER_WCE	50,957
+#define RKER_CSE	51,1000
+#define RKER_NXS	52,1040
+#define RKER_NXC	53,1081
+#define RKER_NXD	54,1124
+#define RKER_TE	55,1164
+#define RKER_DLT	56,1208
+#define RKER_NXM	57,1249
+#define RKER_PGE	58,1290
+#define RKER_SKE	59,1339
+#define RKER_WLK	60,1381
+#define RKER_OVR	61,1423
+#define RKER_DRE	62,1462
+#define RKER_SOFT	64,1506
+#define RKER_HARD	65,1563
+#define	 RKCS_CTLRESET	67,1611
+#define	 RKCS_WRITE	68,1636
+#define	 RKCS_READ	69,1658
+#define	 RKCS_WCHK	70,1679
+#define	 RKCS_SEEK	71,1700
+#define	 RKCS_RCHK	72,1721
+#define	 RKCS_DRVRESET	73,1742
+#define	 RKCS_WLK	74,1767
+#define RKCS_MEX	75,1787
+#define RKCS_SSE	76,1835
+#define RKCS_FMT	77,1883
+#define RKCS_INH	78,1921
+#define RKCS_SCP	79,1970
+#define RKCS_HERR	80,2017
+#define RKCS_ERR	81,2060
+#define RKCS_RW	82,2097
+u16 io_rk_read(85,2141
+static void rk_set_done(130,3240
+static void rk_clr_done(152,3649
+void rk_service(161,3785
+static void rk_go(323,7863
+void io_rk_write(387,8974
+io_rk_reset(453,10679
+static const u16 boot_rom[boot_rom460,10762
+void io_rk_bootrom(487,12111
+
+support.c,987
+int support_int_bits;11,133
+void support_clear_int_bits(17,234
+void cpu_int_set(22,299
+void cpu_int_clear(52,1040
+static u16 clk_csr;64,1245
+static u16 pclk_csr;65,1265
+static u16 pclk_ctr;66,1286
+static u16 pclk_csb;67,1307
+static u16 tti_csr;69,1329
+static u16 tto_csr;70,1349
+static u8 tti_data;71,1369
+static u8 tto_data;72,1389
+#define CSR_GO	74,1410
+#define CSR_IE	75,1435
+#define CSR_DONE	76,1460
+#define CSR_BUSY	77,1486
+#define CSR_ERR	78,1513
+u16 io_tti_read(81,1542
+void io_tti_write(93,1787
+u16 io_tto_read(110,2195
+void io_tto_write(120,2375
+u16 io_sr_read(144,2959
+u16 io_psw_read(149,3003
+void io_psw_write(156,3097
+u16 io_clk_read(170,3446
+void io_clk_write(175,3497
+u16 io_pclk_read(192,3800
+void io_pclk_write(209,4113
+int io_read(227,4452
+int io_write(276,5547
+reset_support(320,6467
+u16 io_sr_read(332,6609
+u16 io_psw_read(337,6653
+void io_psw_write(344,6747
+int io_read(359,7097
+int io_write(410,8229
+void reset_support(452,9143
+
+tc.c,57
+u_short test_code[test_code3,20
+fill_test_code(40,694

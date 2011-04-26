@@ -1,0 +1,17 @@
+set cpu 11/34
+set cpu 256k
+set RHA disabled
+set PTR disabled
+set PTP disabled
+set CR disabled
+set LPT disabled
+set DZ disabled
+set HK disabled
+set RX disabled
+set RY disabled
+set RP disabled
+set RQ disabled
+set TM disabled
+set TQ disabled
+att rk unix0_v6_rk.dsk
+boot rk

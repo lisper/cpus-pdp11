@@ -1,0 +1,81 @@
+if 0
+/* put ss/dd ea in R_S1/R_D1 */
+void __encode_ea_from_spec(int dest, int mode, int reg, u16 arg, int byte)
+{
+    /* special case r7 due to prefetch */
+    if (reg == 7) {
+        switch (mode) {
+        case 0:
+            break;
+        case 1:
+            m_loadi(dest+1, arg);
+            break;
+        case 2:
+            m_loadi(dest+1, arg);
+            m_addi(reg, 2);
+            break;
+        case 3:
+            m_loadi(dest+2, arg);
+            m_loadind(dest+1,dest+2);
+            m_addi(reg, 2);
+            break;
+        case 4:
+            m_loadi(dest+1, arg);
+            m_subi(reg, 2);
+            break;
+        case 5:
+            m_loadi(dest+2, arg);
+            m_loadind(dest+1,dest+2);
+            m_subi(reg, 2);
+            break;
+        case 6:
+            m_loadi(dest+1, arg);
+            m_add(dest+1, reg);
+            m_addi(reg, 2);
+            break;
+        case 7:
+            m_loadi(dest+2, arg);
+            m_add(dest+2, reg);
+            m_loadind(dest+1, dest+2);
+            m_addi(reg, 2);
+            break;
+        }
+m_nop();
+        return;
+    }
+
+    switch (mode) {
+    case 1:
+        m_load(dest+1, reg);
+        break;
+    case 2:
+        m_load(dest+1, reg);
+        m_addi(reg, (byte && reg < 6) ? 1 : 2);
+        break;
+    case 3:
+        m_loadind(dest+1, reg);
+        m_addi(reg, 2);
+        break;
+    case 4:
+        m_subi(reg, (byte && reg < 6) ? 1 : 2);
+        m_load(dest+1, reg);
+        break;
+    case 5: 
+        m_subi(reg, 2);
+        m_loadind(dest+1, reg);
+        break;
+    case 6:
+        m_loadi(dest+1, arg);
+if (reg == 7) m_addi(reg, 2);
+        m_add(dest+1, reg);
+        break;
+    case 7:
+        m_loadi(dest+2, arg);
+if (reg == 7) m_addi(reg, 2);
+        m_add(dest+2, reg);
+        m_loadind(dest+1, dest+2);
+        break;
+    }
+m_nop();
+}
+#endif
