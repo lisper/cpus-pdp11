@@ -17,7 +17,6 @@ extern int halted;
 extern int debug;
 
 u16 regs[32];
-//#define p_regs regs
 u16 p_regs[32];
 
 #define R_SP(mode)	(16 + mode)
@@ -210,6 +209,7 @@ void m_post_reg(m_fifo_t *m, int reg, int val)
 {
     p_regs[reg] = val;
 
+#if 0
     if (reg > 5) {
         regs[reg] = val;
 
@@ -217,6 +217,12 @@ void m_post_reg(m_fifo_t *m, int reg, int val)
             regs[R_SP(current_mode)] = val;
         return;
     }
+#else
+    regs[reg] = val;
+
+    if (reg == 6)
+        regs[R_SP(current_mode)] = val;
+#endif
 
     if (debug > 1) printf("post r%d <- %06o\n", reg, val);
 
@@ -1010,6 +1016,7 @@ void m_execute_isn(m_fifo_t *m)
 
 void m_commit_isn(m_fifo_t *m)
 {
+#if 0
     if (m->r_valid) {
         regs[m->r_reg] = m->r_val;
         if (debug) printf("m_commit_isn: r%d <- %06o\n", m->r_reg, m->r_val);
@@ -1019,6 +1026,7 @@ void m_commit_isn(m_fifo_t *m)
         regs[m->r_reg2] = m->r_val2;
         if (debug) printf("m_commit_isn: r%d <- %06o\n", m->r_reg, m->r_val);
     }
+#endif
 }
 
 void m_pipe_flush(void)
