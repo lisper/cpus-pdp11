@@ -9,8 +9,10 @@ isn.h: isn.txt maketables.pl
 SRC = binre.c isn.c tc.c mach.c pdp11.c support.c rk.c rl.c mmu.c bpred.c
 HDR = binre.h isn.h mach.h
 
+CFLAGS += -g -O2
+
 binre: $(SRC) $(HDR)
-	cc -o binre -g $(SRC)
+	cc -o binre $(CFLAGS) $(SRC)
 
 dis: dis.c isn.c isn.h
 	cc -o dis dis.c isn.c

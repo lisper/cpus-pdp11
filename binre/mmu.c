@@ -66,10 +66,31 @@ void mmu_write_parpdr(int addr, int index, u16 data, int writeb)
     if (addr & 040) {
         if (debug) printf("mmu: write par/pdr %o (%o); par[%o] <- %o\n",
                           addr, index, pxr_addr, data);
-        par[pxr_addr] = data & PAR_W_MASK;
+
+        if (writeb) {
+            u16 old = par[pxr_addr];
+
+            if (addr & 1)
+                data = (old & 0xff) | (data << 8);
+            else
+                data = (old & 0xff00) | (data & 0xff);
+        }
+
+        par[pxr_addr] = data & PAR_W_MASK;;
     } else {
         if (debug) printf("mmu: write par/pdr %o (%o); pdr[%o] -> %o\n",
                           addr, index, pxr_addr, data);
+
+
+        if (writeb) {
+            u16 old = pdr[pxr_addr];
+
+            if (addr & 1)
+                data = (old & 0xff) | (data << 8);
+            else
+                data = (old & 0xff00) | (data & 0xff);
+        }
+
         pdr[pxr_addr] = data & PDR_W_MASK;
     }
 }
@@ -96,8 +117,6 @@ void mmu_write_reg(int addr, u16 data, int writeb)
         data &= 0377;
         switch (addr) {
         case IOBASE_MMR0: mmr0 = byte_place(addr, mmr0, data); break;
-        case IOBASE_MMR1: mmr1 = byte_place(addr, mmr1, data); break;
-        case IOBASE_MMR2: mmr2 = byte_place(addr, mmr2, data); break;
         case IOBASE_MMR3: mmr3 = byte_place(addr, mmr3, data); break;
         }
         return;
@@ -105,8 +124,6 @@ void mmu_write_reg(int addr, u16 data, int writeb)
 
     switch (addr) {
     case IOBASE_MMR0: mmr0 = data; break;
-    case IOBASE_MMR1: mmr1 = data; break;
-    case IOBASE_MMR2: mmr2 = data; break;
     case IOBASE_MMR3: mmr3 = data; break;
     }
 }
@@ -213,6 +230,12 @@ mmu_map(int cpu_mode, int cpu_fetch, int cpu_write, int cpu_trap, int trap_odd,
     // check bn against page length
     pg_len_err = pdr_ed ? cpu_bn < pdr_plf : cpu_bn > pdr_plf;
 
+#if 1
+    printf("mmu_map: pxr_index %o pdr_value %o\n", pxr_index, pdr_value);
+    printf("mmu_map: pg_len_err %d; pdr_ed %d, cpu_bn %o, pdf_plf %o\n",
+           pg_len_err, pdr_ed, cpu_bn, pdr_plf);
+#endif
+
     //
     update_pdr = 0;
 
@@ -302,7 +325,8 @@ mmu_map(int cpu_mode, int cpu_fetch, int cpu_write, int cpu_trap, int trap_odd,
 
             update_pdr = 1;
             update_mmr0_page = 1;
-            if (~trap_odd)
+//XXX added, not in rtl, for diag
+            if (~trap_odd && (mapped_pa_22 != IOBASE_MMR0))
                 pdr_update_w = 1;	// set w bit
             if (pg_len_err)
             {
@@ -362,6 +386,14 @@ mmu_map(int cpu_mode, int cpu_fetch, int cpu_write, int cpu_trap, int trap_odd,
         case 4:		// read/write
             update_pdr = 1;
             pdr_update_a = 1;	// set a bit
+
+#if 1
+            //XXXX rtl doesn't have this; diags FKABD0 wanted it
+            if (pg_len_err) {
+                update_mmr0_ple = 1;
+            }
+#endif
+
 #ifdef MMU_1134
             update_mmr0_page = 1;
             update_mmr0_nonres = 1;
@@ -409,6 +441,13 @@ mmu_map(int cpu_mode, int cpu_fetch, int cpu_write, int cpu_trap, int trap_odd,
         pdr[pxr_index] = pdr_update_value;
     }
 
+#if 1
+    printf("mmu_map() nonres %d ple %d ro %d trap %d page %o, mmr0 %o\n",
+           update_mmr0_nonres, update_mmr0_ple, update_mmr0_ro,
+           update_mmr0_trap_flag, update_mmr0_page,
+           (mmr0&(1<<15)) | (mmr0&(1<<14)) | (mmr0&(1<<13)));
+#endif
+
     // update mmr0 if requested,
     //  but only if there are no error bits set
     if ((update_mmr0_nonres ||
@@ -451,6 +490,13 @@ mmu_map(int cpu_mode, int cpu_fetch, int cpu_write, int cpu_trap, int trap_odd,
     *ppaddr = cpu_pa;
 
     return 0;
+}
+
+void
+mmu_reset(void)
+{
+    mmr0 &= ~((1<<15) | (1<<14) | (1<<13));
+    mmr0 &= ~(1<<8);
 }
 
 

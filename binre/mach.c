@@ -1,6 +1,13 @@
 /*
  * mach.c
  */
+#define SSDD
+//XXX
+// clean up ssdd deltas
+//  remove _encode_ssdd_deltas() call from flagmux and
+//  put in all the right places
+//
+// replace inc/dec's with defered calls in all the right places
 
 #include <stdio.h>
 #include <string.h>
@@ -12,8 +19,11 @@
 int m_fifo_depth;
 m_fifo_t m_fifo[32];
 m_fifo_t *m_current;
+m_fifo_t *m_last;
 
 extern int halted;
+extern int waiting;
+extern int reset;
 extern int debug;
 
 u16 regs[32];
@@ -114,7 +124,6 @@ void m_dis_op(m_fifo_t *m, char *str)
     int d =  m->d;
     int s1 = m->s1;
     int s2 = m->s2;
-    int r2 = (m->s2 != 0xff) ? 1 : 0;
     int v =  m->v;
 
     str[0] = 0;
@@ -140,22 +149,51 @@ void m_dis_op(m_fifo_t *m, char *str)
     case M_STOREPSW:  sprintf(str, "store   %d,psw", d); break;
     case M_STORESP:   sprintf(str, "storesp r6-%d", v, s1); break;
 
-    case M_ADD:       sprintf(str, "add     %d,%d,%d", d, s1, s2); break;
-    case M_ADD1:      sprintf(str, "add     %d,%d", d, s1); break;
+    case M_ADD:
+        if (d == s1 && s2 == R_ZERO) {
+                      sprintf(str, "addi    %d,#0%o", d, v); break;
+        }
+        if (d == s1 && s2 != R_ZERO) {
+                      sprintf(str, "add1    %d,%d", d, s2); break;
+        }
+        if (s2 == R_CARRY) {
+                      sprintf(str, "addc    %d", d); break;
+        }
+        if (s2 != R_ZERO && v == 0) {
+                      sprintf(str, "add2    %d,%d,%d", d, s1, s2); break;
+        }
 
-    case M_ADDI:      sprintf(str, "addi    %d,#0%o", d, v); break;
-    case M_ADDIB:     sprintf(str, "addib   %d,#0%o", d, v); break;
+                      sprintf(str, "add     %d,%d,%d,#%o", d, s1, s2,v); break;
+        break;
 
-    case M_ADDC:      sprintf(str, "addc    %d", d); break;
-    case M_ADDCB:     sprintf(str, "addcb   %d", d); break;
+    case M_ADDB:
+        if (d == s1 && s2 == R_ZERO) {
+                      sprintf(str, "addib   %d,#0%o", d, v); break;
+        }
+        if (s2 == R_CARRY) {
+                      sprintf(str, "addcb   %d", d); break;
+        }
+
+                      sprintf(str, "addb    %d,%d,%d,#%o", d, s1, s2,v); break;
+        break;
         
-    case M_SUB:       sprintf(str, "sub     %d,%d,%d", d, s1, s2); break;
+    case M_SUB:
+        if (d == s1 && s2 == R_ZERO) {
+                      sprintf(str, "subi    %d,#0%o", d, v); break;
+        }
+        if (s2 == R_CARRY) {
+                      sprintf(str, "subc    %d", d); break;
+        }
 
-    case M_SUBB:      sprintf(str, "subb    %d,%d,%d", d, s1, s2); break;
+                      sprintf(str, "sub     %d,%d,%d,#%o", d, s1, s2,v); break;
+        break;
 
-    case M_SUBI:      sprintf(str, "subi    %d,#0%o", d, v); break;
-    case M_SUBIB:     sprintf(str, "subib   %d,#0%o", d, v); break;
-    case M_SUBC:      sprintf(str, "subc    %d", d); break;
+    case M_SUBB:
+        if (d == s1 && s2 == R_ZERO) {
+                      sprintf(str, "subib   %d,#0%o", d, v); break;
+        }
+                      sprintf(str, "subb    %d,%d,%d,#%o", d, s1, s2,v); break;
+        break;
 
     case M_AND:       sprintf(str, "and     %d,%d,%d", d, s1, s2); break;
 
@@ -246,9 +284,8 @@ void m_execute_isn(m_fifo_t *m)
 {
     u32 op = m->op;
     int d = m->d;
-    int s = m->s1;
+    int s1 = m->s1;
     int s2 = m->s2;
-    int r2 = (m->s2 != 0xff) ? 1 : 0;
     int v = m->v;
     int vs = (short)m->v;
     int offset, take_jump;
@@ -256,6 +293,11 @@ void m_execute_isn(m_fifo_t *m)
     int cc_c, cc_n, cc_v, cc_z;
     int count;
     u16 r0, r1;
+
+
+    /* synthetic register */
+    regs[R_CARRY] = psw & CC_C ? 1 : 0;
+    regs[R_ZERO] = 0;
 
     /* in hardware this would be a mux for reads */
     regs[6] = regs[R_SP(current_mode)];
@@ -268,20 +310,22 @@ void m_execute_isn(m_fifo_t *m)
         halted = 1;
         break;
     case M_WAIT:
+        waiting = 1;
         break;
     case M_RESET:
+        reset = 1;
         break;
 
     case M_LOAD:
         // p_regs[d] = regs[s];
-        m_post_reg(m, d, regs[s]);
-        if (debug) printf("r%d <- r%d (0%o)\n", d, s, regs[s]);
+        m_post_reg(m, d, regs[s1]);
+        if (debug) printf("r%d <- r%d (0%o)\n", d, s1, regs[s1]);
         break;
 
     case M_LOADB:
         // regs[d] = (regs[d] & 0xff00) | (regs[s] & 0xff);
-        m_post_reg(m, d, (regs[d] & 0xff00) | (regs[s] & 0xff));
-        if (debug) printf("r%d <- r%d (byte 0%o)\n", d, s, regs[s] & 0xff);
+        m_post_reg(m, d, (regs[d] & 0xff00) | (regs[s1] & 0xff));
+        if (debug) printf("r%d <- r%d (byte 0%o)\n", d, s1, regs[s1] & 0xff);
         break;
 
     case M_LOADI:
@@ -295,41 +339,41 @@ void m_execute_isn(m_fifo_t *m)
         break;
 
     case M_LOADIND:
-        if (regs[s] & 1) {
+        if (regs[s1] & 1) {
             mach_signals_odd();
             break;
         }
 
-        if (cpu_read(current_mode, 0, regs[s], &v) == 0) {
+        if (cpu_read(current_mode, 0, regs[s1], &v) == 0) {
             // regs[d] = v;
             m_post_reg(m, d, v);
-            if (debug) printf("r%d <- (@%o) 0%o\n", d, regs[s], v);
+            if (debug) printf("r%d <- (@%o) 0%o\n", d, regs[s1], v);
         } else {
-            if (debug) printf("r%d <- (@%o) bus-error %o\n", d, regs[s], v);
+            if (debug) printf("r%d <- (@%o) bus-error %o\n", d, regs[s1], v);
             // regs[d] = v;
             m_post_reg(m, d, v);
         }
         break;
 
     case M_LOADINDPM:
-        if (regs[s] & 1) {
+        if (regs[s1] & 1) {
             mach_signals_odd();
             break;
         }
-        if (cpu_read(previous_mode, 0, regs[s], &v) == 0) {
+        if (cpu_read(previous_mode, 0, regs[s1], &v) == 0) {
             // regs[d] = v;
             m_post_reg(m, d, v);
-            if (debug) printf("r%d <- (pm-@%o) 0%o\n", d, regs[s], v);
+            if (debug) printf("r%d <- (pm-@%o) 0%o\n", d, regs[s1], v);
         } else {
-            if (debug) printf("r%d <- (pm-@%o) bus-error %o\n", d, regs[s], v);
+            if (debug) printf("r%d <- (pm-@%o) bus-error %o\n", d, regs[s1], v);
             // regs[d] = v;
             m_post_reg(m, d, v);
         }
         break;
 
     case M_LOADINDB:
-        if (cpu_read(current_mode, 0, regs[s], &v) == 0) {
-            if (regs[s] & 1)
+        if (cpu_read(current_mode, 0, regs[s1], &v) == 0) {
+            if (regs[s1] & 1)
                 // regs[d] = (v & 0xff00) >> 8;
                 m_post_reg(m, d, (v & 0xff00) >> 8);
             else
@@ -343,9 +387,9 @@ void m_execute_isn(m_fifo_t *m)
         case 0:
             // in user mode don't allow rti to pop mode or ipl
             if (current_mode == mode_user)
-                psw = (regs[s] & 000037) | (0170000) | (psw&0340) | (psw&020);
+                psw = (regs[s1] & 000037) | (0170000) | (psw&0340) | (psw&020);
             else
-                psw = regs[s] | (psw & 020);
+                psw = regs[s1] | (psw & 020);
             break;
 
             //xxx changing current mode may break store of r6 below
@@ -353,16 +397,16 @@ void m_execute_isn(m_fifo_t *m)
 
         case 1:
             // exception
-            psw = (regs[s] & ~0030000) | (current_mode << 12);
+            psw = (regs[s1] & ~0030000) | (current_mode << 12);
             break;
 
         case 2:
             // mtps
             if (current_mode == mode_user)
-                psw = (regs[s] & 000037) | (0170000) | (psw&0340) | (psw&020);
+                psw = (regs[s1] & 000037) | (0170000) | (psw&0340) | (psw&020);
             else {
-                psw = ((regs[s] & 0xff) & ~020) | (psw & 020);
-                if (debug) printf("new psw %o (from %o)\n", psw, regs[s]);
+                psw = ((regs[s1] & 0xff) & ~020) | (psw & 020);
+                if (debug) printf("new psw %o (from %o)\n", psw, regs[s1]);
             }
             break;
         }
@@ -371,23 +415,23 @@ void m_execute_isn(m_fifo_t *m)
         break;
 
     case M_STOREB:
-        // regs[d] = (signed char)(regs[s] & 0xff);
-        m_post_reg(m, d, (signed char)(regs[s] & 0xff));
-        if (debug) printf("r%d <- r%d (byte 0%o)\n", d, s, regs[s] & 0xff);
+        // regs[d] = (signed char)(regs[s1] & 0xff);
+        m_post_reg(m, d, (signed char)(regs[s1] & 0xff));
+        if (debug) printf("r%d <- r%d (byte 0%o)\n", d, s1, regs[s1] & 0xff);
         break;
 
     case M_STOREIND:
-        if (cpu_write(current_mode, regs[d], regs[s])) {
+        if (cpu_write(current_mode, regs[d], regs[s1])) {
         }
         break;
 
     case M_STOREINDPM:
-        if (cpu_write(previous_mode, regs[d], regs[s])) {
+        if (cpu_write(previous_mode, regs[d], regs[s1])) {
         }
         break;
 
     case M_STOREINDB:
-        if (cpu_write_byte(current_mode, regs[d], regs[s])) {
+        if (cpu_write_byte(current_mode, regs[d], regs[s1])) {
         }
         break;
 
@@ -397,113 +441,106 @@ void m_execute_isn(m_fifo_t *m)
         break;
 
     case M_STORESP:
-        // regs[R_SP(v)] = regs[s];
-        m_post_reg(m, R_SP(v), regs[s]);
+        // regs[R_SP(v)] = regs[s1];
+        m_post_reg(m, R_SP(v), regs[s1]);
         break;
 
     case M_ADD:
-        if (debug) printf("r%d <- %o (%o + %o)\n",
-                          d, regs[s] + regs[s2], regs[s], regs[s2]);
-        // regs[d] = regs[s] + regs[s2];
-        m_post_reg(m, d, regs[s] + regs[s2]);
+        if (s2 == R_ZERO) {
+            if (debug) printf("r%d <- %o (%o + #%o)\n",
+                              d, regs[s1] + v, regs[s1], v);
+            // regs[d] += v;
+            m_post_reg(m, d, regs[s1] + v);
+            break;
+        }
+
+        if (v == 0) {
+            if (debug) printf("r%d <- %o (%o + %o)\n",
+                              d, regs[s1] + regs[s2], regs[s1], regs[s2]);
+            m_post_reg(m, d, regs[s1] + regs[s2]);
+            break;
+        }
+
+        if (debug) printf("r%d <- %o (%o + %o + %o)\n",
+                          d, regs[s1] + regs[s2] + v,
+                          regs[s1], regs[s2], v);
+
+        m_post_reg(m, d, regs[s1] + regs[s2] + v);
         break;
 
-    case M_ADD1:
-        if (debug) printf("r%d <- %o (%o + %o)\n",
-                          d, regs[d] + regs[s], regs[d], regs[s]);
-        // regs[d] += regs[s];
-        m_post_reg(m, d, regs[d] + regs[s]);
-        break;
+    case M_ADDB:
+        if (s2 == R_ZERO) {
+            if (debug) printf("addib %o <- %o + #%o\n",
+                              (regs[d] & 0xff00) | ((regs[s1] + v) & 0xff),
+                              regs[s1], v);
+            m_post_reg(m, d, (regs[d] & 0xff00) | ((regs[d] + v) & 0xff));
+            break;
+        }
 
-    case M_ADDI:
-        // regs[d] += v;
-        m_post_reg(m, d, regs[d] + v);
-        break;
+        if (debug) printf("add %o <- %o + %o\n",
+                          (regs[d] & 0xff00) |
+                          ((regs[s1] + regs[s2]) & 0xff),
+                          regs[d] & 0xff, regs[s1] & 0xff);
 
-    case M_ADDIB:
-        if (debug) printf("addib %o <- %o\n",
-                          (regs[d] & 0xff00) | ((regs[d] + v) & 0xff),
-                          regs[d]);
-        // regs[d] = (regs[d] & 0xff00) | ((regs[d] + v) & 0xff);
-        m_post_reg(m, d, (regs[d] & 0xff00) | ((regs[d] + v) & 0xff));
-        break;
-
-    case M_ADDC:
-        if (debug) printf("addc %o <- %o + %o\n",
-                          regs[d] + (psw & CC_C ? 1 : 0),
-                          regs[d], psw & CC_C ? 1 : 0);
-        // regs[d] += (psw & CC_C) ? 1 : 0;
-        m_post_reg(m, d, regs[d] + (psw & CC_C ? 1 : 0));
-        break;
-
-    case M_ADDCB:
-        // regs[d] =
-        // (regs[d] & 0xff00) |
-        // (((regs[d] & 0x00ff) + (psw & CC_C ? 1 : 0)) & 0xff);
         m_post_reg(m, d, 
                    (regs[d] & 0xff00) |
-                   (((regs[d] & 0x00ff) + (psw & CC_C ? 1 : 0)) & 0xff));
+                   ((regs[s1] + regs[s2]) & 0xff));
         break;
 
     case M_SUB:
-        // regs[d] = regs[s] - regs[s2];
-        m_post_reg(m, d, regs[s] - regs[s2]);
+        if (s2 == R_ZERO) {
+            m_post_reg(m, d, regs[s1] - v);
+            break;
+        }
+
+        m_post_reg(m, d, (regs[s1] - regs[s2]) - v);
         break;
 
     case M_SUBB:
-        // regs[d] = (regs[d] & 0xff00) | ((regs[s] - regs[s2]) & 0xff);
-        m_post_reg(m, d, (regs[d] & 0xff00) | ((regs[s] - regs[s2]) & 0xff));
-        break;
+        if (s2 == R_ZERO) {
+            m_post_reg(m, d, (regs[d] & 0xff00) | ((regs[s1] - v) & 0xff));
+            break;
+        }
 
-    case M_SUBI:
-        // regs[d] -= v;
-        m_post_reg(m, d, regs[d] - v);
-        break;
-
-    case M_SUBIB:
-        // regs[d] = (regs[d] & 0xff00) | ((regs[d] - v) & 0xff);
-        m_post_reg(m, d, (regs[d] & 0xff00) | ((regs[d] - v) & 0xff));
-        break;
-
-    case M_SUBC:
-        // regs[d] -= (psw & CC_C) ? 1 : 0;
-        m_post_reg(m, d, regs[d] - (psw & CC_C ? 1 : 0));
+        m_post_reg(m, d,
+                   (regs[d] & 0xff00) |
+                   (((regs[s1] - regs[s2]) - v) & 0xff));
         break;
 
     case M_AND:
-        // regs[d] = regs[s] & regs[s2];
-        m_post_reg(m, d, regs[s] & regs[s2]);
+        // regs[d] = regs[s1] & regs[s2];
+        m_post_reg(m, d, regs[s1] & regs[s2]);
         break;
 
     case M_ANDB:
-        // regs[d] = (regs[d] & 0xff00) | ((regs[s]&0xff) & (regs[s2]&0xff));
+        // regs[d] = (regs[d] & 0xff00) | ((regs[s1]&0xff) & (regs[s2]&0xff));
         m_post_reg(m, d,
-                   (regs[d] & 0xff00) | ((regs[s]&0xff) & (regs[s2]&0xff)));
+                   (regs[d] & 0xff00) | ((regs[s1]&0xff) & (regs[s2]&0xff)));
         break;
 
     case M_OR:
-        // regs[d] = regs[s] | regs[s2];
-        m_post_reg(m, d, regs[s] | regs[s2]);
+        // regs[d] = regs[s1] | regs[s2];
+        m_post_reg(m, d, regs[s1] | regs[s2]);
         break;
 
     case M_ORB:
-        // regs[d] = (regs[d] & 0xff00) | ((regs[s]&0xff) | (regs[s2]&0xff));
+        // regs[d] = (regs[d] & 0xff00) | ((regs[s1]&0xff) | (regs[s2]&0xff));
         m_post_reg(m, d,
-                   (regs[d] & 0xff00) | ((regs[s]&0xff) | (regs[s2]&0xff)));
+                   (regs[d] & 0xff00) | ((regs[s1]&0xff) | (regs[s2]&0xff)));
         break;
 
     case M_NOT:
-        // regs[d] = ~regs[s];
-        m_post_reg(m, d, ~regs[s]);
+        // regs[d] = ~regs[s1];
+        m_post_reg(m, d, ~regs[s1]);
         break;
 
     case M_NOTB:
         if (debug) printf("notb d %o s %o result %o\n",
-                          regs[d], regs[s], 
-                          (regs[d] & 0xff00) | ((~regs[s]) & 0xff));
+                          regs[d], regs[s1], 
+                          (regs[d] & 0xff00) | ((~regs[s1]) & 0xff));
 
-        // regs[d] = (regs[d] & 0xff00) | ((~regs[s]) & 0xff);
-        m_post_reg(m, d, (regs[d] & 0xff00) | ((~regs[s]) & 0xff));
+        // regs[d] = (regs[d] & 0xff00) | ((~regs[s1]) & 0xff);
+        m_post_reg(m, d, (regs[d] & 0xff00) | ((~regs[s1]) & 0xff));
         break;
 
     case M_SXT:
@@ -512,22 +549,22 @@ void m_execute_isn(m_fifo_t *m)
         break;
 
     case M_DIV:
-        // div32by16(&regs[d], &regs[d+1], regs[s], regs[s+1], regs[s2]);
-        div32by16(&r0, &r1, regs[s], regs[s+1], regs[s2]);
+        // div32by16(&regs[d], &regs[d+1], regs[s1], regs[s+1], regs[s2]);
+        div32by16(&r0, &r1, regs[s1], regs[s1+1], regs[s2]);
         m_post_reg(m, d, r0);
         m_post_reg(m, d+1, r1);
         break;
 
     case M_MUL:
-        // mul16by16(&regs[d], &regs[d+1], regs[d], regs[s]);
-        mul16by16(&r0, &r1, regs[d], regs[s]);
+        // mul16by16(&regs[d], &regs[d+1], regs[d], regs[s1]);
+        mul16by16(&r0, &r1, regs[d], regs[s1]);
         m_post_reg(m, d, r0);
         m_post_reg(m, d+1, r1);
         break;
 
     case M_XOR:
-        // xor16(&regs[d], regs[d], regs[s]);
-        xor16(&r0, regs[d], regs[s]);
+        // xor16(&regs[d], regs[d], regs[s1]);
+        xor16(&r0, regs[d], regs[s1]);
         m_post_reg(m, d, r0);
         break;
 
@@ -583,12 +620,12 @@ void m_execute_isn(m_fifo_t *m)
             break;
 
         case FM_ASH:
-            new_cc_v = regs[s] == 0 ? 0 : shift_sign_change16;
+            new_cc_v = regs[s1] == 0 ? 0 : shift_sign_change16;
             new_cc_c = shift_out;
-            printf("regs[s=%d] %o shift_out %d\n", s, regs[d], shift_out);
+            printf("regs[s1=%d] %o shift_out %d\n", s1, regs[d], shift_out);
             break;
         case FM_ASHC:
-            new_cc_v = regs[s] == 0 ? 0 : shift_sign_change32;
+            new_cc_v = regs[s1] == 0 ? 0 : shift_sign_change32;
             new_cc_c = shift_out;
             break;
         case FM_ASL:
@@ -599,7 +636,7 @@ void m_execute_isn(m_fifo_t *m)
             break;
         case FM_ASR:
         case FM_ASRB:
-            new_cc_c = regs[s]&1 ? 1 : 0;
+            new_cc_c = regs[s1]&1 ? 1 : 0;
             new_cc_v = new_cc_n ^ new_cc_c;
             break;
         case FM_BIC:
@@ -690,12 +727,12 @@ void m_execute_isn(m_fifo_t *m)
             new_cc_c = new_cc_z ^ 1;
             break;
         case FM_ROL:
-            new_cc_c = regs[s]&0x8000 ? 1 : 0;
+            new_cc_c = regs[s1]&0x8000 ? 1 : 0;
             new_cc_v = new_cc_n ^ new_cc_c;
             break;
         case FM_ROR:
         case FM_RORB:
-            new_cc_c = regs[s]&1 ? 1 : 0;
+            new_cc_c = regs[s1]&1 ? 1 : 0;
             new_cc_v = new_cc_n ^ new_cc_c;
             break;
         case FM_SBC:
@@ -749,7 +786,7 @@ void m_execute_isn(m_fifo_t *m)
             new_cc_c = new_cc_z ^ 1;
             break;
         case FM_ROLB:
-            new_cc_c = (regs[s] & 0x80) ? 1 : 0;
+            new_cc_c = (regs[s1] & 0x80) ? 1 : 0;
             new_cc_v = new_cc_n ^ new_cc_c;
             break;
         case FM_SBCB:
@@ -836,7 +873,7 @@ void m_execute_isn(m_fifo_t *m)
         case B_CC: take_jump = (psw & CC_C) ? 0 : 1; break;
         case B_CS: take_jump = (psw & CC_C) ? 1 : 0; break;
 
-        case B_REGZERO: take_jump = regs[s] == 0 ? 0 : 1; break;
+        case B_REGZERO: take_jump = regs[s1] == 0 ? 0 : 1; break;
         }
 
         if (debug)
@@ -853,8 +890,8 @@ void m_execute_isn(m_fifo_t *m)
         break;
 
     case M_SWAB:
-        // regs[d] = ((regs[s] & 0xff) << 8) | ((regs[s] >> 8) & 0xff);
-        m_post_reg(m, d, ((regs[s] & 0xff) << 8) | ((regs[s] >> 8) & 0xff));
+        // regs[d] = ((regs[s1] & 0xff) << 8) | ((regs[s1] >> 8) & 0xff);
+        m_post_reg(m, d, ((regs[s1] & 0xff) << 8) | ((regs[s1] >> 8) & 0xff));
         break;
 
     case M_SHIFT:
@@ -865,18 +902,18 @@ void m_execute_isn(m_fifo_t *m)
         if (count > 0) {
             u32 r;
             if (debug)
-                printf("r%o <- r%o (%o) << %d", d, s, regs[s], count);
-            r = ((u32)regs[s]) << count;
+                printf("r%o <- r%o (%o) << %d", d, s1, regs[s1], count);
+            r = ((u32)regs[s1]) << count;
             shift_out = (r & 0x10000) ? 1 : 0;
             // regs[d] = r;
             m_post_reg(m, d, r);
         } else {
             if (debug)
-                printf("r%o <- r%o (%o) >> %d", d, s, regs[s], -count);
-            shift_out = (regs[s] >> (-count - 1)) & 1;
-            shift_sign = regs[s] & 0x8000;
-            // regs[d] = regs[s] >> -count;
-            r0 = regs[s] >> -count;
+                printf("r%o <- r%o (%o) >> %d", d, s1, regs[s1], -count);
+            shift_out = (regs[s1] >> (-count - 1)) & 1;
+            shift_sign = regs[s1] & 0x8000;
+            // regs[d] = regs[s1] >> -count;
+            r0 = regs[s1] >> -count;
 
             if (shift_sign)
                 // regs[d] |= 0177777 << (16 - -count);
@@ -884,9 +921,9 @@ void m_execute_isn(m_fifo_t *m)
 
             m_post_reg(m, d, r0);
 
-            if (debug) printf("shift_out %d, regs[s=%o] %o, shift %o\n",
-                              shift_out, s, regs[s],
-                              regs[s] >> (-count - 1));
+            if (debug) printf("shift_out %d, regs[s1=%o] %o, shift %o\n",
+                              shift_out, s1, regs[s1],
+                              regs[s1] >> (-count - 1));
         }
 
         if (debug) printf(" (result %o)\n", regs[d]);
@@ -895,16 +932,16 @@ void m_execute_isn(m_fifo_t *m)
     case M_SHIFTI:
         if (vs > 0) {
             if (debug)
-                printf("r%o <- r%o (%o) << %d", d, s, regs[s], v);
-            shift_out = (((u32)regs[s]) << v) & 0x10000;
-            // regs[d] = regs[s] << v;
-            r0 = regs[s] << v;
+                printf("r%o <- r%o (%o) << %d", d, s1, regs[s1], v);
+            shift_out = (((u32)regs[s1]) << v) & 0x10000;
+            // regs[d] = regs[s1] << v;
+            r0 = regs[s1] << v;
         } else {
             if (debug)
-                printf("r%o <- r%o (%o) >> %d", d, s, regs[s], -vs);
-            shift_out = (regs[s] >> (-vs - 1)) & 1;
-            // regs[d] = regs[s] >> -vs;
-            r0 = regs[s] >> -vs;
+                printf("r%o <- r%o (%o) >> %d", d, s1, regs[s1], -vs);
+            shift_out = (regs[s1] >> (-vs - 1)) & 1;
+            // regs[d] = regs[s1] >> -vs;
+            r0 = regs[s1] >> -vs;
         }
 
         m_post_reg(m, d, r0);
@@ -918,17 +955,17 @@ void m_execute_isn(m_fifo_t *m)
             if (count & 040)
                 count |= ~077;
 
-            l32 = (regs[s] << 16) | regs[s+1];
+            l32 = (regs[s1] << 16) | regs[s1+1];
 
             if (count > 0) {
                 if (debug)
-                    printf("r%o <- r%o (%o) << %d", d, s, l32, count);
+                    printf("r%o <- r%o (%o) << %d", d, s1, l32, count);
                 shift_out = (l32 & 0x80000000) ? 1 : 0;
                 l32 <<= count;
             } else {
                 count = -count;
                 if (debug)
-                    printf("r%o <- r%o (%o) >> %d", d, s, l32, count);
+                    printf("r%o <- r%o (%o) >> %d", d, s1, l32, count);
                 shift_out = (l32 & (1 << (count-1))) ? 1 : 0;
                 l32 >>= count;
             }
@@ -946,13 +983,13 @@ void m_execute_isn(m_fifo_t *m)
 
     case M_ROTATE:
         if (vs > 0) {
-            // regs[d] = (regs[s] << 1) | (psw & CC_C ? 1 : 0);
-            r0 = (regs[s] << 1) | (psw & CC_C ? 1 : 0);
-            new_cc_c = regs[s] & 0x8000;
+            // regs[d] = (regs[s1] << 1) | (psw & CC_C ? 1 : 0);
+            r0 = (regs[s1] << 1) | (psw & CC_C ? 1 : 0);
+            new_cc_c = regs[s1] & 0x8000;
         } else {
-            // regs[d] = (psw & CC_C ? 0x8000 : 0) | (regs[s] >> 1);
-            r0 = (psw & CC_C ? 0x8000 : 0) | (regs[s] >> 1);
-            new_cc_c = regs[s] & 1;
+            // regs[d] = (psw & CC_C ? 0x8000 : 0) | (regs[s1] >> 1);
+            r0 = (psw & CC_C ? 0x8000 : 0) | (regs[s1] >> 1);
+            new_cc_c = regs[s1] & 1;
         }
 
         m_post_reg(m, d, r0);
@@ -969,13 +1006,13 @@ void m_execute_isn(m_fifo_t *m)
     case M_ROTATEB:
         regs[d] &= 0xff00;
         if (vs > 0) {
-            // regs[d] |= ((regs[s]&0x7f) << 1) | (psw & CC_C ? 1 : 0);
-            r0 = regs[d] | ((regs[s]&0x7f) << 1) | (psw & CC_C ? 1 : 0);
-            new_cc_c = regs[s] & 0x80;
+            // regs[d] |= ((regs[s1]&0x7f) << 1) | (psw & CC_C ? 1 : 0);
+            r0 = regs[d] | ((regs[s1]&0x7f) << 1) | (psw & CC_C ? 1 : 0);
+            new_cc_c = regs[s1] & 0x80;
         } else {
-            // regs[d] |= (psw & CC_C ? 0x80 : 0) | ((regs[s]&0xff) >> 1);
-            r0 = regs[d] | (psw & CC_C ? 0x80 : 0) | ((regs[s]&0xff) >> 1);
-            new_cc_c = regs[s] & 1;
+            // regs[d] |= (psw & CC_C ? 0x80 : 0) | ((regs[s1]&0xff) >> 1);
+            r0 = regs[d] | (psw & CC_C ? 0x80 : 0) | ((regs[s1]&0xff) >> 1);
+            new_cc_c = regs[s1] & 1;
         }
 
         m_post_reg(m, d, r0);
@@ -991,13 +1028,13 @@ void m_execute_isn(m_fifo_t *m)
 
     case M_ASR:
         if (vs > 0) {
-            // regs[d] = (regs[s] << 1) | (psw & CC_C ? 1 : 0);
-            r0 = (regs[s] << 1) | (psw & CC_C ? 1 : 0);
-            new_cc_c = regs[s] & 0x8000;
+            // regs[d] = (regs[s1] << 1) | (psw & CC_C ? 1 : 0);
+            r0 = (regs[s1] << 1) | (psw & CC_C ? 1 : 0);
+            new_cc_c = regs[s1] & 0x8000;
         } else {
-            // regs[d] = (regs[s] & 0x8000) | (regs[s] >> 1);
-            r0 = (regs[s] & 0x8000) | (regs[s] >> 1);
-            new_cc_c = regs[s] & 1;
+            // regs[d] = (regs[s1] & 0x8000) | (regs[s1] >> 1);
+            r0 = (regs[s1] & 0x8000) | (regs[s1] >> 1);
+            new_cc_c = regs[s1] & 1;
         }
 
         m_post_reg(m, d, r0);
@@ -1100,6 +1137,7 @@ void m_fifo_dump(void)
 void m_fifo_push(m_fifo_t *m)
 {
     if (m_fifo_depth < 32) {
+m_last = &m_fifo[m_fifo_depth];
         m_fifo[m_fifo_depth++] = *m;
     } else {
         printf("m_fifo overflow\n");
@@ -1114,6 +1152,8 @@ void m_fifo_reset(void)
 void m_push_isn(int op, int d, int s1, int s2, int v)
 {
     m_fifo_t mm;
+
+    memset((char *)&mm, 0, sizeof(mm));
 
     mm.op = op;
     mm.d = d;
@@ -1205,9 +1245,14 @@ void m_storesp(int v, int sr)
     m_push_isn(M_STORESP, 0, sr, 0, v);
 }
 
+void m_add(int dr, int s1, int s2, int v)
+{
+    m_push_isn(M_ADD, dr, s1, s2, v);
+}
+
 void m_add1(int dr, int sr)
 {
-    m_push_isn(M_ADD1, dr, sr, 0, 0);
+    m_push_isn(M_ADD, dr, dr, sr, 0);
 }
 
 void m_add2(int dr, int s1, int s2)
@@ -1217,22 +1262,22 @@ void m_add2(int dr, int s1, int s2)
 
 void m_addi(int dr, int val)
 {
-    m_push_isn(M_ADDI, dr, 0, 0, val);
-}
-
-void m_addib(int dr, int val)
-{
-    m_push_isn(M_ADDIB, dr, 0, 0, val);
+    m_push_isn(M_ADD, dr, dr, R_ZERO, val);
 }
 
 void m_addc(int dr, int sr)
 {
-    m_push_isn(M_ADDC, dr, sr, 0, 0);
+    m_push_isn(M_ADD, dr, sr, R_CARRY, 0);
+}
+
+void m_addib(int dr, int val)
+{
+    m_push_isn(M_ADDB, dr, dr, R_ZERO, val);
 }
 
 void m_addcb(int dr, int sr)
 {
-    m_push_isn(M_ADDCB, dr, sr, 0, 0);
+    m_push_isn(M_ADDB, dr, sr, R_CARRY, 0);
 }
 
 void m_sub(int dr, int s1, int s2)
@@ -1240,24 +1285,24 @@ void m_sub(int dr, int s1, int s2)
     m_push_isn(M_SUB, dr, s1, s2, 0);
 }
 
+void m_subi(int dr, int val)
+{
+    m_push_isn(M_SUB, dr, dr, R_ZERO, val);
+}
+
+void m_subc(int dr, int sr)
+{
+    m_push_isn(M_SUB, dr, sr, R_CARRY, 0);
+}
+
 void m_subb(int dr, int s1, int s2)
 {
     m_push_isn(M_SUBB, dr, s1, s2, 0);
 }
 
-void m_subi(int dr, int val)
+void m_subbi(int dr, int val)
 {
-    m_push_isn(M_SUBI, dr, 0, 0, val);
-}
-
-void m_subib(int dr, int val)
-{
-    m_push_isn(M_SUBIB, dr, 0, 0, val);
-}
-
-void m_subc(int dr, int sr)
-{
-    m_push_isn(M_SUBC, dr, sr, 0, 0);
+    m_push_isn(M_SUBB, dr, dr, R_ZERO, val);
 }
 
 void m_flags(int dr, int sr, int v)
@@ -1267,6 +1312,9 @@ void m_flags(int dr, int sr, int v)
 
 void m_flagmux(int dr, int sr, int v)
 {
+#ifdef SSDD
+    _encode_ssdd_deltas();
+#endif
     m_push_isn(M_FLAGMUX, dr, sr, 0, v);
 }
 
@@ -1502,7 +1550,11 @@ m_nop();
         break;
     case 2:
         m_load(dest+1, reg);
+#ifdef SSDD
+m_last->r_delta[reg] += (byte && reg < 6) ? 1 : 2;
+#else
         m_addi(reg, (byte && reg < 6) ? 1 : 2);
+#endif
         break;
     case 3:
         m_loadind(dest+1, reg);
@@ -1583,8 +1635,13 @@ void __encode_load_from_spec(int dest, int mode, int reg, u16 arg, int byte)
             break;
         case 6:
             m_loadi(dest+1, arg);
+//#ifdef SSDD
+//m_last->r_delta[reg] += 2;
+//m_add(dest+1, dest+1, reg, 2);
+//#else
             m_addi(reg, 2);
             m_add1(dest+1, reg);
+//#endif
             if (byte)
                 m_loadindb(dest, dest+1);
             else
@@ -1628,11 +1685,17 @@ m_nop();
 void _encode_load_from_spec(int dest, int mode, int reg, u16 arg)
 {
     __encode_load_from_spec(dest, mode, reg, arg, 0);
+#ifdef SSDD
+    _encode_ssdd_deltas();
+#endif
 }
 
 void _encode_load_from_spec_byte(int dest, int mode, int reg, u16 arg)
 {
     __encode_load_from_spec(dest, mode, reg, arg, 1);
+#ifdef SSDD
+    _encode_ssdd_deltas();
+#endif
 }
 
 
@@ -1715,6 +1778,31 @@ void _encode_store_result(int result, int ea, int dmode, int dreg, u16 dst)
 void _encode_store_result_byte(int result, int ea, int dmode, int dreg, u16 dst)
 {
     __encode_store_result(result, ea, dmode, dreg, dst, 1);
+}
+
+
+void _encode_ssdd_deltas(void)
+{
+#ifdef SSDD
+    int i, j;
+
+    for (i = 0; i < m_fifo_depth; i++)  {
+        m_fifo_t *m = &m_fifo[i];
+        int d;
+
+        for (j = 0; j < 8; j++) {
+            if (d = m->r_delta[j]) {
+                if (d > 0) {
+                    m_addi(j, d);
+                } else {
+                    m_subi(j, -d);
+                }
+
+                m->r_delta[j] = 0;
+            }
+        }
+    }
+#endif
 }
 
 /* ------------------------------------------------------------------------ */
@@ -2154,6 +2242,9 @@ void encode_mtpi(int dmode, int dreg, u16 dst)
         __encode_ea_from_spec(R_D0, dmode, dreg, dst, 0, 1);
         m_storeindpm(R_D1, R_S0);
     }
+#ifdef SSDD
+    _encode_ssdd_deltas();
+#endif
 }
 
 
@@ -2296,6 +2387,9 @@ void encode_jmp(int dmode, int dreg, u16 dst)
 
     /* S0 <- dd */
     _encode_ea_from_spec(R_S0, dmode, dreg, dst);
+#ifdef SSDD
+    _encode_ssdd_deltas();
+#endif
     m_push_isn(M_JMP, R_S1, 0, 0, 0);
 }
 
@@ -2311,6 +2405,9 @@ void encode_jsr(int reg, int dmode, int dreg, u16 dst)
     if (reg != 7)
         m_load(reg, 7);
 
+#ifdef SSDD
+    _encode_ssdd_deltas();
+#endif
     m_push_isn(M_JMP, R_S1, 0, 0, 0);
 }
 
@@ -2431,11 +2528,11 @@ void encode_decb(int dmode, int dreg, u16 dst)
 
     /* S0 <- ss */
     if (dmode == 0) {
-        m_subib(dreg, 1);
+        m_subbi(dreg, 1);
         m_flagmux(dreg, 0, FM_DECB);
     } else {
         _encode_load_from_spec_byte(R_S0, dmode, dreg, dst);
-        m_subib(R_S0, 1);
+        m_subbi(R_S0, 1);
         _encode_store_result_byte(R_S0, R_S1, dmode, dreg, dst);
         m_flagmux(R_S0, 0, FM_DECB);
     }
@@ -2566,8 +2663,12 @@ void encode_mfps(int dmode, int dreg, u16 dst)
     m_flagmux(R_S0, 0, FM_MFPS);
 }
 
+void encode_csm(int dmode, int dreg, u16 dst)
+{
+    encode_trap(010);
+}
+
 encode_mtpd() {}
-encode_csm() {}
 encode_sbcb() {}
 encode_arsb() {}
 encode_aslb() {}

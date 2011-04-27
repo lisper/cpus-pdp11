@@ -11,6 +11,8 @@
 
 int support_int_bits;
 
+int support_tto_delay;
+
 extern int assert_int;
 extern u16 assert_int_vec;
 extern u16 assert_int_ipl_bits;
@@ -137,6 +139,18 @@ void io_tti_write(u32 addr, u16 data)
     }
 }
 
+void io_tto_count(void)
+{
+    if (support_tto_delay) {
+        support_tto_delay--;
+        if (support_tto_delay == 0) {
+            printf("io_tto_count: tto delay expired\n");
+            tto_csr |= CSR_DONE;
+            if (tto_csr & CSR_IE) cpu_int_set(2);
+        }
+    }
+}
+
 u16 io_tto_read(u32 addr)
 {
     printf("io_tto_read(%o)\n", addr);
@@ -159,9 +173,11 @@ void io_tto_write(u32 addr, u16 data)
         tto_csr = tto_csr & ~CSR_DONE;
         cpu_int_clear(2);
 
-#if 1
+#if 0
 tto_csr |= CSR_DONE;
 if (tto_csr & CSR_IE) cpu_int_set(2);
+#else
+support_tto_delay = 100/*4*/;
 #endif
     } else {
         if (addr & 1)
@@ -193,18 +209,18 @@ u16 io_psw_read(u32 addr)
 void io_psw_write(u32 addr, u16 data, int writeb)
 {
     extern u16 psw;
-    printf("psw: write; data %o, writeb %d\n", data, writeb);
+    u16 data_w_tbit;
+    printf("psw: write; addr %o, data %o, writeb %d\n", addr, data, writeb);
 
-    data &= ~020;
-    data |= psw & 020;
+    data_w_tbit = (data & ~020) | (psw & 020);
 
     if (writeb) {
         if (addr & 1)
             psw = (psw & 0xff) | (data << 8);
         else
-            psw = (psw & 0xff00) | (data & 0xff);
+            psw = (psw & 0xff00) | (data_w_tbit & 0xff);
     } else
-        psw = data;
+        psw = data_w_tbit;
 
     m_psw_changed();
     printf("psw: new %o\n", psw);
@@ -451,6 +467,7 @@ poll_support(void)
 #ifdef PCLK
     io_pclk_count();
 #endif
+    io_tto_count();
 }
 
 extern char *image_filename;

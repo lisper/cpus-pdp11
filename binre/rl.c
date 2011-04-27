@@ -601,7 +601,9 @@ io_rl_reset(const char *fn)
 {
 //    rkcs = CSR_DONE;
 
-    rl_fd = open(fn, O_RDONLY);
+    if (rl_fd == 0) {
+        rl_fd = open(fn, O_RDONLY);
+    }
 
     rl11_reset();
 }

@@ -458,7 +458,9 @@ io_rk_reset(const char *fn)
 {
     rkcs = CSR_DONE;
 
-    rk_fd = open(fn, O_RDWR/*O_RDONLY*/);
+    if (rk_fd == 0) {
+        rk_fd = open(fn, O_RDWR/*O_RDONLY*/);
+    }
 }
 
 static const u16 boot_rom[] = {

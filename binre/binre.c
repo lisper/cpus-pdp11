@@ -23,6 +23,8 @@ u16 fetch[3];
 u_char fetch_valid[3];
 
 int halted;
+int waiting;
+int reset;
 int debug;
 unsigned int max_cycles;
 unsigned int cycles;
@@ -393,7 +395,8 @@ tb_decode(void)
 	(op_15_6 == 0002 && (op_5_0 >= 010 && op_5_0 <= 027)) ||
 	(op_15_12 == 007 && (op_11_9 == 5 || op_11_9 == 6)) ||
 	(op_15_12 == 017) ||
-   	(op_15_6 == 00047 && op_5_0 <= 007);		// jsp rx
+   	(op_15_6 == 00047 && op_5_0 <= 007) ||		// jsp rx
+        (op_15_6 >= 0071 && op_15_6 <= 0077);
 
     r_reserved =
 	(op_15_6 == 0001 && op_5_0 <= 007) ||		/* jmp rx */
@@ -1211,11 +1214,11 @@ isn_fetch(void)
         return;
     fetch_valid[0] = 1;
 
-    if (cpu_read(mode, 1, pc+2, &fetch[1]))
+    if (cpu_read(mode, 0, pc+2, &fetch[1]))
         return;
     fetch_valid[1] = 1;
 
-    if (cpu_read(mode, 1, pc+4, &fetch[2]))
+    if (cpu_read(mode, 0, pc+4, &fetch[2]))
         return;
     fetch_valid[2] = 1;
 
@@ -1275,6 +1278,7 @@ run(void)
             else
                 tb_recompile();
         }
+
         if (0) tb_show();
         tb_execute();
         tb_show();
@@ -1284,7 +1288,26 @@ run(void)
             printf("max cycles (%d) exceeded\n", max_cycles);
             break;
         }
+
         poll_support();
+
+        if (reset) {
+            reset = 0;
+            mmu_reset();
+            support_clear_int_bits();
+            reset_support();
+        }
+
+        if (waiting) {
+            printf("waiting...\n");
+
+            while (!assert_int) {
+                poll_support();
+            }
+
+            printf("done waiting!");
+            waiting = 0;
+        }
     }
 
     if (halted) {

@@ -20,7 +20,28 @@ typedef struct m_fifo_s {
     u8	r_valid2;
     u8	r_reg2;
     u16	r_val2;
+
+    int  r_delta[8];
 } m_fifo_t;
+
+enum {
+    R_S0 = 8,
+    R_S1 = 9,
+    R_S2 = 10,
+    R_D0 = 11,
+    R_D1 = 12,
+    R_D2 = 13,
+    R_R0 = 14,
+    R_R1 = 15,
+    R_R6_M0 = 16,
+    R_R6_M1 = 17,
+    R_R6_M2 = 18,
+    R_R6_M3 = 19,
+
+    R_CARRY = 30,
+    R_ZERO = 31
+};
+
 
 enum {
     M_NOP,
@@ -37,12 +58,7 @@ enum {
     M_STOREPSW,
     M_STORESP,
     M_ADD,
-    M_ADD1,
-    M_ADDI,
-    M_ADDC,
     M_SUB,
-    M_SUBI,
-    M_SUBC,
     M_FLAGS,
     M_FLAGMUX,
     M_CHECKSP,
@@ -68,29 +84,12 @@ enum {
     M_LOADINDB,
     M_STOREB,
     M_STOREINDB,
-    M_ADDCB,
-    M_ADDIB,
-    M_SUBIB,
+    M_ADDB,
+    M_SUBB,
     M_NOTB,
     M_ANDB,
     M_ORB,
-    M_SUBB,
     M_ROTATEB,
-};
-
-enum {
-    R_S0 = 8,
-    R_S1 = 9,
-    R_S2 = 10,
-    R_D0 = 11,
-    R_D1 = 12,
-    R_D2 = 13,
-    R_R0 = 14,
-    R_R1 = 15,
-    R_R6_M0 = 16,
-    R_R6_M1 = 17,
-    R_R6_M2 = 18,
-    R_R6_M3 = 19,
 };
 
 enum {
