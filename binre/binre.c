@@ -1275,8 +1275,9 @@ run(void)
             else
                 tb_recompile();
         }
-        tb_show();
+        if (0) tb_show();
         tb_execute();
+        tb_show();
 
         cycles++;
         if (cycles >= max_cycles) {
