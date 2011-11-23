@@ -13,19 +13,28 @@ module sr_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    output 	 decode;
    input [15:0]  switches;
 
+   //
+   reg [15:0]  switch_sample;
+
    assign 	 decode = (iopage_addr == 13'o17570);
    
-   always @(clk or decode or iopage_addr or iopage_rd or switches)
+   always @(clk or decode or iopage_addr or iopage_rd or switch_sample)
      begin
 	if (decode)
 	  case (iopage_addr)
-	    13'o17570: data_out = switches;
+	    13'o17570: data_out = switch_sample;
 	    default: data_out = 16'b0;
 	  endcase
         else
 	  data_out = 16'b0;
      end
-   
+
+   always @(posedge clk)
+     if (reset)
+       switch_sample <= 0;
+     else
+       switch_sample <= switches;
+
    always @(posedge clk)
        if (iopage_wr)
 	 case (iopage_addr)
