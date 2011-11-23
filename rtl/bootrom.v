@@ -65,33 +65,32 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
  `endif
 
  `ifdef boot_tt
-	 0: fetch = 16'o12706; /* 000 */
-	 2: fetch = 16'o500;   /* 002 */
-	 4: fetch = 16'o12700; /* 004 	mov	#msg, r0 */
-	 6: fetch = 16'o173044;/* 006 */
-	 8: fetch = 16'h9401;  /* 010       	movb	(r0)+, r1 */
-	 10: fetch = 16'h0303; /* 012       	beq	e <done> */
-	 12: fetch = 16'h09f7; /* 014      	jsr	pc, 024 <tpchr> */
-	 14: fetch = 16'h0004; /* 016 */
-	 16: fetch = 16'h01fb; /* 020       	br	10 <loop> */
-	 18: fetch = 16'h01f8; /* 022        br      4 */
-	 20: fetch = 16'h8bff; /* 024      	tstb	*$1e <tps> */
-	 22: fetch = 16'h000a; /* 026 */
-	 24: fetch = 16'h80fd; /* 030       	bpl	024 <tpchr> */
-	 26: fetch = 16'h907f; /* 032     	movb	r1, *$1c <tpb> */
-	 28: fetch = 16'h0002; /* 034 */
-	 30: fetch = 16'h0087; /* 036       	rts	pc */
-	 32: fetch = 16'hff76; /* 040*/
-	 34: fetch = 16'hff74; /* 042 */
-	 36: fetch = 16'h0a0d; /* 044 */
-	 38: fetch = 16'h6548;
-	 40: fetch = 16'h6c6c;
-	 42: fetch = 16'h206f;
-	 44: fetch = 16'h6f77;
-	 46: fetch = 16'h6c72;
-	 48: fetch = 16'h2164;
-	 50: fetch = 16'h0a0d;
-	 52: fetch = 16'h0000;
+320: fetch = 16'o000240;
+322: fetch = 16'o012706;
+324: fetch = 16'o001000;
+326: fetch = 16'o016700;
+328: fetch = 16'o000542;
+330: fetch = 16'o112001;
+332: fetch = 16'o001403;
+334: fetch = 16'o004767;
+336: fetch = 16'o000526;
+338: fetch = 16'o000773;
+340: fetch = 16'o000000;
+342: fetch = 16'o105767;
+344: fetch = 16'o177564;
+346: fetch = 16'o100375;
+348: fetch = 16'o110167;
+350: fetch = 16'o177566;
+352: fetch = 16'o000207;
+354: fetch = 16'o005015;
+356: fetch = 16'o062510;
+358: fetch = 16'o066154;
+360: fetch = 16'o020157;
+362: fetch = 16'o067567;
+364: fetch = 16'o066162;
+366: fetch = 16'o020544;
+368: fetch = 16'o005015;
+370: fetch = 16'o000000;
  `endif
 
  `ifdef boot_diag
