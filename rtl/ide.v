@@ -22,106 +22,115 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
    output [1:0] ide_cs;
    output [2:0] ide_da;
 
-
    reg 		ide_dior;
    reg 		ide_diow;
    reg [1:0] 	ide_cs;
    reg [2:0] 	ide_da;
 
    //
+   parameter [4:0] ATA_DELAY = 8;
+
+   reg [4:0] ata_count;
+
    reg [2:0] ata_state;
 
-   parameter idle = 3'd0;
-   parameter s0 = 3'd1;
-   parameter s1 = 3'd2;
-   parameter s2 = 3'd3;
-   parameter s3 = 3'd4;
-   parameter s4 = 3'd5;
+   parameter [2:0]
+		s0 = 3'd0,
+		s1 = 3'd1,
+		s2 = 3'd2,
+		s3 = 3'd3,
+		s4 = 3'd4,
+		s5 = 3'd5,
+		s6 = 3'd6,
+		s7 = 3'd7;
 
-   wire      assert_cs;
-   wire      assert_rw;
+   wire [2:0] ata_state_next;
 
-   reg [2:0] ata_state_next;
+   wire       ide_start, ide_busy, ide_stop;
    
    reg [15:0] ide_d_out;
    reg [15:0] ide_d_in;
 
-   // if write, drive ide_bus
-   assign ide_data_bus = (ata_wr && (ata_state == s0 ||
-				     ata_state == s1 ||
-				     ata_state == s2 ||
-   				     ata_state == s3)) ? ide_d_out : 16'bz;
-
-   // assert cs & da during r/w cycle
-   assign assert_cs = (ata_rd || ata_wr) && ata_state != s4;
    
-   // assert r/w one cycle sort
-   assign assert_rw = ata_state == s0 ||
-		      ata_state == s1 ||
-		      ata_state == s2;
+   // if write, drive ide_bus
+   assign ide_data_bus = (ata_wr && (ata_state == s1 ||
+				     ata_state == s2 ||
+				     ata_state == s3)) ? ide_d_out : 16'bz;
 
+   // grab data bound for ide at start
    always @(posedge clk)
      if (reset)
-       begin
-	  ide_cs <= 2'b11;
-	  ide_da <= 3'b111;
-	  ide_dior <= 1;
-	  ide_diow <= 1;
-       end
+       ide_d_out <= 0;
      else
-       begin
-	  ide_cs <= assert_cs ? ata_addr[4:3] : 2'b11;
-	  ide_da <= assert_cs ? ata_addr[2:0] : 3'b111;
-
-	  ide_dior <= ~(assert_rw && ata_rd);
-	  ide_diow <= ~(assert_rw && ata_wr);
-       end
-
-
-   always @(posedge clk)
-     if (reset)
-       begin
-	  ide_d_out <= 0;
-	  ide_d_in <= 0;
-       end
-     else
-       begin
-	  if (ata_state == idle)
-	    ide_d_out <= ata_in;
-
-	  if (ata_state == s2 && ata_rd)
-	    ide_d_in <= ide_data_bus;
-       end
+       if (ata_state == s0 && (ata_rd || ata_wr))
+	 ide_d_out <= ata_in;
    
    assign ata_out = ide_d_in;
    
    // send back done pulse at end
-   assign ata_done = ata_state == s4;
+   assign ata_done = ata_state == s3;
    
    always @(posedge clk)
      if (reset)
-       ata_state <= idle;
+       ata_state <= s0;
      else
        ata_state <= ata_state_next;
 
-   always @(clk or ata_state or ata_rd or ata_wr or ata_addr or ide_data_bus)
-     begin
-	case (ata_state)
-	  idle:
-	    begin
-	       if (ata_rd || ata_wr)
-		    ata_state_next = s0;
-	       else
-		    ata_state_next = idle;
-	    end
-	  
-	  s0: ata_state_next = s1;
-	  s1: ata_state_next = s2;
-	  s2: ata_state_next = s3;
-	  s3: ata_state_next = s4;
-	  s4: ata_state_next = idle;
-	  default: ata_state_next = idle;
-	endcase
-     end
+   assign ata_state_next =
+			  (ata_state == s0 && (ata_rd || ata_wr)) ? s1 :
+			  (ata_state == s1) ? s2 :
+			  (ata_state == s2 && ata_count == ATA_DELAY) ? s3 :
+			  (ata_state == s3) ? s4 :
+			  (ata_state == s4) ? s5 :
+			  (ata_state == s5) ? s6 :
+			  (ata_state == s6) ? s7 :
+			  (ata_state == s7) ? s0 :
+			  ata_state;
 
-endmodule // ide
+   assign ide_start = ata_state == s1;
+   assign ide_busy = ata_state == s2;
+   assign ide_stop = ata_state == s3;
+   
+   always @(posedge clk)
+     if (reset)
+       ata_count <= 0;
+     else
+       if (ata_state == s1)
+	 ata_count <= 0;
+       else
+	 if (ata_state == s2)
+	   ata_count <= ata_count + 1;
+   
+   // register all the ide signals
+   always @(posedge clk)
+     if (reset)
+       begin
+	  ide_dior <= 1'b1;
+	  ide_diow <= 1'b1;
+	  ide_cs <= 2'b11;
+	  ide_da <= 3'b111;
+	  ide_d_in <= 0;
+       end
+     else
+       if (ide_start)
+	 begin
+	    ide_cs <= ata_addr[4:3];
+	    ide_da <= ata_addr[2:0];
+	    ide_dior <= ata_rd ? 1'b0 : 1'b1;
+	    ide_diow <= ata_wr ? 1'b0 : 1'b1;
+	 end
+       else
+	 if (ide_stop)
+	   begin
+	      ide_dior <= 1'b1;
+	      ide_diow <= 1'b1;
+	      ide_cs <= 2'b11;
+	      ide_da <= 3'b111;
+	   end
+	 else
+	   if (ide_busy)
+	     begin
+		ide_d_in <= ide_data_bus;
+	     end
+
+endmodule

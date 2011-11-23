@@ -182,8 +182,8 @@ output [4:0] rk_state;
    //   ttttttttttssss
    //
    wire [3:0] sector;
-   wire [9:0] track;
-   wire [11:0] trackx3;
+   wire [8:0] track;
+   wire [10:0] trackx3;
    wire [15:0] trackx12;
    
    assign sector = rkda[3:0];
@@ -192,7 +192,7 @@ output [4:0] rk_state;
    // (track*12)+sector = 4*(track+track+track) + sector
    assign trackx3 = {2'b0, track} + {2'b0, track} + {2'b0, track};
 
-   assign trackx12 = {2'b0, trackx3, 2'b0};
+   assign trackx12 = {3'b0, trackx3, 2'b0};
 
    assign lba = trackx12 + { 12'b0, sector };
 
