@@ -15,7 +15,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 		interrupt, interrupt_ack, vector,
 		ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
    		dma_req, dma_ack, dma_addr, dma_data_in, dma_data_out,
-		dma_rd, dma_wr, rk_state);
+		dma_rd, dma_wr, rk_state_out);
    
    input clk;
    input reset;
@@ -24,7 +24,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
    input 	iopage_rd, iopage_wr, iopage_byte_op;
    output [15:0] data_out;
    output 	 decode;
-output [4:0] rk_state;
+   output [4:0]  rk_state_out;
 
    output 	 interrupt;
    reg 		 interrupt;
@@ -48,6 +48,8 @@ output [4:0] rk_state;
    wire [15:0] 	 rkds;
    reg [15:0] 	 rker, rkwc, rkda;
    reg [17:0] 	 rkba;
+
+   reg [15:0] 	 rkide_reg, rkide_data;
 
    reg 		 rkcs_err;
    reg [3:0] 	 rkcs_cmd;
@@ -118,34 +120,40 @@ output [4:0] rk_state;
        ATA_CMD_READ = 16'h0020,
        ATA_CMD_WRITE = 16'h0030;
 
-   reg [4:0] rk_state;
-   reg [4:0] rk_state_next;
+   reg [5:0] rk_state;
+   reg [5:0] rk_state_next;
 
-   parameter ready = 5'd0;
-   parameter init0 = 5'd1;
-   parameter init1 = 5'd2;
-   parameter init2 = 5'd3;
-   parameter init3 = 5'd4;
-   parameter init4 = 5'd5;
-   parameter init5 = 5'd6;
-   parameter init6 = 5'd7;
-   parameter init7 = 5'd8;
-   parameter init8 = 5'd9;
-   parameter init9 = 5'd10;
-   parameter init10 = 5'd11;
-   parameter init11 = 5'd12;
-   parameter read0 = 5'd13;
-   parameter read1 = 5'd14;
-   parameter write0 = 5'd15;
-   parameter write1 = 5'd16;
-   parameter last0 = 5'd17;
-   parameter last1 = 5'd18;
-   parameter last2 = 5'd19;
-   parameter last3 = 5'd20;
-   parameter wait0 = 5'd21;
-   parameter wait1 = 5'd22;
-   parameter done0 = 5'd30;
-   parameter done1 = 5'd31;
+   parameter [5:0]
+		ready = 0,
+		init0 = 1,
+		init1 = 2,
+		init2 = 3,
+		init3 = 4,
+		init4 = 5,
+		init5 = 6,
+		init6 = 7,
+		init7 = 8,
+		init8 = 9,
+		init9 = 10,
+		init10 = 11,
+		init11 = 12,
+		read0 = 13,
+		read1 = 14,
+		write0 = 15,
+		write1 = 16,
+		last0 = 17,
+		last1 = 18,
+		last2 = 19,
+		last3 = 20,
+		wait0 = 21,
+		wait1 = 22,
+		done0 = 30,
+		done1 = 31,
+		ide_wr0 = 32,
+		ide_wr1 = 33,
+		ide_rd0 = 34,
+		ide_rd1 = 35;
+   
 
    reg 	     ata_rd;
    reg 	     ata_wr;
@@ -172,7 +180,9 @@ output [4:0] rk_state;
 		      (iopage_addr == 13'o17402) |
 		      (iopage_addr == 13'o17406) |
 		      (iopage_addr == 13'o17410) |
-   		      (iopage_addr == 13'o17412);
+   		      (iopage_addr == 13'o17412) |
+      		      (iopage_addr == 13'o17414) |
+      		      (iopage_addr == 13'o17416);
 
    assign rkcs_mex = rkba[17:16];
 
@@ -224,6 +234,8 @@ output [4:0] rk_state;
 	    13'o17406: reg_out = rkwc;
 	    13'o17410: reg_out = rkba[15:0];
 	    13'o17412: reg_out = rkda;
+	    13'o17414: reg_out = ata_out;
+	    13'o17416: reg_out = rkide_data;
 	    default: reg_out = 16'b0;
 	  endcase
 	else
@@ -338,7 +350,24 @@ output [4:0] rk_state;
        else
    	 if (clear_da)
 	   rkda <= 0;
-	       
+
+   // RKIDE
+   always @(posedge clk)
+     if (reset)
+       rkide_reg <= 0;
+     else
+       if (iopage_wr && decode && iopage_addr == 13'o17414)
+	 rkide_reg <= data_in;
+
+   always @(posedge clk)
+     if (reset)
+       rkide_data <= 0;
+     else
+       if (iopage_wr && decode && iopage_addr == 13'o17416)
+	 rkide_data <= data_in;
+       else
+	   if (rk_state == ide_rd0 && ata_done)
+	     rkide_data <= ata_out;
 
    assign vector = 8'o220;
 
@@ -351,6 +380,8 @@ output [4:0] rk_state;
 	  rk_state <= rk_state_next;
        end
 
+   assign rk_state_out = rk_state[4:0];
+   
    always @(posedge clk)
      if (reset)
        interrupt <= 0;
@@ -428,13 +459,17 @@ output [4:0] rk_state;
 			rk_state_next = done0;
 		      RKCS_CMD_SEEK:
 			rk_state_next = done0;
-		      RKCS_CMD_WCHK, RKCS_CMD_RCHK, RKCS_CMD_WLK:
+		      /*RKCS_CMD_WCHK, RKCS_CMD_RCHK, */RKCS_CMD_WLK:
 			begin
 `ifdef debug
 			   $display("rk: unhandled command %o", rkcs_cmd);
 			   $finish;
 `endif
 			end
+		      RKCS_CMD_WCHK:
+			rk_state_next = ide_wr0;
+		      RKCS_CMD_RCHK:
+			rk_state_next = ide_rd0;
 		      default:
 			rk_state_next = init0;
 		      endcase
@@ -747,7 +782,33 @@ output [4:0] rk_state;
 	       $display("rk: XXX last3, done (ie %b)", rkcs_ie);
 `endif
 	    end
-		 
+
+	  // ------
+	  ide_wr0:
+	    begin
+	       ata_wr = 1;
+	       ata_addr = rkide_reg[4:0];
+	       ata_in = rkide_data;
+
+	       if (ata_done)
+		 rk_state_next = ide_wr1;
+	    end
+	  
+	  ide_wr1:
+	    rk_state_next = ready;
+
+	  ide_rd0:
+	    begin
+	       ata_rd = 1;
+	       ata_addr = rkide_reg[4:0];
+	       if (ata_done)
+		 rk_state_next = ide_rd1;
+	    end
+
+	  ide_rd1:
+	    rk_state_next = ready;
+	  // ------		 
+
 	  default:
 	    begin
 	    end

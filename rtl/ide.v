@@ -55,7 +55,8 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
    // if write, drive ide_bus
    assign ide_data_bus = (ata_wr && (ata_state == s1 ||
 				     ata_state == s2 ||
-				     ata_state == s3)) ? ide_d_out : 16'bz;
+				     ata_state == s3 ||
+   				     ata_state == s4)) ? ide_d_out : 16'bz;
 
    // grab data bound for ide at start
    always @(posedge clk)

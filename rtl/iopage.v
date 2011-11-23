@@ -232,7 +232,7 @@ output [4:0] rk_state;
 		    .dma_data_out(dma_data_out),
 		    .dma_rd(dma_rd), .dma_wr(dma_wr),
 
-		    .rk_state(rk_state)
+		    .rk_state_out(rk_state)
 		    );
 `endif
 
