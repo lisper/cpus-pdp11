@@ -377,7 +377,10 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
        rk_state <= ready;
      else
        begin
-	  rk_state <= rk_state_next;
+	  if (rkcs_cmd[0] && rkcs_cmd[3:1] == RKCS_CMD_CTLRESET)
+	    rk_state <= ready;
+	  else
+	    rk_state <= rk_state_next;
        end
 
    assign rk_state_out = rk_state[4:0];
