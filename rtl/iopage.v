@@ -14,6 +14,7 @@ module iopage(clk, brgclk, reset, address, data_in, data_out,
 	      ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
 	      psw, psw_io_wr,
 	      switches,
+	      unibus_to, memory_to,
 	      rs232_tx, rs232_rx,
    	      dma_req, dma_ack, dma_addr, dma_data_in, dma_data_out,
 	      dma_rd, dma_wr
@@ -52,6 +53,7 @@ output [4:0] rk_state;
    output 	psw_io_wr;
 
    input [15:0] switches;
+   input	unibus_to, memory_to;
 
    input	rs232_rx;
    output	rs232_tx;
@@ -189,7 +191,9 @@ output [4:0] rk_state;
 		    .iopage_rd(iopage_rd),
 		    .iopage_wr(iopage_wr),
 		    .iopage_byte_op(iopage_byte_op),
-		    .switches(switches));
+		    .switches(switches),
+		    .unibus_to(unibus_to),
+		    .memory_to(memory_to));
 
    psw_regs psw_regs(.clk(clk),
 		     .reset(reset),

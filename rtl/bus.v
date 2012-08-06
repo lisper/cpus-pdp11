@@ -26,7 +26,7 @@ module bus(clk, brgclk, reset, bus_addr, bus_data_in, bus_data_out,
 	   bus_rd, bus_wr, bus_byte_op,
 	   bus_arbitrate, bus_ack, bus_error,
 	   bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl,
-	   ram_addr, ram_data_in, ram_data_out, ram_rd, ram_wr, ram_byte_op,
+	   ram_addr, ram_data_in, ram_data_out, ram_rd, ram_wr, ram_byte_op, ram_done,
 	   pxr_wr, pxr_rd, pxr_be,
 	   pxr_addr, pxr_data_in, pxr_data_out, pxr_trap,
 	   ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da,
@@ -55,7 +55,8 @@ output [4:0] rk_state;
    input [15:0]   ram_data_in;
    output [15:0]  ram_data_out;
    output 	  ram_rd, ram_wr, ram_byte_op;
-
+   input 	  ram_done;
+   
    output 	  pxr_wr;
    output 	  pxr_rd;
    output [1:0]	  pxr_be;
@@ -86,10 +87,10 @@ output [4:0] rk_state;
    wire 	iopage_rd, iopage_wr;
    wire 	dma_rd, dma_wr, dma_req, dma_ack;
    wire [17:0] 	dma_addr;
-   
    wire [15:0] 	dma_data_out;
 
    wire		bus_req;
+   wire 	waiting;
  	
    wire 	grant_cpu, grant_dma;
    reg [2:0] 	grant_state;
@@ -123,38 +124,39 @@ output [4:0] rk_state;
    
    assign ram_addr = cpu_drives ? /*hold_*/bus_addr : {4'b0, dma_addr};
    assign ram_data_out = cpu_drives ? /*hold_*/bus_data_in : dma_data_out;
-   assign ram_rd = grant_cpu ? (/*hold_*/bus_rd & ram_access) : dma_rd;
-   assign ram_wr = grant_cpu ? (/*hold_*/bus_wr & ram_access) : dma_wr;
-   assign ram_byte_op = grant_cpu ? /*hold_*/bus_byte_op : 1'b0;
+   assign ram_rd = cpu_drives ? (/*hold_*/bus_rd & ram_access) : dma_rd;
+   assign ram_wr = cpu_drives ? (/*hold_*/bus_wr & ram_access) : dma_wr;
+   assign ram_byte_op = cpu_drives ? /*hold_*/bus_byte_op : 1'b0;
 
 
 `ifdef debug_bus_all
    always @(posedge clk)
-     if (bus_wr || bus_rd)
+     if ((bus_wr || bus_rd) && ~reset)
        begin
 	  if (bus_wr) $display("bus: write %o <- %o", bus_addr,bus_data_in);
 	  if (bus_rd) $display("bus: read %o -> %o", bus_addr,bus_data_out);
-	  $display("     ram_rd %o, ram_wr %o ram_byte_op %o",
-		   ram_rd, ram_wr, ram_byte_op);
+	  $display("     ram_access %b, ram_data_in %o", ram_access, ram_data_in);
+	  $display("     iopage_access %b, iopage_out %o", iopage_access, iopage_out);
+	  $display("     bus_rd %o, bus_wr %o", bus_rd, bus_wr);
        end
 `endif
    
 `ifdef debug_bus_ram
    always @(posedge clk)
-     if (ram_access)
+     if (ram_access && ~reset)
        begin
-	  if (bus_wr) $display("bus: ram write %o <- %o %o%o%o",
+	  if (bus_wr) $display("bus: ram write %o <- %o %o%o%o; %t",
 			       bus_addr, bus_data_in,
-			       ram_rd, ram_wr, ram_byte_op);
-	  if (bus_rd) $display("bus: ram read %o -> %o %o%o%o",
+			       ram_rd, ram_wr, ram_byte_op, $time);
+	  if (bus_rd) $display("bus: ram read %o -> %o %o%o%o; %t",
 			       bus_addr, bus_data_out,
-			       ram_rd, ram_wr, ram_byte_op);
+			       ram_rd, ram_wr, ram_byte_op, $time);
        end
 `endif
    
 `ifdef debug_bus_io
    always @(posedge clk)
-     if (iopage_access)
+     if (iopage_access && ~reset)
        begin
 	  if (bus_wr) $display("bus: io write %o <- %o", bus_addr,bus_data_in);
 	  if (bus_rd) $display("bus: io read %o -> %o", bus_addr,bus_data_out);
@@ -163,10 +165,10 @@ output [4:0] rk_state;
    
 `ifdef debug_bus_dma
    always @(posedge clk)
-     if (dma_ack)
+     if (dma_ack && ~reset)
        begin
-	  if (bus_wr) $display("bus: ram write %o <- %o", bus_addr,bus_data_in);
-	  if (bus_rd) $display("bus: ram read %o -> %o", bus_addr,bus_data_out);
+	  if (bus_wr && grant_cpu) $display("bus: ram write %o <- %o", bus_addr,bus_data_in);
+	  if (bus_rd && grant_cpu) $display("bus: ram read %o -> %o", bus_addr,bus_data_out);
 	  if (dma_rd || dma_wr)
 	    $display("     dma_rd %o dma_wr %o ram_data_in %o, dma_data_out %o",
 		     dma_rd, dma_wr, ram_data_in, dma_data_out);
@@ -175,12 +177,12 @@ output [4:0] rk_state;
 
 `ifdef debug_io
    always @(posedge clk)
-     if (iopage_access)
+     if (iopage_access && ~reset)
        begin
-	  if (bus_wr)
+	  if (bus_wr && grant_cpu)
 	    $display("bus: iopage write %o <- %o (byte %o, error %o)",
 		     bus_addr, bus_data_in, bus_byte_op, bus_error);
-	  if (bus_rd)
+	  if (bus_rd && grant_cpu)
 	    $display("bus: iopage read %o -> %o (byte %o, error %o)",
 		     bus_addr, bus_data_out, bus_byte_op, bus_error);
        end
@@ -215,20 +217,22 @@ output [4:0] rk_state;
        grant_state <= grant_state_next;
 
    assign grant_state_next =
-		// cpu 0-3
 		(grant_state == 3'd0 && dma_req && bus_arbitrate) ? 3'd4 :
 		(grant_state == 3'd0 && bus_req) ? 3'd1 :
-		(grant_state == 3'd1) ? 3'd0 :
+		// cpu 1-3
+		(grant_state == 3'd1 && bus_req && waiting) ? 3'd1 :
+		(grant_state == 3'd1 && bus_req && !waiting) ? 3'd0 :
 		// dma 4-7
 		(grant_state == 3'd4 && dma_req) ? 3'd5 :
-		(grant_state == 3'd5 && dma_req) ? 3'd6:
-		(grant_state == 3'd6 && dma_req) ? 3'd7 :
+		(grant_state == 3'd5 && dma_req && ~ram_done) ? 3'd5 :
+		(grant_state == 3'd5 && dma_req &&  ram_done) ? 3'd6 :
 		3'd0;
 
 `ifdef debug_bus_state
    always @(posedge clk)
-     $display("grant_state %b, cpu %b %b, arb %b, dma %b %b; %t",
-	      grant_state, bus_req, bus_ack, bus_arbitrate, dma_req, dma_ack,
+     if (~reset)
+     $display("grant_state %b, next %b, bus req %b ack %b, arb %b, dma req %b ack %b; %t",
+	      grant_state, grant_state_next, bus_req, bus_ack, bus_arbitrate, dma_req, dma_ack,
 	      $time);
 `endif
    
@@ -238,16 +242,12 @@ output [4:0] rk_state;
    assign grant_cpu = grant_state == 3'd1;
    assign grant_dma = grant_state >= 3'd5;
 
-//   reg 	  bus_ack;
-//   always @(posedge clk)
-//     if (reset)
-//       bus_ack <= 0;
-//     else
-//       bus_ack <= ~bus_req || grant_cpu;
-//   assign bus_ack = ~bus_req || grant_cpu;
-   assign bus_ack = ~bus_req || grant_cpu;
+   assign waiting = ram_access && ~ram_done;
+		  
+//   assign bus_ack = ~bus_req || (grant_cpu && ack);
+   assign bus_ack = grant_cpu && !waiting;
 
-   assign dma_ack = grant_dma;
+   assign dma_ack = grant_dma && ram_done;
 
    wire   iopage_bus_error;
    wire   ram_bus_error;
@@ -340,6 +340,10 @@ output [4:0] rk_state;
 		  // switches
 		  .switches(switches),
 
+		  //
+		  .unibus_to(iopage_bus_error),
+		  .memory_to(ram_bus_error),
+		 
 		  // rs-232
 		  .rs232_tx(rs232_tx), .rs232_rx(rs232_rx),
 		  

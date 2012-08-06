@@ -3,15 +3,30 @@
 // copyright Brad Parker <brad@heeltoe.com> 2009-2010
 
 `define mmu_1134
+//`define mmu_1145
+//`define mmu_1144
 //`define mmu_1170
 
 `ifdef mmu_1134
  `define no_super
 `endif
 
+`ifdef mmu_1145
+// `define no_super
+`endif
+
+`ifdef mmu_1144
+ `define has_traps
+`endif
+
+`ifdef mmu_1170
+ `define has_traps
+`endif
+
 module mmu(clk, reset, soft_reset,
 	   cpu_va, cpu_cm, cpu_rd, cpu_wr, cpu_i_access, cpu_d_access,
-	   cpu_trap, cpu_pa, fetch_va, trap_odd, signal_abort, signal_trap,
+	   cpu_trap, cpu_pa, cpu_incdec, fetch_va, valid_incdec,
+	   trap_odd, signal_abort, signal_trap,
 	   pxr_wr, pxr_rd, pxr_be, pxr_addr, pxr_data_in, pxr_data_out);
 
    input clk;
@@ -25,14 +40,15 @@ module mmu(clk, reset, soft_reset,
    input 	cpu_i_access;
    input 	cpu_d_access;
    input 	cpu_trap;
-
+   input [15:0] cpu_incdec;
+   
    input 	fetch_va;
+   input 	valid_incdec;
    input 	trap_odd;
    output 	signal_abort;
    reg 		signal_abort;
    output 	signal_trap;
    reg 		signal_trap;
-
  	
    input 	pxr_wr;
    input 	pxr_rd;
@@ -109,6 +125,25 @@ module mmu(clk, reset, soft_reset,
    parameter PDR_W_MASK_HI = 8'o177;
    parameter PDR_W_MASK_LO = 8'o016;
    parameter PAR_MASK = 16'o007777; /* 12 bits */
+   parameter MMR3_MASK = 16'o000007; /* 3 bits */
+`endif
+
+`ifdef mmu_1145
+   // 11/44 values
+   parameter PDR_MASK = 16'o077717;
+   parameter PDR_W_MASK_HI = 8'o177;
+   parameter PDR_W_MASK_LO = 8'o317;
+   parameter PAR_MASK = 16'o007777; /* 12 bits */
+   parameter MMR3_MASK = 16'o000007; /* 3 bits */
+`endif
+
+`ifdef mmu_1144
+   // 11/44 values
+   parameter PDR_MASK = 16'o177516; /* acf low bit gone */
+   parameter PDR_W_MASK_HI = 8'o377;
+   parameter PDR_W_MASK_LO = 8'o116;
+   parameter PAR_MASK = 16'o177777; /* 16 bits */
+   parameter MMR3_MASK = 16'o000077; /* 6 bits */
 `endif
 
    assign map22 = 1'b0;
@@ -132,7 +167,7 @@ module mmu(clk, reset, soft_reset,
 //----
 `ifdef debug
     always @(posedge clk)
-      if (cpu_va == 16'o54766 && mmr0[0])
+      if (/*cpu_va == 16'o54766 && */mmr0[0])
 	begin
 	   $display("ZZZ: va %o, pa %o, cm %o, i %o, pxr_index %o",
 		    cpu_va, cpu_pa, cpu_cm, cpu_i_access, pxr_index);
@@ -145,7 +180,7 @@ module mmu(clk, reset, soft_reset,
    // MMR0_MME bit
    assign mmu_on = mmr0[0];
    assign maint_mode = mmr0[8];
-`ifdef mmu_1170
+`ifdef has_traps
    assign traps_enabled = mmr0[9];
 `else   
    assign traps_enabled = 1'b1;
@@ -190,6 +225,16 @@ module mmu(clk, reset, soft_reset,
    
    // check bn against page length
    assign 	pg_len_err = pdr_ed ? cpu_bn < pdr_plf : cpu_bn > pdr_plf;
+
+   // don't update A bit on register accesses
+   wire 	inhibit_update_pdr;
+   wire 	decode_reg;
+
+   assign 	decode_reg = ({cpu_pa[21:3], 3'b0} == 22'o17777570) ||
+			     ({cpu_pa[21:1], 1'b0} == 22'o17772516);
+
+   assign 	inhibit_update_pdr = va_is_iopage && decode_reg;
+
 
    wire [5:0] 	pxr_addr_5_0;
    assign 	pxr_addr_5_0 = pxr_addr[5:0];
@@ -295,7 +340,7 @@ module mmu(clk, reset, soft_reset,
 		 $display("zzz: acf=%o, signal trap, wr unused", pdr_acf);
  `endif
 `endif		 
-`ifdef mmu_1170
+`ifdef has_traps
 		 if (traps_enabled)	// trap enable
 		   begin
 		      update_mmr0_page = 1;
@@ -339,8 +384,9 @@ module mmu(clk, reset, soft_reset,
 		   begin
 		      update_mmr0_ple = 1;
 		      signal_trap = 1;
- `ifdef debug_mmu
-		      $display("zzz: signal trap, wr len");
+ `ifdef debug/*_mmu*/
+		      $display("zzz: signal trap, wr len; pdr_ed=%b, cpu_bn=%o, pdr_plf=%o",
+			       pdr_ed, cpu_bn, pdr_plf);
  `endif
 		   end
 	      end
@@ -378,7 +424,7 @@ module mmu(clk, reset, soft_reset,
 
 	      3'd1:		// read-only
 		begin
-`ifdef mmu_1170
+`ifdef has_traps
 		   update_pdr = 1;
 		   pdr_update_a = 1;	// set a bit
 		   if (traps_enabled) 	// trap enable
@@ -405,7 +451,7 @@ module mmu(clk, reset, soft_reset,
 		   $display("zzz: acf=%o, signal trap, rd r-w", pdr_acf);
  `endif
 `endif
-`ifdef mmu_1170
+`ifdef has_traps
 		   if (traps_enabled) 	// trap enable
 		     begin
 			update_mmr0_page = 1;
@@ -426,7 +472,7 @@ module mmu(clk, reset, soft_reset,
 		     begin
 			update_mmr0_ple = 1;
 			signal_abort = 1;
- `ifdef debug_mmu
+ `ifdef debug/*_mmu*/
 			$display("zzz: acf=%o, signal abort, rd len", pdr_acf);
 			$display("pdr_ed %b, cpu_bn %o, plr_plf %o; <%b >%b",
 				 pdr_ed, cpu_bn, pdr_plf,
@@ -541,15 +587,15 @@ module mmu(clk, reset, soft_reset,
 		default: mmr0 <= pxr_data_in;
 	      endcase
 
-`ifdef debug_mmu
+`ifdef debug/*_mmu*/
 	      $display("mmu: write mmr0 <- %o", pxr_data_in);
 `endif
 	   end
 
 	   8'b10xxxx11: begin
-	      mmr3 <= pxr_data_in;
+	      mmr3 <= pxr_data_in & MMR3_MASK;
 `ifdef debug_mmu
-	      $display("mmu: write mmr3 <- %o", pxr_data_in);
+	      $display("mmu: write mmr3 <- %o (%0)", pxr_data_in & MMR_MASK, pxr_data_in);
 `endif
 	     end
 
@@ -569,16 +615,16 @@ module mmu(clk, reset, soft_reset,
 		pdr_h[pxr_addr_5_0] <= pxr_data_in[15:8] & PDR_W_MASK_HI;
 	      if (pxr_be[0])
 		pdr_l[pxr_addr_5_0] <= pxr_data_in[7:0] & PDR_W_MASK_LO;
-`ifdef debug_mmu
-      	      $display("mmu: write pdr[%o] <- %o; pxr_addr %o, pxr_be %b; %t",
-		       pxr_addr_5_0, pxr_data_in, pxr_addr, pxr_be, $time);
+`ifdef debug/*_mmu*/
+      	      $display("mmu: write pdr[%o] <- %o; pxr_addr %o, pxr_be %b, pxr_data_in %o; %t",
+		       pxr_addr_5_0, pxr_data_in, pxr_addr, pxr_be, pxr_data_in, $time);
 `endif
 	     end
 	 endcase
        else
 	 if (mmu_on)
 	   begin
-	      if (update_pdr)
+	      if (update_pdr && ~inhibit_update_pdr)
 		begin
 		   pdr_h[pxr_index] <= pdr_update_value[15:8];
 		   pdr_l[pxr_index] <= pdr_update_value[7:0];
@@ -588,6 +634,12 @@ module mmu(clk, reset, soft_reset,
 			    pxr_index, pdr_update_value, $time);
 `endif
 		end
+
+`ifdef debug_mmu
+	      if (update_pdr && inhibit_update_pdr)
+		$display("mmu: update pdr[%o] <- %o INHIBITED, pa %o; %t",
+			    pxr_index, pdr_update_value, cpu_pa, $time);
+`endif
 
 	      // update mmr0 if requested,
 	      //  but only if there are no error bits set
@@ -628,13 +680,24 @@ module mmu(clk, reset, soft_reset,
        if (fetch_va && ~(mmr0[15] | mmr0[14] | mmr0[13]))
 	 mmr2 <= cpu_va;
 `endif
-   
+
+`ifdef debug_mmu
+   always @(posedge clk)
+     if (fetch_va)
+       begin
+	  if (~(mmr0[15] | mmr0[14] | mmr0[13]))
+	    $display("mmu: mmr2 <- %o; %t", cpu_va, $time);
+	  else
+	    $display("mmu: mmr2 <- %o INHIBIT; %t", cpu_va, $time);
+       end
+`endif
+	 //    
    always @(posedge clk)
      if (reset)
        mmr1 <= 0;
-//     else
-//       if (fetch_incdec)
-//	 mmr1 <= incdec;
+     else
+       if (valid_incdec)
+	 mmr1 <= cpu_incdec;
    
    
 endmodule

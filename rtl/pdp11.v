@@ -23,7 +23,8 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
 	     bus_rd, bus_wr, bus_byte_op,
 	     bus_arbitrate, bus_ack, bus_error,
 	     bus_i_access, bus_d_access, bus_cpu_cm,
-	     mmu_fetch_va, mmu_trap_odd, mmu_abort, mmu_trap, mmu_wr_inhibit,
+	     mmu_fetch_va, mmu_valid_incdec,
+	     mmu_trap_odd, mmu_abort, mmu_trap, mmu_wr_inhibit, mmu_incdec,
 	     bus_int, bus_int_ipl, bus_int_vector, interrupt_ack_ipl, 
 	     pc, psw, psw_io_wr);
 
@@ -41,7 +42,7 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    reg [15:0] 	 bus_data_out;
    
    output 	 bus_rd, bus_wr, bus_byte_op;
-//   reg 		 bus_rd, bus_wr, bus_byte_op;
+   reg 		 bus_rd, bus_wr, bus_byte_op;
    output 	 bus_arbitrate;
    input 	 bus_ack, bus_error;
    input 	 bus_int;
@@ -57,8 +58,10 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    output [1:0]  bus_cpu_cm;
 
    output 	 mmu_fetch_va;
+   output 	 mmu_valid_incdec;
    output 	 mmu_trap_odd;
    output 	 mmu_wr_inhibit;
+   output [15:0] mmu_incdec;
    input 	 mmu_abort;
    input 	 mmu_trap;
 
@@ -92,6 +95,9 @@ module pdp11(clk, reset, initial_pc, halted, waited, trapped, soft_reset,
    wire 	trace;
    wire 	odd_fetch;
    wire 	odd_pc;
+
+   wire 	waiting;
+   wire 	bus_req;
 
    reg [15:0] 	psw;
 
@@ -646,6 +652,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
      if (reset)
 	  psw <= 16'o0340;
      else
+       if (~waiting)
        begin
 	  case (istate)
 	    e1:
@@ -773,17 +780,29 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
    //
    // assert_trap_oflo is sampled during f1, c1, s4, d4, e1, w1
    //
-   // xxx seems like s1 & d1 should be in that list too... hmm.
-   //
+   reg [1:0] trap_count;
+   
    assign assert_trap_oflo = 				// stack overflow
 			     (istate == s1 && ss_pre_dec &&
 			      ss_reg == 6 && new_ss_reg_pre_decr < 16'o0400) ||
 			     (istate == d1 && dd_pre_dec &&
 			      dd_reg == 6 && new_dd_reg_pre_decr < 16'o0400) ||
-//			     (trap && (sp - 16'd2) < 16'o0400);
-		(trap && (sp - 16'd2) < 16'o0400) ||
-		(interrupt && (sp - 16'd2) < 16'o0400);
+			     (trap && (sp - 16'd2) < 16'o0400) ||
+	     ((istate == t3 || istate == t4) && trap_count < 2 && (sp - 16'd2) < 16'o0400) ||
+			     (interrupt && (sp - 16'd2) < 16'o0400);
 
+   // stop after double fault
+   always @(posedge clk)
+     if (reset)
+       trap_count <= 0;
+     else
+       if (istate == f1 && ~trap)
+	 trap_count <= 0;
+       else
+	 if (istate == t0 && trap)
+	   trap_count <= trap_count + 1;
+   
+       
 //----debug----
 `ifdef debug
    always @(posedge clk)
@@ -918,7 +937,8 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 
    assign new_dd_reg_incdec = dd_post_incr ? new_dd_reg_post_incr :
 			      new_dd_reg_pre_decr;
-   
+
+// should be need_destspec_ss_byte?
    assign new_ss_reg_post_incr = ss_reg_value +
 				 ((need_destspec_dd_byte &&
 				   ss_reg < 6 && ss_mode == 2) ?
@@ -1009,26 +1029,41 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 		    istate == t4 ? sp - 16'd2 :
 		    16'b0;
 
-//   always @(posedge clk)
-//     if (reset)
-//       begin
-//	  bus_rd <= 0;
-//	  bus_wr <= 0;
-//	  bus_byte_op <= 0;
-//       end
-//     else
-//       begin
-//	  bus_rd <= bus_rd_r;
-//	  bus_wr <= bus_wr_r;
-//	  bus_byte_op <= bus_byte_op_r;
-//       end
+   always @(posedge clk)
+     if (reset)
+       begin
+	  bus_rd <= 0;
+	  bus_wr <= 0;
+	  bus_byte_op <= 0;
+       end
+     else
+       begin
+	  if ((bus_rd || bus_wr) && bus_ack)
+	    begin
+	       bus_rd <= 0;
+	       bus_wr <= 0;
+	       bus_byte_op <= 0;
+	    end
+	  else
+	    if (bus_rd_r)
+	      begin
+		 bus_byte_op <= bus_byte_op_r;
+		 bus_rd <= bus_rd_r;
+	      end
+	    else
+	      if (bus_wr_r)
+		begin
+		   bus_byte_op <= bus_byte_op_r;
+		   bus_wr <= bus_wr_r;
+		end
+       end
 
-   assign bus_rd = bus_rd_r;
-   assign bus_wr = bus_wr_r;
-   assign bus_byte_op = bus_byte_op_r;
+//   assign bus_rd = bus_rd_r;
+//   assign bus_wr = bus_wr_r;
+//   assign bus_byte_op = bus_byte_op_r;
    
    wire   bus_addr_valid;
-   assign bus_addr_valid = bus_rd || bus_wr;
+   assign bus_addr_valid = bus_rd_r || bus_wr_r;
    
    always @(posedge clk)
      if (reset)
@@ -1068,7 +1103,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 		       force_previous_mode ? previous_mode :
 		       current_mode;
 
-   assign mmu_fetch_va = istate == f1;
+   assign mmu_fetch_va = istate == f1 && ~trap && ~waiting;
 
    assign mmu_trap_odd = assert_trap_odd;
 
@@ -1098,7 +1133,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 	  isn <= 0;
        end
      else
-       if (bus_ack)
+       if (~waiting/*bus_ack*/)
        begin
 
 	  if (istate != w1)
@@ -1365,6 +1400,8 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
    assign ok_to_assert_trap =
 			     istate == f1 || istate == c1 || istate == e1 ||
 			     istate == s4 || istate == d4 || istate == w1 ||
+			     // catch stack oflo on trap
+			     istate == t3 || istate == t4 ||
 			     // catch stack oflo
 			     istate == s1 || istate == d1;
    
@@ -1732,13 +1769,15 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 		       istate == h1 ? h1 :
 		       istate;
 
-  always @(posedge clk)
-    if (reset)
-      istate <= f1;
-    else
-      istate <= bus_ack ? new_istate : istate;
-
+   assign bus_req = bus_rd_r || bus_wr_r;
+   assign waiting = bus_req && !bus_ack;
    assign bus_arbitrate = istate == f1;
+   
+   always @(posedge clk)
+     if (reset)
+       istate <= f1;
+     else
+       istate <= waiting ? istate : new_istate;
 
    //
    // clock internal registes
@@ -1754,7 +1793,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 	  e32_data <= 0;
        end
      else
-       if (bus_ack)
+       if (~waiting/*bus_ack*/)
        begin
 	  ss_ea <= (istate == c1 ||
 		    istate == s1 ||
@@ -1805,6 +1844,47 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
        end
 
    //
+   // mmu register increment/decrement
+   //
+   reg [15:0] reg_incdec;
+   reg 	      reg_valid_incdec;
+   
+   wire [4:0] ss_reg_delta, dd_reg_delta;
+
+   wire ss_reg_delta_1, dd_reg_delta_1;
+   assign dd_reg_delta_1 = (need_destspec_dd_byte && dd_reg < 6 && dd_mode == 2);
+   assign ss_reg_delta_1 = (is_isn_byte/*need_destspec_ss_byte*/ && ss_reg < 6 && ss_mode == 2);
+      
+   assign dd_reg_delta = dd_post_incr ?
+			 (dd_reg_delta_1 ? 5'b00001 : 5'b00010) :
+			 (dd_reg_delta_1 ? 5'b11111 : 5'b11110);  /* -1, -2 */
+      
+   assign ss_reg_delta = ss_post_incr ?
+			 (ss_reg_delta_1 ? 5'b00001 : 5'b00010) :
+			 (ss_reg_delta_1 ? 5'b11111 : 5'b11110);  /* -1, -2 */
+      
+   assign mmu_incdec = reg_incdec;
+   assign mmu_valid_incdec = reg_valid_incdec;
+   
+   always @(posedge clk)
+     if (reset)
+       reg_valid_incdec <= 0;
+     else
+       reg_valid_incdec <= (istate == s1) || (istate == d1);
+
+   always @(posedge clk)
+     if (reset)
+       reg_incdec <= 0;
+     else
+       begin
+	  if ((ss_post_incr || ss_pre_dec) && istate == s1)
+	    reg_incdec <= { reg_incdec[15:8], ss_reg_delta, ss_reg };
+
+	  if ((dd_post_incr || dd_pre_dec) && istate == d1)
+	    reg_incdec <= { dd_reg_delta, dd_reg, reg_incdec[7:0] };
+       end
+   
+   //
    //debug
    //
 
@@ -1812,12 +1892,18 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
    always @(posedge clk)
      /* verilator lint_off STMTDLY */
      #2 begin
-   	if (istate == f1 && ~trap)
+   	if (istate == f1 && ~trap && ~waiting && ~reset)
 	  begin
 	     $display("f1: pc=%0o, sp=%0o, psw=%0o ipl%d n%d z%d v%d c%d (%0o %0o %0o %0o %0o %0o %0o %0o)",
 		      pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
 		      r0, r1, r2, r3, r4, r5, sp, pc);
 	  end // case: f1
+   	if (istate == f1 && bus_ack && ~reset)
+	  $display("    bus_data_in=%o", bus_data_in);
+   	if (istate == c1 && ~reset)
+	  $display("c1: isn %o", isn);
+   	if (istate == e1 && ~reset)
+	  $display("e1: isn %o, ss_data %o, dd_data %o", isn, ss_data, dd_data);
      end
 `endif
 

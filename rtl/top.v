@@ -54,10 +54,12 @@ module top(rs232_txd, rs232_rxd,
    wire         soft_reset;
 
    wire 	mmu_fetch_va;
+   wire 	mmu_valid_incdec;
    wire 	mmu_trap_odd;
    wire 	mmu_abort;
    wire 	mmu_trap;
    wire 	mmu_wr_inhibit;
+   wire [15:0] 	mmu_incdec;
    
    assign initial_pc = 32'o173000;
 
@@ -158,11 +160,14 @@ wire [4:0] rk_state;
 	     .bus_d_access(bus_d_access),
 	     .bus_cpu_cm(bus_cpu_cm),
 
+
 	     .mmu_fetch_va(mmu_fetch_va),
+	     .mmu_valid_incdec(mmu_valid_incdec),
 	     .mmu_trap_odd(mmu_trap_odd),
 	     .mmu_abort(mmu_abort),
 	     .mmu_trap(mmu_trap),
 	     .mmu_wr_inhibit(mmu_wr_inhibit),
+	     .mmu_incdec(mmu_incdec),
 	     
 	     .bus_int(bus_int),
 	     .bus_int_ipl(bus_int_ipl),
@@ -175,10 +180,9 @@ wire [4:0] rk_state;
    
    wire [21:0] ram_addr;
    wire [15:0] ram_data_in, ram_data_out;
-   wire        ram_rd, ram_wr, ram_byte_op;
+   wire        ram_rd, ram_wr, ram_byte_op, ram_done;
 
    wire        ram_oe_n, ram_we_n, ram_ce_n;
-   wire [15:0] ram1_io, ram2_io;
 
    wire [15:0] switches;
    assign switches = {8'b0, slideswitch};
@@ -216,7 +220,8 @@ wire [4:0] rk_state;
 	    .ram_rd(ram_rd),
 	    .ram_wr(ram_wr),
 	    .ram_byte_op(ram_byte_op),
-
+	    .ram_done(ram_done),
+	    
 	    .pxr_wr(pxr_wr),
 	    .pxr_rd(pxr_rd),
 	    .pxr_be(pxr_be),
@@ -248,7 +253,9 @@ wire [4:0] rk_state;
 		.cpu_d_access(bus_d_access),
 		.cpu_trap(trapped),
 		.cpu_pa(bus_addr_p),
+		.cpu_incdec(mmu_incdec),
 		.fetch_va(mmu_fetch_va),
+		.valid_incdec(mmu_valid_incdec),
 		.trap_odd(mmu_trap_odd),
 		.signal_abort(mmu_abort),
 		.signal_trap(mmu_trap),
@@ -270,7 +277,9 @@ wire [4:0] rk_state;
 	    .cpu_d_access(bus_d_access),
 	    .cpu_trap(trapped),
 	    .cpu_pa(bus_addr_p),
+	    .cpu_incdec(mmu_incdec),
 	    .fetch_va(mmu_fetch_va),
+	    .valid_incdec(mmu_valid_incdec),
 	    .trap_odd(mmu_trap_odd),
 	    .signal_abort(mmu_abort),
 	    .signal_trap(mmu_trap),
@@ -292,7 +301,8 @@ wire [4:0] rk_state;
 		  .wr(ram_wr),
 		  .wr_inhibit(mmu_wr_inhibit),
 		  .byte_op(ram_byte_op),
-
+		  .done(ram_done),
+		  
 		  .ram_a(ram_a),
 		  .ram_oe_n(ram_oe_n), .ram_we_n(ram_we_n),
 

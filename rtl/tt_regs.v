@@ -250,14 +250,22 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 `ifdef fake_uart
 `define no_fake_input
 //`define v6_unix
-//`define bsd_unix
+//`define v7_unix
+//`define bsd29_unix
+//`define bsd211_unix
 //`define rsts
 
  `ifdef v6_unix
    parameter fake_max = 9;
  `endif
- `ifdef bsd_unix
+ `ifdef v7_unix
+   parameter fake_max = 18;
+ `endif
+ `ifdef bsd29_unix
    parameter fake_max = 13;
+ `endif
+ `ifdef bsd211_unix
+   parameter fake_max = 11;
  `endif
  `ifdef rsts
    parameter fake_max = 21;
@@ -319,7 +327,28 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 	    8: fake_rx_data <= 8'h30; //0
 	    9: fake_rx_data <= 8'h0d; //<ret>
 `endif
-`ifdef bsd_unix
+`ifdef v7_unix
+	    0: fake_rx_data <= 8'h62; //b
+	    1: fake_rx_data <= 8'h6f; //o
+	    2: fake_rx_data <= 8'h6f; //o
+	    3: fake_rx_data <= 8'h74; //t
+	    4: fake_rx_data <= 8'h0d; //<ret>
+	    5: fake_rx_data <= 8'h72; //r
+	    6: fake_rx_data <= 8'h6b; //k
+	    7: fake_rx_data <= 8'h28; //(
+	    8: fake_rx_data <= 8'h30; //0
+	    9: fake_rx_data <= 8'h2c; //,
+	    10: fake_rx_data <= 8'h30; //0
+	    11: fake_rx_data <= 8'h29; //)
+	    12: fake_rx_data <= 8'h72; //r
+	    13: fake_rx_data <= 8'h6b; //k
+	    14: fake_rx_data <= 8'h75; //u
+	    15: fake_rx_data <= 8'h6e; //n
+	    16: fake_rx_data <= 8'h69; //i
+	    17: fake_rx_data <= 8'h78; //x
+	    18: fake_rx_data <= 8'h0d; //<ret>
+`endif
+`ifdef bsd29_unix
 	    0: fake_rx_data <= 8'h72; //r
 	    1: fake_rx_data <= 8'h6b; //k
 	    2: fake_rx_data <= 8'h28; //(
@@ -334,6 +363,36 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 	    11: fake_rx_data <= 8'h69; //i
 	    12: fake_rx_data <= 8'h78; //x
 	    13: fake_rx_data <= 8'h0d; //<ret>
+`endif	    
+`ifdef bsd29_unix
+	    0: fake_rx_data <= 8'h72; //r
+	    1: fake_rx_data <= 8'h6b; //k
+	    2: fake_rx_data <= 8'h28; //(
+	    3: fake_rx_data <= 8'h30; //0
+	    4: fake_rx_data <= 8'h2c; //,
+	    5: fake_rx_data <= 8'h30; //0
+	    6: fake_rx_data <= 8'h29; //)
+	    7: fake_rx_data <= 8'h72; //r
+	    8: fake_rx_data <= 8'h6b; //k
+	    9: fake_rx_data <= 8'h75; //u
+	    10: fake_rx_data <= 8'h6e; //n
+	    11: fake_rx_data <= 8'h69; //i
+	    12: fake_rx_data <= 8'h78; //x
+	    13: fake_rx_data <= 8'h0d; //<ret>
+`endif	    
+`ifdef bsd211_unix
+	    0: fake_rx_data <= 8'h72; //r
+	    1: fake_rx_data <= 8'h6b; //k
+	    2: fake_rx_data <= 8'h28; //(
+	    3: fake_rx_data <= 8'h30; //0
+	    4: fake_rx_data <= 8'h2c; //,
+	    5: fake_rx_data <= 8'h30; //0
+	    6: fake_rx_data <= 8'h29; //)
+	    7: fake_rx_data <= 8'h75; //u
+	    8: fake_rx_data <= 8'h6e; //n
+	    9: fake_rx_data <= 8'h69; //i
+	    10: fake_rx_data <= 8'h78; //x
+	    11: fake_rx_data <= 8'h0d; //<ret>
 `endif	    
 	    default: ;
 	  endcase

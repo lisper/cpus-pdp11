@@ -48,10 +48,10 @@ module mmu_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 				  supr_par_pdr_decode |
 				  kern_par_pdr_decode;
 
-   assign 	 decode_reg = (iopage_addr == 13'o12516) |
-			      (iopage_addr == 13'o17572) |
-			      (iopage_addr == 13'o17574) |
-			      (iopage_addr == 13'o17576);
+   assign 	 decode_reg = ({iopage_addr[12:1],1'b0} == 13'o12516) |
+			      ({iopage_addr[12:1],1'b0} == 13'o17572) |
+			      ({iopage_addr[12:1],1'b0} == 13'o17574) |
+			      ({iopage_addr[12:1],1'b0} == 13'o17576);
    
    assign 	 decode = decode_reg | par_pdr_decode;
 

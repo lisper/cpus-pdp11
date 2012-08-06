@@ -2,8 +2,8 @@
 
 module null_mmu(clk, reset, soft_reset,
 		cpu_va, cpu_cm, cpu_rd, cpu_wr, cpu_i_access, cpu_d_access,
-		cpu_trap, cpu_pa, fetch_va, trap_odd, 
-		signal_abort, signal_trap,
+		cpu_trap, cpu_pa, cpu_incdec, fetch_va, valid_incdec,
+		trap_odd, signal_abort, signal_trap,
 		pxr_wr, pxr_rd, pxr_be, pxr_addr, pxr_data_in, pxr_data_out);
 
    input clk;
@@ -17,8 +17,10 @@ module null_mmu(clk, reset, soft_reset,
    input 	cpu_i_access;
    input 	cpu_d_access;
    input 	cpu_trap;
+   input [15:0] cpu_incdec;
 
    input 	fetch_va;
+   input 	valid_incdec;
    input 	trap_odd;
    output 	signal_abort;
    output 	signal_trap;

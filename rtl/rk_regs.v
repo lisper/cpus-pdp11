@@ -377,7 +377,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
        rk_state <= ready;
      else
        begin
-	  if (rkcs_cmd[0] && rkcs_cmd[3:1] == RKCS_CMD_CTLRESET)
+	  if (rkcs_cmd[0] && rkcs_cmd[3:1] == RKCS_CMD_CTLRESET && rk_state != ready)
 	    rk_state <= ready;
 	  else
 	    rk_state <= rk_state_next;
@@ -449,7 +449,7 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	case (rk_state)
 	  ready:
 	    begin
-	       if (rkcs_cmd[0])
+	       if (rkcs_cmd[0] && ~rkcs_done)
 		 begin
 		    case (rkcs_cmd[3:1])
 		      RKCS_CMD_CTLRESET:
@@ -477,7 +477,11 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 			rk_state_next = init0;
 		      endcase
 `ifdef debug
-		    $display("rk: XXX go! rkcs_cmd %b", rkcs_cmd);
+		    if (rkcs_done == 0)
+		      $display("rk: XXX go! rkcs_cmd %b", rkcs_cmd);
+
+		    $display("rk: XXX rk_state %d, rk_state_next %d, rkcs_done %b",
+			     rk_state, rk_state_next, rkcs_done);
 `endif
 		 end
 	    end
@@ -647,13 +651,13 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	       dma_req = 1;
 	       dma_addr = rkba;
 	       dma_data_out = ata_out;
+	       dma_wr = 1;
 	       
 	       if (0) $display("read1: XXX ata_out %o, dma_addr %o",
 			       ata_out, dma_addr);
 			    
 	       if (dma_ack)
 		 begin
-		    dma_wr = 1;
 		    inc_ba = 1;
 		    if (rkwc == 0)
 		      rk_state_next = last0;
@@ -755,6 +759,9 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	  
 	  done0:
 	    begin
+`ifdef debug
+	       $display("rk: XXX done0");
+`endif
 	       if (rkcs_ie)
 		 begin
 		    assert_int = 1;
