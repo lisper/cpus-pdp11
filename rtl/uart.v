@@ -43,10 +43,10 @@ module uart(clk, reset,
    reg          rx_busy;
 
    reg [1:0]	rx_uld;
-   reg [1:0] 	rx_uld_next;
+   wire [1:0] 	rx_uld_next;
    
    reg [1:0]	tx_ld;
-   reg [1:0] 	tx_ld_next;
+   wire [1:0] 	tx_ld_next;
 
    wire  	uld_rx_ack_next;
    wire 	uld_rx_data;
@@ -91,7 +91,7 @@ module uart(clk, reset,
 
    assign tx_ld_next =
 		      (tx_ld == 2'b00 && ~ld_tx_req) ? 2'b00 :
-		      (tx_ld == 2'b00 && ld_tx_req)  ? 2'b01 :			  
+		      (tx_ld == 2'b00 && ld_tx_req)  ? 2'b01 :
 		      (tx_ld == 2'b01 && ld_tx_req)  ? 2'b01 :
 		      (tx_ld == 2'b01 && ~ld_tx_req)  ? 2'b10 :
 		      2'b00;
