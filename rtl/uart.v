@@ -25,7 +25,7 @@ module uart(clk, reset,
 
    reg 		ld_tx_ack;
    reg 		uld_rx_ack;
- 		
+
    reg [7:0] 	tx_reg;
    reg          tx_empty;
    reg          tx_over_run;
@@ -48,60 +48,55 @@ module uart(clk, reset,
    reg [1:0]	tx_ld;
    reg [1:0] 	tx_ld_next;
 
+   wire  	uld_rx_ack_next;
+   wire 	uld_rx_data;
+ 		
+   wire  	ld_tx_ack_next;
+   wire 	ld_tx_data;
+   
    // require uld_rx_req to deassert before sending next char
    always @(posedge rxclk or posedge reset)
      if (reset)
-       rx_uld <= 2'b00;
+       begin
+	  rx_uld <= 2'b00;
+	  uld_rx_ack <= 0;
+       end
      else
-       rx_uld <= rx_uld_next;
+       begin
+	  rx_uld <= rx_uld_next;
+	  uld_rx_ack <= uld_rx_ack_next;
+       end
 
-   always @(uld_rx_req or rx_uld)
-     begin
-	rx_uld_next = rx_uld;
-	uld_rx_ack = 0;
-	case (rx_uld)
-	  2'b00: if (uld_rx_req) rx_uld_next = 2'b01;
-	  2'b01: begin
-	     uld_rx_ack = 1;
-	     rx_uld_next = 2'b10;
-	    end
-	  2'b10: begin
-	     uld_rx_ack = 1;
-	     if (~uld_rx_req) rx_uld_next = 2'b00;
-	    end
-	  default: rx_uld_next = 2'b00;
-	endcase
-     end
+   assign rx_uld_next =
+		       (rx_uld == 2'b00 && ~uld_rx_req) ? 2'b00 :
+		       (rx_uld == 2'b00 && uld_rx_req)  ? 2'b01 :
+		       (rx_uld == 2'b01 && uld_rx_req)  ? 2'b01 :
+		       (rx_uld == 2'b01 && ~uld_rx_req)  ? 2'b10 :
+		       2'b00;
 
-   wire uld_rx_data;
-   assign uld_rx_data = rx_uld == 2'b01;
+   assign uld_rx_ack_next = rx_uld == 2'b01;
+   assign uld_rx_data = rx_uld == 2'b00 && uld_rx_req;
+   
    
    // require tx_ld_req to deassert before accepting next char
    always @(posedge txclk or posedge reset)
-     if (reset)
-       tx_ld <= 2'b00;
-     else
-       tx_ld <= tx_ld_next;
-
-   always @(ld_tx_req or tx_ld)
-     begin
-	tx_ld_next = tx_ld;
-	ld_tx_ack = 0;
-	case (tx_ld)
-	  2'b00: if (ld_tx_req) tx_ld_next = 2'b01;
-	  2'b01: begin
-	     ld_tx_ack = 1;
-	     tx_ld_next = 2'b10;
-	    end
-	  2'b10: begin
-	     ld_tx_ack = 1;
-	     if (~ld_tx_req) tx_ld_next = 2'b00;
-	    end
-	  default: tx_ld_next = 2'b00;
-	endcase
+     if (reset) begin
+	tx_ld <= 2'b00;
+	ld_tx_ack <= 0;
      end
-   
-   wire ld_tx_data;
+     else begin
+	tx_ld <= tx_ld_next;
+	ld_tx_ack <= ld_tx_ack_next;
+     end
+
+   assign tx_ld_next =
+		      (tx_ld == 2'b00 && ~ld_tx_req) ? 2'b00 :
+		      (tx_ld == 2'b00 && ld_tx_req)  ? 2'b01 :			  
+		      (tx_ld == 2'b01 && ld_tx_req)  ? 2'b01 :
+		      (tx_ld == 2'b01 && ~ld_tx_req)  ? 2'b10 :
+		      2'b00;
+
+   assign ld_tx_ack_next = tx_ld == 2'b01;
    assign ld_tx_data = tx_ld == 2'b01;
    
    
