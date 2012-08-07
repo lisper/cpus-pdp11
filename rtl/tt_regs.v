@@ -26,7 +26,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    input 	 rs232_rx;
    
    reg [15:0] 	 tto_data;
-   wire 	 tto_empty;
+   reg 		 tto_empty;
    wire 	 tto_data_wr;
    wire 	 tti_full;
    wire 	 tti_data_rd;
@@ -166,8 +166,8 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    // assert ld_tx_req until uart catches up
    // hold off cpu until tx_empty does full transition
    // state 0 - idle; wait for iopage write to data
-   // state 1 - wait for tx_ack to assert
-   // state 2 - wait for tx_ack to deassert
+   // state 1 - wait for ld_tx_ack to assert
+   // state 2 - wait for ld_tx_ack to deassert
    // state 3 - wait for tx_empty to assert
    // state 4 - 
    reg [2:0] tto_state;
@@ -205,16 +205,19 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 `else
    assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
 			   (tto_state == 1 && ld_tx_ack) ? 2 :
+//			   (tto_state == 2 && ~ld_tx_ack && ~tx_empty) ? 4 :
 			   (tto_state == 2 && ~ld_tx_ack) ? 3 :
-			   (tto_state == 3 && tx_empty) ? 4 :
-			   (tto_state == 4) ? 0 :
+//			   (tto_state == 3 && ~tx_empty) ? 4 :
+//			   (tto_state == 4 && tx_empty) ? 5 :
+//			   (tto_state == 5) ? 0 :
+			   (tto_state == 3) ? 0 :
 			   tto_state;
 
  `ifdef debug
    always @(posedge clk)
      if (tto_state != 0)
-	   $display("tto_state %d ld_tx_ack %b tx_empty %b",
-		    tto_state, ld_tx_ack, tx_empty);
+	   $display("tto_state %d ld_tx_req %b ld_tx_ack %b tx_empty %b",
+		    tto_state, ld_tx_req, ld_tx_ack, tx_empty);
  `endif
    
 `endif
@@ -227,15 +230,22 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 		(interrupt_ack && asserting_tx_int && !asserting_rx_int);
 
    assign ld_tx_req = tto_state == 1;
-   assign tto_empty = tto_state == 0;
+
+   always @(posedge clk)
+     if (reset)
+       tto_empty <= 0;
+     else
+       tto_empty <= tx_empty;
+   
+//   assign tto_empty = tto_state == 0;
    
    // tti state machine
    // don't become ready until we've clock data out of uart holding reg
    // state 0 - idle; wait for rx_empty to deassert
-   // state 1 - wait for rx_empty to assert
-   // state 2 - wait for rx_empty to deassert
-   // state 3 - wait for iopage read of uart (tti)
-   // state 4 - assert interrupt
+   // state 1 - wait for uld_rx_ack to assert
+   // state 2 - wait for uld_rx_ack to deassert
+   // state 3 - wait for iopage read of uart (tti); assert interrupt
+   // state 4 - wait for rx_empty to assert
    reg [2:0] tti_state;
    wire [2:0] tti_state_next;
 
@@ -277,7 +287,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    assign tti_state_next = (tti_state == 0 && fake_count <= fake_max) ? 1 :
 			   (tti_state == 1) ? 3 :
 			   (tti_state == 3 && tti_data_rd) ? 4 :
-			   (tti_state == 4) ? 0 :
+			   (tti_state == 4 && rx_empty) ? 0 :
 			   tti_state;
 
    initial
