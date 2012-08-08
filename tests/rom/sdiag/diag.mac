@@ -1,0 +1,397 @@
+;
+; simple rom monitor
+;
+STACK = 7000
+LINBUF = 6000
+;ORG = 2000
+ORG = 173000	
+
+	.TITLE rom
+	.ASECT
+	.ENABL AMA
+	.=ORG
+
+start:
+	nop
+	mov	#STACK,sp
+	jsr	pc,init
+	jmp	loop
+
+stop1:	halt
+stop2:	halt
+
+loop:
+	jsr	pc,prompt
+	jsr	pc,getcmd
+	mov	#LINBUF,r5
+
+	cmpb	#'r,@r5
+	beq	cread
+	cmpb	#'h,@r5
+	beq	cquit
+	cmpb	#'d,@r5
+	beq	cdump
+	cmpb	#'e,@r5
+	beq	cexam
+	cmpb	#'g,@r5
+	beq	cgo
+	cmpb	#'i,@r5
+	beq	cide
+	cmpb	#'x,@r5
+	beq	creset
+
+	jmp	loop
+
+;
+cquit:
+	halt
+
+;
+cdump:
+	jsr	pc,crlf
+
+	add	#2,r5
+	mov	r5,r1
+	jsr	pc,getaddr
+	mov	r0,r4
+
+	mov	r4,r1
+	jsr	pc,dword
+	movb	#':,r1
+	jsr	pc,putc
+	jsr	pc,space
+
+; jsr	pc,crlf
+; jmp	loop
+
+	mov	#10,r2
+cdmp1:
+	mov	(r4)+,r1
+	jsr	pc,dwordsp
+	sob	r2,cdmp1
+	jsr	pc,crlf
+
+	jmp	loop
+
+;
+cexam:
+	jsr	pc,crlf
+
+	add	#2,r5
+	mov	r5,r1
+	jsr	pc,getaddr
+	mov	r0,r4
+
+	mov	r4,r1
+	jsr	pc,dword
+	movb	#':,r1
+	jsr	pc,putc
+	jsr	pc,space
+
+	mov	(r4)+,r1
+	jsr	pc,dwordsp
+	jsr	pc,crlf
+
+	jmp	loop
+
+;
+cgo:
+	jsr	pc,crlf
+
+	add	#2,r5
+	mov	r5,r1
+	jsr	pc,getaddr
+	mov	r0,r4
+
+	jmp	r4
+
+; ---------------------------------------------------------------------------
+
+rkda = 177412
+
+cread:
+	mov	#0,r0    ; unit number
+	mov	r0,r3
+	swab	r3
+	asl	r3
+	asl	r3
+	asl	r3
+	asl	r3
+	asl	r3
+
+	mov	#rkda, r1	; csr
+	mov	r3,(r1)		; load da
+	clr	-(r1)		; clear ba
+	
+	mov	#-256.*2,-(r1)	; load wc
+	
+	mov	#5,-(r1)	; read & go
+	
+	tstb	(r1)
+	bpl	.-2
+	clrb	(r1)
+
+	jsr	pc,crlf
+	jmp	loop
+
+; ---------------------------------------------------------------------------
+
+
+rkcmd  = 177404
+
+idereg = 177414
+idedat = 177416
+
+cide:
+	mov	#20,r2
+	mov	#10,r5
+	jsr	pc,crlf
+cide1:
+	mov	r2,r1
+	jsr	pc,dword
+	jsr	pc,space	; regnum + dpace
+
+	mov	#idereg,r4
+	mov	r2,(r4)+
+
+	mov	#rkcmd,r3
+	mov	#13,(r3)	; read ide (rchk) & go
+	
+	tstb	(r3)
+	bpl	.-2
+	clrb	(r3)
+
+	mov	(r4),r1
+	jsr	pc,dword	; get reg value
+
+	jsr	pc,crlf
+	inc	r2
+	sob	r5,cide1
+
+	jmp	loop
+
+creset:
+	mov	#rkcmd,r3
+	mov	#1,(r3)		; controller reset & go
+	nop
+	nop
+	clrb	(r3)
+
+	jsr	pc,crlf
+	jmp	loop
+
+; ---------------------------------------------------------------------------
+
+; parse octal address in r5
+; return in r0
+getaddr:
+	mov	r2,-(sp)
+	clr	r2
+getad2:
+	movb	(r5)+,r1
+	beq	getad3
+	bic	#177770,r1
+	asl	r2
+	asl	r2
+	asl	r2
+	bis	r1,r2
+	jmp	getad2
+getad3:
+	mov	r2,r0
+	mov	(sp)+,r2
+	rts	pc
+
+;
+dwordsp:
+	jsr	pc,dword
+	jsr	pc,space
+	rts	pc
+
+;
+; print word in r1
+;
+dword:
+	mov	r2,-(sp)
+	mov	r3,-(sp)
+
+	mov	#dbuf,r3
+
+	jsr	pc,dig1
+	jsr	pc,dig1
+	jsr	pc,dig1
+	jsr	pc,dig1
+	jsr	pc,dig1
+	jsr	pc,dig1
+
+	movb	-(r3),r1
+	jsr	pc,putc
+	movb	-(r3),r1
+	jsr	pc,putc
+	movb	-(r3),r1
+	jsr	pc,putc
+	movb	-(r3),r1
+	jsr	pc,putc
+	movb	-(r3),r1
+	jsr	pc,putc
+	movb	-(r3),r1
+	jsr	pc,putc
+
+	mov	(sp)+,r3
+	mov	(sp)+,r2
+	rts	pc
+
+; add one digit to output
+dig1:
+	mov	r1,r2
+	bic	#177770,r2
+	add	#'0,r2
+	movb	r2,(r3)+
+
+	bic	#7,r1
+	clc
+	ror	r1
+	ror	r1
+	ror	r1
+	rts	pc
+
+;
+prompt:
+	mov	#msg2,r0
+	jsr	pc,pmsg
+	rts	pc
+
+crlf:
+	mov	#msgcr,r0
+	jsr	pc,pmsg
+	rts	pc
+
+space:
+	movb	#' ,r1
+	jsr	pc,putc
+	rts	pc
+
+;
+getcmd:
+	mov	#LINBUF,r5
+getcm1:
+	jsr	pc,getc
+	cmp	#15,r1		; cr?
+	beq	getcm2
+	cmp	#177,r1		; rubout?
+	beq	getcm3
+	jsr	pc,putc
+	movb	r1,(r5)+
+	jmp	getcm1
+getcm2:
+	movb	#0,(r5)+	; term w/zero
+	movb	#0,(r5)+	; term w/zero
+	rts	pc
+
+getcm3:
+	cmp	#LINBUF,r5	; don't backspace past beginning
+	beq	getcm4
+	sub	#1,r5		; backup ptr
+	mov	#10,r1
+	jsr	pc,putc
+	mov	#40,r1
+	jsr	pc,putc
+	mov	#10,r1
+	jsr	pc,putc
+	jmp	getcm1	
+getcm4:
+	mov	#7,r1		; beep
+	jsr	pc,putc
+	jmp	getcm1	
+
+;
+init:
+	nop
+
+	clr	r0
+	mov	#1234,r1
+	mov	r1,(r0)		; write 0
+
+	mov	#2000,r0
+	mov	#4321,r1
+	mov	r1,(r0)		; write 2000
+
+	nop
+	clr	r0
+	mov	(r0),r2		; read 0
+	mov	#1234,r1
+	cmp	r1,r2
+	bne	bad1
+
+	nop
+	mov	#2000,r0
+	mov	(r0),r2		; read 2000
+	mov	#4321,r1
+	cmp	r1,r2
+	bne	bad2
+
+	mov	#msg1,r0
+	jsr	pc,pmsg
+	rts	pc
+
+bad1:	jmp	stop1
+bad2:	jmp	stop2
+
+;
+;
+;
+pmsg:
+	movb	(r0)+,r1
+	beq	pmsg1
+	jsr	pc,putc
+	br	pmsg
+pmsg1:
+	rts	pc
+
+
+;
+;
+;
+
+kbs = 177560
+kbb = 177562
+
+tps = 177564
+tpb = 177566
+
+; print char in r1
+putc:
+	tstb	tps
+	bpl	putc
+	movb	r1,tpb
+	rts	pc
+
+; return char in r1
+getc:
+	tstb	kbs
+	bpl	getc
+	movb	kbb,r1
+	rts	pc
+
+; -------------------------------------------------------------------------
+
+	.even
+
+msg1:
+	.byte	15,12
+	.ascii "Hello world!"
+msgcr:
+	.byte	15,12
+	.byte	0
+
+msg2:
+	.byte	15,12
+	.ascii "rom> "
+	.byte	0
+
+	.=10000
+dbuf:
+	.byte	0,0,0,0,0,0
+
+	.even
+
+

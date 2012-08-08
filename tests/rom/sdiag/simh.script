@@ -1,0 +1,6 @@
+
+att rk ../../verif/rk.dsk
+load diag.bin
+set cpu 11/34
+go 2000
+quit
