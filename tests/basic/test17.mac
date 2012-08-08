@@ -8,19 +8,21 @@ PSW=177776	;processor status word
 	.word 	0007
 
 	.=200
-	mov	#200, r5
+	mov	#200, r5	;we should be in kernel mode here
    	rti
 
 	.=500
 
 	clr	@#PSW		;kernel mode	
-	mov	#500,sp
+	mov	#500,sp		;sp=500 in kernel mode
 
 	mov	#140000,@#PSW	;user mode	
-	MOV	#700,sp
+	MOV	#700,sp		;sp=700 in user mode
 
-	trap	377
+	trap	377		;should move us to kernel mode
 
+	nop
 	clr	@#PSW		;back to kernel mode	
+	nop
 	halt
 

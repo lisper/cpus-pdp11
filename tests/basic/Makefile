@@ -9,8 +9,8 @@
 # regression tests are the cornerstone of reproducible results.
 #
 
-AS = ../../macro11/macro11
-DUMP = ../../macro11/dumpobj
+AS = ../../utils/macro11/macro11
+DUMP = ../../utils/macro11/dumpobj
 
 TESTS = ttytest.mac \
 	test0.mac test1.mac test2.mac test3.mac test4.mac test5.mac \
@@ -54,7 +54,8 @@ endef
 %.simh.script: %.bin
 	echo -n >$@
 	echo "load $*.bin" >>$@
-	echo "set cpu 11/34" >>$@
+#	echo "set cpu 11/34" >>$@
+	echo "set cpu 11/40" >>$@
 	echo "go 500" >>$@
 	echo "quit" >>$@
 
@@ -68,7 +69,6 @@ logs: $(LOGS)
 #------------------------------
 
 clean:
-	rm -f *.lst *.obj *.log
-	rm -f *.mem
+	rm -f *.lst *.obj *.log *.bin
 	rm -f unmem aout2mem mem2bin
 

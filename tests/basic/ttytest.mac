@@ -1,28 +1,44 @@
 	.TITLE test1
 	.ASECT
-	.=500
+	.ENABL AMA
+;	.=500
+	.=173000	
 	
 start:
-	mov	msg,r0
+	nop
+	mov	#1000,sp
+	mov	#msg,r0
 loop:
 	movb	(r0)+,r1
 	beq	done
 	jsr	pc,tpchr
 	br	loop
 
+read:
+	jsr	pc,kpchr
+	cmp	r1,#3
+	beq	done
+	jsr	pc,tpchr
+	jmp	read
 done:
 	halt
-	
+
+kps = 177560
+kpb = 177562
+tps = 177564
+tpb = 177566
+
 tpchr:
-	tstb	@tps
+	tstb	tps
 	bpl	tpchr
-	movb	r1,@tpb
+	movb	r1,tpb
 	rts	pc
 
-tpb:
-	.word 177566
-tps:
-	.word 177564
+kpchr:
+	tstb	kps
+	bpl	kpchr
+	movb	kpb,r1
+	rts	pc
 
 msg:
 	.byte	15,12
