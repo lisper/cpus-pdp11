@@ -801,7 +801,10 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	       ata_in = rkide_data;
 
 	       if (ata_done)
-		 rk_state_next = ide_wr1;
+		 begin
+		    rk_state_next = ide_wr1;
+		    set_done = 1;
+		 end
 	    end
 	  
 	  ide_wr1:
@@ -812,7 +815,10 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
 	       ata_rd = 1;
 	       ata_addr = rkide_reg[4:0];
 	       if (ata_done)
-		 rk_state_next = ide_rd1;
+		 begin
+		    rk_state_next = ide_rd1;
+		    set_done = 1;
+		 end
 	    end
 
 	  ide_rd1:

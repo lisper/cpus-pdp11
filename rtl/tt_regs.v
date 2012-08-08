@@ -57,28 +57,32 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    wire 	 tx_enable, tx_empty;
    wire 	 rx_enable, rx_empty;
    wire [7:0] 	 rx_data;
+
 `ifdef fake_uart
-   integer 	 fake_count;
-   reg [7:0] 	 fake_rx_data;
+   fake_uart
+`else
+   uart
 `endif
+     tt_uart(
+	     .clk(clk),
+	     .reset(reset),
 
-   uart tt_uart(.clk(clk), .reset(reset),
-
-		.txclk(uart_tx_clk),
-		.ld_tx_req(ld_tx_req),
-		.ld_tx_ack(ld_tx_ack),
-		.tx_data(tto_data[7:0]), 
-		.tx_enable(tx_enable),
-		.tx_out(rs232_tx),
-		.tx_empty(tx_empty),
-
-		.rxclk(uart_rx_clk),
-		.uld_rx_req(uld_rx_req),
-		.uld_rx_ack(uld_rx_ack),
-		.rx_data(rx_data),
-		.rx_enable(rx_enable),
-		.rx_in(rs232_rx),
-		.rx_empty(rx_empty));
+	     .txclk(uart_tx_clk),
+	     .ld_tx_req(ld_tx_req),
+	     .ld_tx_ack(ld_tx_ack),
+	     .tx_data(tto_data[7:0]), 
+	     .tx_enable(tx_enable),
+	     .tx_out(rs232_tx),
+	     .tx_empty(tx_empty),
+      
+	     .rxclk(uart_rx_clk),
+	     .uld_rx_req(uld_rx_req),
+	     .uld_rx_ack(uld_rx_ack),
+	     .rx_data(rx_data),
+	     .rx_enable(rx_enable),
+	     .rx_in(rs232_rx),
+	     .rx_empty(rx_empty)
+	     );
 
    reg 		 rx_int;
    reg 		 tx_int;
@@ -97,11 +101,7 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 	if (iopage_rd && decode)
 	  case (iopage_addr)
 	    13'o17560: reg_out = {8'b0, tti_full, rx_int_enable, 6'b0};
-`ifdef fake_uart
-    	    13'o17562: reg_out = {8'b0, fake_rx_data};
-`else
     	    13'o17562: reg_out = {8'b0, rx_data};
-`endif
 	    13'o17564: reg_out = {8'b0, tto_empty, tx_int_enable, 6'b0};
 	    13'o17566: reg_out = tto_data;
 	    default: reg_out = 16'b0;
@@ -181,46 +181,13 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
      else
        tto_state <= tto_state_next;
 
-`ifdef fake_uart
-   // quicker version for sim; don't wait for uart
-   assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
-			   (tto_state == 1) ? 2 :
-			   (tto_state == 2) ? 3 :
-			   (tto_state == 3 && _tx_delay == 0) ? 4 :
-			   (tto_state == 4) ? 0 :
-			   tto_state;
-
-   integer _tx_delay;
-
-   initial
-     _tx_delay = 0;
-   
-   always @(posedge clk)
-     if (tto_data_wr)
-         _tx_delay = 100;
-     else
-       if (_tx_delay > 0)
-	 _tx_delay = _tx_delay - 1;
-
-`else
    assign tto_state_next = (tto_state == 0 && tto_data_wr) ? 1 :
 			   (tto_state == 1 && ld_tx_ack) ? 2 :
-//			   (tto_state == 2 && ~ld_tx_ack && ~tx_empty) ? 4 :
 			   (tto_state == 2 && ~ld_tx_ack) ? 3 :
-//			   (tto_state == 3 && ~tx_empty) ? 4 :
-//			   (tto_state == 4 && tx_empty) ? 5 :
-//			   (tto_state == 5) ? 0 :
 			   (tto_state == 3) ? 0 :
 			   tto_state;
 
- `ifdef debug
-   always @(posedge clk)
-     if (tto_state != 0)
-	   $display("tto_state %d ld_tx_req %b ld_tx_ack %b tx_empty %b",
-		    tto_state, ld_tx_req, ld_tx_ack, tx_empty);
- `endif
-   
-`endif
+   assign ld_tx_req = tto_state == 1;
 
    assign  assert_tx_int = (tto_state == 3) ||
 		   (tto_state == 0 && 
@@ -229,15 +196,19 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    assign clear_tx_int =
 		(interrupt_ack && asserting_tx_int && !asserting_rx_int);
 
-   assign ld_tx_req = tto_state == 1;
-
    always @(posedge clk)
      if (reset)
        tto_empty <= 0;
      else
        tto_empty <= tx_empty;
    
-//   assign tto_empty = tto_state == 0;
+ `ifdef debug
+   always @(posedge clk)
+     if (tto_state != 0)
+	   $display("uart: tto_state %d ld_tx_req %b ld_tx_ack %b tx_empty %b",
+		    tto_state, ld_tx_req, ld_tx_ack, tx_empty);
+ `endif
+   
    
    // tti state machine
    // don't become ready until we've clock data out of uart holding reg
@@ -257,172 +228,12 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
      else
        tti_state <= tti_state_next;
 
-`ifdef fake_uart
-`define no_fake_input
-//`define v6_unix
-//`define v7_unix
-//`define bsd29_unix
-//`define bsd211_unix
-//`define rsts
-
- `ifdef v6_unix
-   parameter fake_max = 9;
- `endif
- `ifdef v7_unix
-   parameter fake_max = 18;
- `endif
- `ifdef bsd29_unix
-   parameter fake_max = 13;
- `endif
- `ifdef bsd211_unix
-   parameter fake_max = 11;
- `endif
- `ifdef rsts
-   parameter fake_max = 21;
- `endif
- `ifdef no_fake_input
-   parameter fake_max = 0;
- `endif
-     
-   assign tti_state_next = (tti_state == 0 && fake_count <= fake_max) ? 1 :
-			   (tti_state == 1) ? 3 :
-			   (tti_state == 3 && tti_data_rd) ? 4 :
-			   (tti_state == 4 && rx_empty) ? 0 :
-			   tti_state;
-
-   initial
-`ifdef no_fake_input
-     fake_count = 10;
-`else
-     fake_count = 0;
-`endif
-   
-   always @(posedge clk)
-     if (tti_state == 1)
-       begin
-	  case (fake_count)
-`ifdef rsts
-	    0: fake_rx_data <= 8'h53; //S
-	    1: fake_rx_data <= 8'h54; //T
-	    2: fake_rx_data <= 8'h41; //A
-	    3: fake_rx_data <= 8'h52; //R
-	    4: fake_rx_data <= 8'h54; //T
-	    5: fake_rx_data <= 8'h0d; //<ret>
-	    6: fake_rx_data <= 8'h30;//0
-	    7: fake_rx_data <= 8'h31;//1
-	    8: fake_rx_data <= 8'h2d;//-
-	    9: fake_rx_data <= 8'h4a;//J
-	    10: fake_rx_data <= 8'h41;//A
-	    11: fake_rx_data <= 8'h4e;//N
-	    12: fake_rx_data <= 8'h2d;//-
-	    13: fake_rx_data <= 8'h38;//8
-	    14: fake_rx_data <= 8'h35;//5
-	    15: fake_rx_data <= 8'h0d;//<ret>
-	    16: fake_rx_data <= 8'h31;//1
-	    17: fake_rx_data <= 8'h30;//0
-	    18: fake_rx_data <= 8'h3a;//:
-	    19: fake_rx_data <= 8'h31;//1
-	    20: fake_rx_data <= 8'h30;//0
-	    21: fake_rx_data <= 8'h0d;//<ret>
-`endif
-`ifdef v6_unix
-	    0: fake_rx_data <= 8'h72; //r
-	    1: fake_rx_data <= 8'h6b; //k
-	    2: fake_rx_data <= 8'h75; //u
-	    3: fake_rx_data <= 8'h6e; //n
-	    4: fake_rx_data <= 8'h69; //i
-	    5: fake_rx_data <= 8'h78; //x
-	    6: fake_rx_data <= 8'h2e; //.
-	    7: fake_rx_data <= 8'h34; //4
-	    8: fake_rx_data <= 8'h30; //0
-	    9: fake_rx_data <= 8'h0d; //<ret>
-`endif
-`ifdef v7_unix
-	    0: fake_rx_data <= 8'h62; //b
-	    1: fake_rx_data <= 8'h6f; //o
-	    2: fake_rx_data <= 8'h6f; //o
-	    3: fake_rx_data <= 8'h74; //t
-	    4: fake_rx_data <= 8'h0d; //<ret>
-	    5: fake_rx_data <= 8'h72; //r
-	    6: fake_rx_data <= 8'h6b; //k
-	    7: fake_rx_data <= 8'h28; //(
-	    8: fake_rx_data <= 8'h30; //0
-	    9: fake_rx_data <= 8'h2c; //,
-	    10: fake_rx_data <= 8'h30; //0
-	    11: fake_rx_data <= 8'h29; //)
-	    12: fake_rx_data <= 8'h72; //r
-	    13: fake_rx_data <= 8'h6b; //k
-	    14: fake_rx_data <= 8'h75; //u
-	    15: fake_rx_data <= 8'h6e; //n
-	    16: fake_rx_data <= 8'h69; //i
-	    17: fake_rx_data <= 8'h78; //x
-	    18: fake_rx_data <= 8'h0d; //<ret>
-`endif
-`ifdef bsd29_unix
-	    0: fake_rx_data <= 8'h72; //r
-	    1: fake_rx_data <= 8'h6b; //k
-	    2: fake_rx_data <= 8'h28; //(
-	    3: fake_rx_data <= 8'h30; //0
-	    4: fake_rx_data <= 8'h2c; //,
-	    5: fake_rx_data <= 8'h30; //0
-	    6: fake_rx_data <= 8'h29; //)
-	    7: fake_rx_data <= 8'h72; //r
-	    8: fake_rx_data <= 8'h6b; //k
-	    9: fake_rx_data <= 8'h75; //u
-	    10: fake_rx_data <= 8'h6e; //n
-	    11: fake_rx_data <= 8'h69; //i
-	    12: fake_rx_data <= 8'h78; //x
-	    13: fake_rx_data <= 8'h0d; //<ret>
-`endif	    
-`ifdef bsd29_unix
-	    0: fake_rx_data <= 8'h72; //r
-	    1: fake_rx_data <= 8'h6b; //k
-	    2: fake_rx_data <= 8'h28; //(
-	    3: fake_rx_data <= 8'h30; //0
-	    4: fake_rx_data <= 8'h2c; //,
-	    5: fake_rx_data <= 8'h30; //0
-	    6: fake_rx_data <= 8'h29; //)
-	    7: fake_rx_data <= 8'h72; //r
-	    8: fake_rx_data <= 8'h6b; //k
-	    9: fake_rx_data <= 8'h75; //u
-	    10: fake_rx_data <= 8'h6e; //n
-	    11: fake_rx_data <= 8'h69; //i
-	    12: fake_rx_data <= 8'h78; //x
-	    13: fake_rx_data <= 8'h0d; //<ret>
-`endif	    
-`ifdef bsd211_unix
-	    0: fake_rx_data <= 8'h72; //r
-	    1: fake_rx_data <= 8'h6b; //k
-	    2: fake_rx_data <= 8'h28; //(
-	    3: fake_rx_data <= 8'h30; //0
-	    4: fake_rx_data <= 8'h2c; //,
-	    5: fake_rx_data <= 8'h30; //0
-	    6: fake_rx_data <= 8'h29; //)
-	    7: fake_rx_data <= 8'h75; //u
-	    8: fake_rx_data <= 8'h6e; //n
-	    9: fake_rx_data <= 8'h69; //i
-	    10: fake_rx_data <= 8'h78; //x
-	    11: fake_rx_data <= 8'h0d; //<ret>
-`endif	    
-	    default: ;
-	  endcase
-	  $display("tti: sending fake #%d", fake_count);
-	  fake_count = fake_count + 1;
-       end
-	  
-   always @(iopage_rd or iopage_addr)
-     if (iopage_rd && (iopage_addr == 13'o17562 || iopage_addr == 13'o17563))
-       $display("tti: read %o -> %o", iopage_addr, fake_rx_data);
-   
-	   
-`else
    assign tti_state_next = (tti_state == 0 && ~rx_empty) ? 1 :
 			   (tti_state == 1 && uld_rx_ack) ? 2 :
 			   (tti_state == 2 && ~uld_rx_ack) ? 3 :
 			   (tti_state == 3 && tti_data_rd) ? 4 :
 			   (tti_state == 4) ? 0 :
 			   tti_state;
-`endif
    
    assign uld_rx_req = tti_state == 1;
    assign tti_full = tti_state == 3;
@@ -431,6 +242,13 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 
    assign clear_rx_int = (interrupt_ack && asserting_rx_int);
 
+ `ifdef debug
+   always @(posedge clk)
+     if (tti_state != 0)
+	   $display("uart: tti_state %d uld_rx_req %b uld_rx_ack %b rx_empty %b",
+		    tti_state, uld_rx_req, uld_rx_ack, rx_empty);
+ `endif
+   
    // interrupts
    assign interrupt = asserting_rx_int || asserting_tx_int;
    

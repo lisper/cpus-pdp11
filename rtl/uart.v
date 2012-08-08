@@ -23,6 +23,7 @@ module uart(clk, reset,
    input        rx_in;
    output       rx_empty;
 
+   reg 		_ld_tx_ack;
    reg 		ld_tx_ack;
    reg 		uld_rx_ack;
 
@@ -78,17 +79,25 @@ module uart(clk, reset,
    assign uld_rx_data = rx_uld == 2'b00 && uld_rx_req;
    
    
-   // require tx_ld_req to deassert before accepting next char
-   always @(posedge txclk or posedge reset)
-     if (reset) begin
-	tx_ld <= 2'b00;
-	ld_tx_ack <= 0;
-     end
-     else begin
-	tx_ld <= tx_ld_next;
-	ld_tx_ack <= ld_tx_ack_next;
-     end
+   always @(posedge clk or posedge reset)
+     if (reset)
+       ld_tx_ack <= 0;
+     else
+       ld_tx_ack <= _ld_tx_ack;
 
+   always @(posedge txclk or posedge reset)
+     if (reset)
+       _ld_tx_ack <= 0;
+     else
+       _ld_tx_ack <= ld_tx_ack_next;
+
+   always @(posedge txclk or posedge reset)
+     if (reset)
+	tx_ld <= 2'b00;
+     else
+	tx_ld <= tx_ld_next;
+
+   // require ld_tx_req to deassert before accepting next char
    assign tx_ld_next =
 		      (tx_ld == 2'b00 && ~ld_tx_req) ? 2'b00 :
 		      (tx_ld == 2'b00 && ld_tx_req)  ? 2'b01 :
@@ -207,6 +216,9 @@ module uart(clk, reset,
 		  begin
 		     tx_reg <= tx_data;
 		     tx_empty <= 0;
+`ifdef debug
+		    $display("uart: tx loading 0x%x", tx_data);
+`endif
 		  end
 	     end
 
@@ -228,6 +240,9 @@ module uart(clk, reset,
 		    tx_out <= 1;
 		    tx_cnt <= 0;
 		    tx_empty <= 1;
+`ifdef debug
+		    $display("uart: tx empty");
+`endif
 		 end
 		 default: tx_out <= 0;
 	       endcase
