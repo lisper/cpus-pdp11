@@ -1,11 +1,11 @@
 
-AS = ../../utils/macro11/macro11
-DUMP = ../../utils/macro11/dumpobj
+AS = ../../../utils/macro11/macro11
+DUMP = ../../../utils/macro11/dumpobj
 
 SRC = diag.mac
 
 all: diag.mem
-	../basic/mem2bin <diag.mem >diag.bin
+	../../basic/mem2bin <diag.mem >diag.bin
 
 #------------------------------
 
