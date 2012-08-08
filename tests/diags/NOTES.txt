@@ -3,8 +3,9 @@ extract diagnostics from XXDP rl02 image
 FKAAC0.BIC      11/34 Basic CPU Test
 FKABD0.BIC	11/34 CPU trap Test
 FKACA0.BIC	11/34 Extended Instruction Set Test
-FKTGC0.BIC	11/34 Instruction / I/O Exerciser
 FKTHB0.BIN	11/34 Memory management test 2
+
+FKTGC0.BIC	11/34 Instruction / I/O Exerciser
 
 EKBAD0.BIC	11/70 CPU Diagnostic part 1
 
@@ -44,3 +45,17 @@ Diagnostic Group 1978
 load FKAAC0.BIC
 set cpu 11/34
 go 200
+
+----
+
+
+KKTA 		11/44 MEM MGMT PRT A
+KKTB 		11/44 MEM MGMT PRT B
+
+CKTGE0 - 11/45 mmu
+CQKCG0 - 11/45 instr exer
+
+DCKB0 - 11/45 cpu diag?
+DZQGA - 11/45 cpu diag?
+DCKTG - 11/45 kt11 mmu diags?
+

@@ -1,5 +1,5 @@
 
-SUBDIRS = basic diags 
+SUBDIRS = basic diags rom src
 
 define makeone
 	echo "[ $(1) ]";
