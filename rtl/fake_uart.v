@@ -8,10 +8,11 @@
 //`define bsd29_unix
 //`define bsd211_unix
 //`define rsts
-`define test_input
-//`define dir
+//`define test_input
+`define dir
 
-`define FAKE_CHAR_DELAY	1000
+`define FAKE_INIT_DELAY	10000000
+`define FAKE_CHAR_DELAY	3000
 
 module fake_uart(clk, reset,
 		 txclk, ld_tx_req, ld_tx_ack, tx_data, tx_enable, tx_out, tx_empty,
@@ -109,7 +110,7 @@ module fake_uart(clk, reset,
        begin
 	  next_fake <= 0;
 	  if (fake_count >= 0)
-	    _rx_delay = 10000000;
+	    _rx_delay = `FAKE_INIT_DELAY;
 	  else
 	    _rx_delay = 0;
        end

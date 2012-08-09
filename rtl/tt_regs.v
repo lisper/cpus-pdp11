@@ -189,16 +189,17 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 
    assign ld_tx_req = tto_state == 1;
 
-   reg [1:0] tx_empty_sample;
+   reg [3:0] tx_empty_sample;
    always @(posedge clk)
      if (reset)
-       tx_empty_sample <= 2'b0;
+       tx_empty_sample <= 4'b0;
      else
-       tx_empty_sample <= { tx_empty_sample[0], tx_empty };
+       tx_empty_sample <= { tx_empty_sample[2:0], tx_empty };
    
-   assign  assert_tx_int = tx_empty_sample == 2'b01 ||
-		   (tto_state == 0 && tx_empty_sample == 2'b11 &&
-		    iopage_wr && (iopage_addr == 13'o17564) && reg_in[6]);
+   assign  assert_tx_int =
+			  (tx_empty_sample[3:2] == 2'b01) ||
+			  (tto_state == 0 && tx_empty_sample[3:2] == 2'b11 &&
+			   iopage_wr && (iopage_addr == 13'o17564) && reg_in[6]);
 
    assign clear_tx_int =
 		(interrupt_ack && asserting_tx_int && !asserting_rx_int);
