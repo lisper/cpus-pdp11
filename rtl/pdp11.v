@@ -1654,7 +1654,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
      else
        if (ok_to_assert_int)
 	 begin
-          if (bus_int & ipl_below)
+	    if (bus_int & ipl_below && ~interrupt)
 	    begin
                interrupt <= 1;
 	       interrupt_ack_ipl <= ipl_winner/*bus_int_ipl*/;

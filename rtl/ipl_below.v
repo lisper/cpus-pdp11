@@ -44,5 +44,27 @@ module ipl_below(ipl, asserting, result, winner);
 		  hot[1] ? 8'h02 :
 		  hot[0] ? 8'h01 :
 		  0;
-   
+
+`ifdef debug
+   integer count;
+
+   assign count =
+		 (asserting[0] ? 1 : 0) +
+		 (asserting[1] ? 1 : 0) +
+		 (asserting[2] ? 1 : 0) +
+		 (asserting[3] ? 1 : 0) +
+		 (asserting[4] ? 1 : 0) +
+		 (asserting[5] ? 1 : 0) +
+		 (asserting[6] ? 1 : 0) +
+		 (asserting[7] ? 1 : 0);
+
+   always
+     begin
+	if (count > 1) begin
+	   $display("XXX bus_int_ipl count=%d; %t", count, $time);
+	   //$finish;
+	end
+     end
+`endif
+
 endmodule

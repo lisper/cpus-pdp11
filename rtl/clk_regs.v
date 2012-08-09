@@ -18,6 +18,7 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    output 	 decode;
 
    output 	 interrupt;
+   reg 		 interrupt;
    output [7:0]  vector;
 
    reg [19:0] 	 counter;
@@ -71,7 +72,6 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
    assign reg_in = (iopage_byte_op & iopage_addr[0]) ? {8'b0, data_in[15:8]} :
 		   data_in;
 
-   assign interrupt = clk_int_enable && clk_done;
    assign vector = 8'o100;
 
    wire   clk_fired;
@@ -98,22 +98,33 @@ module clk_regs(clk, reset, iopage_addr, data_in, data_out, decode,
 	     end
 	 endcase
        else
-	 if (clk_fired)
-	   begin
-	      clk_done <= 1;
+	 begin
+	    if (clk_fired)
+	      begin
+		 clk_done <= 1;
 `ifdef debug
-	      $display("clk: fired");
+		 $display("clk: fired");
 `endif
-	   end
-else
-  //if (interrupt_ack)
-  if (clk_done)
-    begin
-       clk_done <= 0;
+	      end
+	    else
+	      if (clk_done)
+		begin
+		   clk_done <= 0;
 `ifdef debug
-       $display("clk: reset");
+		   $display("clk: reset");
 `endif
-    end	   
+		end
+	 end
+
+   always @(posedge clk)
+     if (reset)
+       interrupt <= 0;
+   else
+     if (clk_int_enable && clk_done)
+       interrupt <= 1;
+     else
+       if (interrupt_ack)
+	 interrupt <= 0;
    
    always @(posedge clk)
      if (reset)

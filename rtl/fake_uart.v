@@ -8,9 +8,10 @@
 //`define bsd29_unix
 //`define bsd211_unix
 //`define rsts
-//`define test_input
-`define dir
+`define test_input
+//`define dir
 
+`define FAKE_CHAR_DELAY	1000
 
 module fake_uart(clk, reset,
 		 txclk, ld_tx_req, ld_tx_ack, tx_data, tx_enable, tx_out, tx_empty,
@@ -98,7 +99,7 @@ module fake_uart(clk, reset,
 `ifdef debug
 	       $display("fake_uart: rx_data = 0x%2x; empty %t", hold, $time);
 `endif
-	       _rx_delay = 200;
+	       _rx_delay = `FAKE_CHAR_DELAY;
 	    end
        end
 
@@ -336,17 +337,22 @@ module fake_uart(clk, reset,
 	    13: hold = 8'h74; //t
 	    14: hold = 8'h0d; //<ret>
 	    15: hold = 8'h0a; //<lf>
-	    16: hold = 8'h03; //^C
+	    16: begin
+	       hold = 8'h03; //^C
+	       fake_done = 1;
+	    end
 `endif
 `ifdef dir
-//	    0: hold = 8'h64; //d
-//	    1: hold = 8'h69; //i
-//	    2: hold = 8'h72; //r
-//	    3: begin
-//	       hold = 8'h0d; //<ret>
-//	       fake_done = 1;
-//	    end
+	    0: hold = 8'h64; //d
+	    1: hold = 8'h69; //i
+	    2: hold = 8'h72; //r
 	    3: begin
+	       hold = 8'h0d; //<ret>
+	       fake_done = 1;
+	    end
+`endif
+`ifdef d_only
+	    0: begin
 	       hold = 8'h64;
 	       fake_done = 1;
 	    end

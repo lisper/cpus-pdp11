@@ -52,23 +52,23 @@ module ram_async(clk, reset,
      else
        state <= next_state;
 
-   assign next_state =
-		      (state == 0 && rd) ? 1 :
-		      (state == 0 && wr) ? 5 :
-
-		      (state == 1 && rd) ? 2 :
-		      (state == 2 && rd) ? 2 :
-
-		      (state == 5 && wr) ? 6 :
-		      (state == 6 && wr) ? 6 :
-		      0;
-
 //   assign next_state =
 //		      (state == 0 && rd) ? 1 :
 //		      (state == 0 && wr) ? 5 :
+//
 //		      (state == 1 && rd) ? 2 :
+//		      (state == 2 && rd) ? 2 :
+//
 //		      (state == 5 && wr) ? 6 :
+//		      (state == 6 && wr) ? 6 :
 //		      0;
+
+   assign next_state =
+		      (state == 0 && rd) ? 1 :
+		      (state == 0 && wr) ? 5 :
+		      (state == 1 && rd) ? 2 :
+		      (state == 5 && wr) ? 6 :
+		      0;
 
 //   assign next_state =
 //		      (state == 0 && rd) ? 1 :
