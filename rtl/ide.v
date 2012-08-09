@@ -28,23 +28,25 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
    reg [2:0] 	ide_da;
 
    //
-   parameter [4:0] ATA_DELAY = 8;
+   parameter [4:0] ATA_DELAY = 20/*13*/;
 
    reg [4:0] ata_count;
 
-   reg [2:0] ata_state;
+   reg [3:0] ata_state;
 
-   parameter [2:0]
-		s0 = 3'd0,
-		s1 = 3'd1,
-		s2 = 3'd2,
-		s3 = 3'd3,
-		s4 = 3'd4,
-		s5 = 3'd5,
-		s6 = 3'd6,
-		s7 = 3'd7;
+   parameter [3:0]
+		s0 = 4'd0,
+		s1 = 4'd1,
+		s2 = 4'd2,
+		s3 = 4'd3,
+		s4 = 4'd4,
+		s5 = 4'd5,
+		s6 = 4'd6,
+		s7 = 4'd7,
+		s8 = 4'd8,
+		s9 = 4'd9;
 
-   wire [2:0] ata_state_next;
+   wire [3:0] ata_state_next;
 
    wire       ide_start, ide_busy, ide_stop;
    
@@ -85,7 +87,9 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
 			  (ata_state == s4) ? s5 :
 			  (ata_state == s5) ? s6 :
 			  (ata_state == s6) ? s7 :
-			  (ata_state == s7) ? s0 :
+			  (ata_state == s7) ? s8 :
+			  (ata_state == s8) ? s9 :
+			  (ata_state == s9) ? s0 :
 			  ata_state;
 
    assign ide_start = ata_state == s1;
@@ -113,10 +117,16 @@ module ide(clk, reset, ata_rd, ata_wr, ata_addr, ata_in, ata_out, ata_done,
 	  ide_d_in <= 0;
        end
      else
-       if (ide_start)
+       if (ata_state == s0 && (ata_rd || ata_wr)/*ide_start*/)
 	 begin
 	    ide_cs <= ata_addr[4:3];
 	    ide_da <= ata_addr[2:0];
+//	    ide_dior <= ata_rd ? 1'b0 : 1'b1;
+//	    ide_diow <= ata_wr ? 1'b0 : 1'b1;
+	 end
+       else
+       if (ide_start)
+	 begin
 	    ide_dior <= ata_rd ? 1'b0 : 1'b1;
 	    ide_diow <= ata_wr ? 1'b0 : 1'b1;
 	 end
