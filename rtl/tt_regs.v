@@ -20,7 +20,9 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    output 	 decode;
 
    output 	 interrupt;
+   reg 		 interrupt;
    output [7:0]  vector;
+   reg [7:0]  vector;
 
    output 	 rs232_tx;
    input 	 rs232_rx;
@@ -198,11 +200,11 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    
    assign  assert_tx_int =
 			  (tx_empty_sample[3:2] == 2'b01) ||
+			  /* below is a hack which I don't think I need anymore */
 			  (tto_state == 0 && tx_empty_sample[3:2] == 2'b11 &&
 			   iopage_wr && (iopage_addr == 13'o17564) && reg_in[6]);
 
-   assign clear_tx_int =
-		(interrupt_ack && asserting_tx_int && !asserting_rx_int);
+   assign  clear_tx_int = tto_data_wr;
 
    always @(posedge clk)
      if (reset)
@@ -246,10 +248,8 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    assign uld_rx_req = tti_state == 1;
    assign tti_full = tti_state == 3;
    
-//   assign assert_rx_int = tti_full;
    assign assert_rx_int = tti_state == 2 && ~uld_rx_ack;
-			    
-   assign clear_rx_int = (interrupt_ack && asserting_rx_int);
+   assign clear_rx_int = tti_data_rd;
 
  `ifdef debug
    always @(posedge clk)
@@ -259,16 +259,27 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
  `endif
    
    // interrupts
-   assign interrupt = asserting_rx_int || asserting_tx_int;
-   
    assign asserting_rx_int = rx_int_enable && rx_int;
    assign asserting_tx_int = tx_int_enable && tx_int;
 
-   // assert vector in int priority order
-   assign vector = asserting_rx_int ? 8'o60 :
-		   asserting_tx_int ? 8'o64 :
-		   8'b0;
-
+   always @(posedge clk)
+     if (reset)
+       interrupt <= 0;
+     else
+       begin
+	  if (asserting_rx_int || asserting_tx_int)
+	    begin
+	       interrupt <= 1;
+	       // assert vector in int priority order
+	       vector <= asserting_rx_int ? 8'o60 :
+			 asserting_tx_int ? 8'o64 :
+			 8'b0;
+	    end
+	  else
+	    if (interrupt_ack)
+	      interrupt <= 0;
+       end
+   
    always @(posedge clk)
      if (reset)
        begin
@@ -305,9 +316,6 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 	  $display("tt: XXX rx_int+ %b; %t", rx_int, $time);
 	if (rx_int == 1 && clear_rx_int)
 	  $display("tt: XXX rx_int- %b; %t", rx_int, $time);
-//	if (interrupt)
-//	  $display("tt: interrupt %b %b; %t", 
-//		   asserting_rx_int, asserting_tx_int, $time);
 	if (interrupt_ack)
 	  $display("tt: interrupt_ack; %t", $time);
      end
