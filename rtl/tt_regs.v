@@ -238,13 +238,14 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    assign uld_rx_req = tti_state == 1;
    assign tti_full = tti_state == 3;
    
-   assign assert_rx_int = tti_full;
-
+//   assign assert_rx_int = tti_full;
+   assign assert_rx_int = tti_state == 2 && ~uld_rx_ack;
+			    
    assign clear_rx_int = (interrupt_ack && asserting_rx_int);
 
  `ifdef debug
    always @(posedge clk)
-     if (tti_state != 0)
+     if (tti_state != tti_state_next)
 	   $display("uart: tti_state %d uld_rx_req %b uld_rx_ack %b rx_empty %b",
 		    tti_state, uld_rx_req, uld_rx_ack, rx_empty);
  `endif

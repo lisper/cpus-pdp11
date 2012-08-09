@@ -1641,8 +1641,9 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 			     istate == s4 || istate == d4 || istate == w1;
 
    wire ipl_below;
+   wire [7:0] ipl_winner;
 
-   ipl_below_func ibf(ipl, bus_int_ipl, ipl_below);
+   ipl_below ibf(ipl, bus_int_ipl, ipl_below, ipl_winner);
    
    always @(posedge clk)
      if (reset)
@@ -1656,11 +1657,11 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
           if (bus_int & ipl_below)
 	    begin
                interrupt <= 1;
-	       interrupt_ack_ipl <= bus_int_ipl;
+	       interrupt_ack_ipl <= ipl_winner/*bus_int_ipl*/;
                vector <= bus_int_vector;
 `ifdef debug/*_cpu_int*/
-               $display("cpu: XXX interrupt asserts; vector %o (istate %d)",
-			bus_int_vector, istate);
+               $display("cpu: XXX interrupt asserts; vector %o (istate %d); bus_int_ipl %b, ipl_winner %b; %t",
+			bus_int_vector, istate, bus_int_vector, ipl_winner, $time);
 `endif
             end
 	  else
@@ -1679,16 +1680,16 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 `ifdef debug_cpu_int
    always @(posedge clk)
      if (ok_to_assert_int && bus_int)
-       $display("cpu: XXX cpu int; ipl %o, int_ipl %b, vector %o, ack_ipl %b below %b",
+       $display("cpu: XXX cpu int; ipl %o, int_ipl %b, vector %o, ack_ipl %b below %b; %t",
 		ipl, bus_int_ipl, bus_int_vector,
-		interrupt_ack_ipl, ipl_below);
+		interrupt_ack_ipl, ipl_below, $time);
 `endif
 
    
 `ifdef debug_cpu_int
    always @(posedge clk)
      if (interrupt)
-       $display("cpu: XXX cpu int; vector %o, istate %o, interrupt_ack_ipl %o",
+       $display("cpu: XXX cpu int; vector %o, istate %o, interrupt_ack_ipl %b",
 		vector, istate, interrupt_ack_ipl);
    
    always @(posedge clk)
@@ -1898,12 +1899,12 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
 		      pc, sp, psw, ipl, cc_n, cc_z, cc_v, cc_c,
 		      r0, r1, r2, r3, r4, r5, sp, pc);
 	  end // case: f1
-   	if (istate == f1 && bus_ack && ~reset)
-	  $display("    bus_data_in=%o", bus_data_in);
-   	if (istate == c1 && ~reset)
-	  $display("c1: isn %o", isn);
-   	if (istate == e1 && ~reset)
-	  $display("e1: isn %o, ss_data %o, dd_data %o", isn, ss_data, dd_data);
+//   	if (istate == f1 && bus_ack && ~reset)
+//	  $display("    bus_data_in=%o", bus_data_in);
+//   	if (istate == c1 && ~reset)
+//	  $display("c1: isn %o", isn);
+//   	if (istate == e1 && ~reset)
+//	  $display("e1: isn %o, ss_data %o, dd_data %o", isn, ss_data, dd_data);
      end
 `endif
 

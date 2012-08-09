@@ -8,7 +8,8 @@
 //`define bsd29_unix
 //`define bsd211_unix
 //`define rsts
-`define test_input
+//`define test_input
+`define dir
 
 
 module fake_uart(clk, reset,
@@ -33,6 +34,7 @@ module fake_uart(clk, reset,
    output       rx_empty;
 
    integer 	 fake_count;
+   reg 		 fake_done;
    reg [7:0] 	 rx_data;
 
    //
@@ -96,6 +98,7 @@ module fake_uart(clk, reset,
 `ifdef debug
 	       $display("fake_uart: rx_data = 0x%2x; empty %t", hold, $time);
 `endif
+	       _rx_delay = 200;
 	    end
        end
 
@@ -104,8 +107,8 @@ module fake_uart(clk, reset,
      if (reset)
        begin
 	  next_fake <= 0;
-	  if (fake_count > 0)
-	    _rx_delay = 100;
+	  if (fake_count >= 0)
+	    _rx_delay = 10000000;
 	  else
 	    _rx_delay = 0;
        end
@@ -117,10 +120,10 @@ module fake_uart(clk, reset,
 	       _rx_delay = _rx_delay - 1;
 	    end
 
-	  if (_rx_delay == 0 && rx_empty == 1)
+	  if (_rx_delay == 0 && rx_empty == 1 && ~fake_done)
 	    begin
 	       next_fake <= 1;
-	       _rx_delay = 200;
+	       _rx_delay = 1000;
 `ifdef debug
 	       $display("fake_uart: next %t", $time);
 `endif
@@ -198,11 +201,14 @@ module fake_uart(clk, reset,
  `endif
      
    initial
+     begin
 `ifdef no_fake_input
-     fake_count = -1;
+	fake_count = -1;
 `else
-     fake_count = 0;
+	fake_count = 0;
 `endif
+	fake_done = 0;
+     end
 
    always @(posedge clk)
      if (next_fake)
@@ -332,6 +338,19 @@ module fake_uart(clk, reset,
 	    15: hold = 8'h0a; //<lf>
 	    16: hold = 8'h03; //^C
 `endif
+`ifdef dir
+//	    0: hold = 8'h64; //d
+//	    1: hold = 8'h69; //i
+//	    2: hold = 8'h72; //r
+//	    3: begin
+//	       hold = 8'h0d; //<ret>
+//	       fake_done = 1;
+//	    end
+	    3: begin
+	       hold = 8'h64;
+	       fake_done = 1;
+	    end
+`endif
 	    default: ;
 	  endcase // case(fake_count)
 
@@ -341,6 +360,9 @@ module fake_uart(clk, reset,
 	       fake_count = fake_count + 1;
 	       rx_empty = 0;
 	    end
+
+	  if (fake_done)
+	    fake_count = -1;
        end
 	  
 endmodule // uart
