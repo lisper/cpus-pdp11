@@ -73,20 +73,23 @@ module top(rs232_txd, rs232_rxd,
    reg [24:0] clkdiv;
    wire [24:0] clkmax;
 
-   assign clkmax = (slideswitch[3:0] == 4'd0)  ? 25'h1 :
-		   (slideswitch[3:0] == 4'd1)  ? 25'h2 :
-		   (slideswitch[3:0] == 4'd2)  ? 25'h1ff :
-		   (slideswitch[3:0] == 4'd3)  ? 25'h7ff :
-		   (slideswitch[3:0] == 4'd4)  ? 25'h1fff :
-		   (slideswitch[3:0] == 4'd5)  ? 25'h7fff :
-		   (slideswitch[3:0] == 4'd6)  ? 25'h1ffff :
-		   (slideswitch[3:0] == 4'd7)  ? 25'h7ffff :
-		   (slideswitch[3:0] == 4'd8)  ? 25'h1fffff :
+   assign clkmax = (slideswitch[3:0] == 4'd0)  ? 25'd1 :
+		   (slideswitch[3:0] == 4'd1)  ? 25'd2 :
+		   (slideswitch[3:0] == 4'd2)  ? 25'd4 :
+		   (slideswitch[3:0] == 4'd3)  ? 25'd8 :
+		   (slideswitch[3:0] == 4'd4)  ? 25'd16 :
+		   (slideswitch[3:0] == 4'd5)  ? 25'd127 :
+		   (slideswitch[3:0] == 4'd6)  ? 25'd255 :
+		   (slideswitch[3:0] == 4'd7)  ? 25'd511 :
+		   (slideswitch[3:0] == 4'd8)  ? 25'd1023 :
 		   (slideswitch[3:0] == 4'd9)  ? 25'h3fffff :
 		   (slideswitch[3:0] == 4'd10) ? 25'h7fffff :
    		   (slideswitch[3:0] == 4'd11) ? 25'hffffff :
 		   25'h1ffffff;
-     
+
+   initial
+     clkdiv = 0;
+   
    always @(posedge sysclk)
      begin
         if (clkdiv == clkmax)
