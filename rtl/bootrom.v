@@ -1,9 +1,9 @@
 // bootrom.v
 // basic rk11 bootrom, residing at 1773000 (173000)
 
-//`define boot_rk
+`define boot_rk
 //`define boot_tt
-`define boot_kb
+//`define boot_kb
 //`define boot_diag
 //`define debug_bootrom
 
@@ -106,47 +106,47 @@ module bootrom(clk, reset, iopage_addr, data_in, data_out, decode,
  `endif
 
  `ifdef boot_kb
-512: fetch = 16'o000240;
-514: fetch = 16'o012706;
-516: fetch = 16'o001000;
-518: fetch = 16'o012700;
-520: fetch = 16'o173100;
-522: fetch = 16'o112001;
-524: fetch = 16'o001403;
-526: fetch = 16'o004737;
-528: fetch = 16'o173050;
-530: fetch = 16'o000773;
-532: fetch = 16'o004737;
-534: fetch = 16'o173064;
-536: fetch = 16'o020127;
-538: fetch = 16'o000003;
-540: fetch = 16'o001404;
-542: fetch = 16'o004737;
-544: fetch = 16'o173050;
-546: fetch = 16'o000137;
-548: fetch = 16'o173024;
-550: fetch = 16'o000000;
-552: fetch = 16'o105737;
-554: fetch = 16'o177564;
-556: fetch = 16'o100375;
-558: fetch = 16'o110137;
-560: fetch = 16'o177566;
-562: fetch = 16'o000207;
-564: fetch = 16'o105737;
-566: fetch = 16'o177560;
-568: fetch = 16'o100375;
-570: fetch = 16'o113701;
-572: fetch = 16'o177562;
-574: fetch = 16'o000207;
-576: fetch = 16'o005015;
-578: fetch = 16'o062510;
-580: fetch = 16'o066154;
-582: fetch = 16'o020157;
-584: fetch = 16'o067567;
-586: fetch = 16'o066162;
-588: fetch = 16'o020544;
-590: fetch = 16'o005015;
-592: fetch = 16'o000000;
+	 512: fetch = 16'o000240;
+	 514: fetch = 16'o012706;
+	 516: fetch = 16'o001000;
+	 518: fetch = 16'o012700;
+	 520: fetch = 16'o173100;
+	 522: fetch = 16'o112001;
+	 524: fetch = 16'o001403;
+	 526: fetch = 16'o004737;
+	 528: fetch = 16'o173050;
+	 530: fetch = 16'o000773;
+	 532: fetch = 16'o004737;
+	 534: fetch = 16'o173064;
+	 536: fetch = 16'o020127;
+	 538: fetch = 16'o000003;
+	 540: fetch = 16'o001404;
+	 542: fetch = 16'o004737;
+	 544: fetch = 16'o173050;
+	 546: fetch = 16'o000137;
+	 548: fetch = 16'o173024;
+	 550: fetch = 16'o000000;
+	 552: fetch = 16'o105737;
+	 554: fetch = 16'o177564;
+	 556: fetch = 16'o100375;
+	 558: fetch = 16'o110137;
+	 560: fetch = 16'o177566;
+	 562: fetch = 16'o000207;
+	 564: fetch = 16'o105737;
+	 566: fetch = 16'o177560;
+	 568: fetch = 16'o100375;
+	 570: fetch = 16'o113701;
+	 572: fetch = 16'o177562;
+	 574: fetch = 16'o000207;
+	 576: fetch = 16'o005015;
+	 578: fetch = 16'o062510;
+	 580: fetch = 16'o066154;
+	 582: fetch = 16'o020157;
+	 584: fetch = 16'o067567;
+	 586: fetch = 16'o066162;
+	 588: fetch = 16'o020544;
+	 590: fetch = 16'o005015;
+	 592: fetch = 16'o000000;
  `endif
 	 
  `ifdef boot_diag

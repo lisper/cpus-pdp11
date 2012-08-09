@@ -1661,7 +1661,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
                vector <= bus_int_vector;
 `ifdef debug/*_cpu_int*/
                $display("cpu: XXX interrupt asserts; vector %o (istate %d); bus_int_ipl %b, ipl_winner %b; %t",
-			bus_int_vector, istate, bus_int_vector, ipl_winner, $time);
+			bus_int_vector, istate, bus_int_ipl, ipl_winner, $time);
 `endif
             end
 	  else

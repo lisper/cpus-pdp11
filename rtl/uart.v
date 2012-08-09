@@ -210,14 +210,19 @@ module uart(clk, reset,
 	begin
    	   if (ld_tx_data)
 	     begin
-		if (!tx_empty)
-		  tx_over_run <= 1;
+		if (!tx_empty && tx_ld == 2'b00) begin
+		   tx_over_run <= 1;
+`ifdef debug
+		   $display("uart: TX OVERRUN! %t", $time);
+		   $finish;
+`endif
+		end
 		else
 		  begin
 		     tx_reg <= tx_data;
 		     tx_empty <= 0;
 `ifdef debug
-		    $display("uart: tx loading 0x%x", tx_data);
+		    $display("uart: tx loading 0x%x; %t", tx_data, $time);
 `endif
 		  end
 	     end
