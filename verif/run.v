@@ -11,9 +11,9 @@
 //`define debug_cycles
 
 // for booting rt-11
-//`define no_mmu
-//`define use_18bit_phys
-//`define sim_56k
+`define no_mmu
+`define use_18bit_phys
+`define sim_56k
 
 //`define no_fake_input
 `define fake_uart
@@ -28,7 +28,6 @@
 `define debug_bus_all 	1
 `define debug_bus_ram	1
 
-//`define debug_vcd
 //`define debug_log
 //`define debug_mmu
 
@@ -49,6 +48,10 @@
 //`define use_ram_pli	1
 
 `include "../verif/rtl.v"
+
+`ifdef fake_uart
+ `include "../rtl/fake_uart.v"
+`endif
 
 module test;
 
@@ -89,10 +92,12 @@ module test;
    wire        bus_d_access;
 
    wire        mmu_fetch_va;
+   wire        mmu_valid_incdec;
    wire        mmu_trap_odd;
    wire        mmu_abort;
    wire        mmu_trap;
    wire        mmu_wr_inhibit;
+   wire [15:0] mmu_incdec;
    
    reg 	       tracing;
    
@@ -119,10 +124,12 @@ module test;
 	     .bus_cpu_cm(bus_cpu_cm),
 
 	     .mmu_fetch_va(mmu_fetch_va),
+	     .mmu_valid_incdec(mmu_valid_incdec),
 	     .mmu_trap_odd(mmu_trap_odd),
 	     .mmu_abort(mmu_abort),
 	     .mmu_trap(mmu_trap),
 	     .mmu_wr_inhibit(mmu_wr_inhibit),
+	     .mmu_incdec(mmu_incdec),
 	     
 	     .bus_int(bus_int),
 	     .bus_int_ipl(bus_int_ipl),
@@ -152,7 +159,9 @@ module test;
 	    .cpu_d_access(bus_d_access),
 	    .cpu_trap(trapped),
 	    .cpu_pa(bus_addr_p),
+	    .cpu_incdec(mmu_incdec),
 	    .fetch_va(mmu_fetch_va),
+	    .valid_incdec(mmu_valid_incdec),
 	    .trap_odd(mmu_trap_odd),
 	    .signal_abort(mmu_abort),
 	    .signal_trap(mmu_trap),
@@ -174,7 +183,9 @@ module test;
 	    .cpu_d_access(bus_d_access),
 	    .cpu_trap(trapped),
 	    .cpu_pa(bus_addr_p),
+	    .cpu_incdec(mmu_incdec),
 	    .fetch_va(mmu_fetch_va),
+	    .valid_incdec(mmu_valid_incdec),
 	    .trap_odd(mmu_trap_odd),
 	    .signal_abort(mmu_abort),
 	    .signal_trap(mmu_trap),
@@ -188,7 +199,7 @@ module test;
      
    wire [21:0] ram_addr;
    wire [15:0] ram_data_in, ram_data_out;
-   wire        ram_rd, ram_wr, ram_byte_op;
+   wire        ram_rd, ram_wr, ram_byte_op, ram_done;
    wire [4:0]  rk_state;
    wire signal_mmu_trap;
    
@@ -217,7 +228,8 @@ module test;
 	    .ram_rd(ram_rd),
 	    .ram_wr(ram_wr),
 	    .ram_byte_op(ram_byte_op),
-
+	    .ram_done(ram_done),
+	   
 	    .pxr_wr(pxr_wr),
 	    .pxr_rd(pxr_rd),
 	    .pxr_be(pxr_be),
@@ -268,7 +280,8 @@ module test;
 		  .wr(ram_wr),
 		  .wr_inhibit(mmu_wr_inhibit),
 		  .byte_op(ram_byte_op),
-
+		  .done(ram_done),
+		  
 		  .ram_a(ram_a),
 		  .ram_oe_n(ram_oe_n), .ram_we_n(ram_we_n),
 		  .ram1_io(ram1_io), .ram1_ce_n(ram1_ce_n),
@@ -299,7 +312,6 @@ module test;
 `endif
 
 	starting_pc = 16'o173000;
-//	starting_pc = 16'o200;
 
 `ifdef __ICARUS__
  `define no_scan
@@ -329,10 +341,16 @@ module test;
 	$nolog;
 `endif
 `endif
-	
-`ifdef debug_vcd
-	$dumpfile("pdp11.vcd");
-	$dumpvars(0, test.cpu, test.bus1);
+
+`ifdef __CVER__
+ 	n = $scan$plusargs("w=", arg);
+	if (n > 0)
+	  begin
+	     $display("vcd=%s", arg);
+	     
+	     $dumpfile(arg);
+	     $dumpvars(0, test.cpu, test.bus);
+	  end
 `endif
      end
 
@@ -344,11 +362,26 @@ module test;
 	rs232_rx = 0;
 
 	max_cycles = 2500000;
-
-// 2.9bsd
-max_cycles = 0;
-switches = 16'o40;
+`ifdef __CVER__
+	// 2.9bsd
+	//max_cycles = 0;
+	//switches = 16'o40;
 	
+ 	n = $scan$plusargs("max_cycles=", arg);
+	if (n > 0)
+	  begin
+	     n = $sscanf(arg, "%d", max_cycles);
+	     $display("arg %s max_cycles %d", arg, max_cycles);
+	  end
+
+ 	n = $scan$plusargs("switches=", arg);
+	if (n > 0)
+	  begin
+	     n = $sscanf(arg, "%o", switches);
+	     $display("arg %s switches %o", arg, switches);
+	  end
+`endif
+
 `ifndef verilator
 	#1 reset = 1;
 	repeat(1)@(negedge clk);

@@ -8,16 +8,17 @@
 
 `define debug		1
 `define debug_bus	1
-`define debug_bus_ram	1
-`define debug_bus_io	1
+//`define debug_bus_ram	1
 //`define debug_bus_state	1
-`define debug_io	1
+//`define debug_bus_io	1
+//`define debug_io	1
+//`define debug_rk_regs	1
+//`define debug_ram	1
 
 `define debug_bus_int	1
 
 `define use_rk_model	1
 
-`define debug_ram	1
 //`define debug_ram_low	1
 
 //`define use_ram_sync	1
@@ -49,7 +50,7 @@ module test_bus;
 
    wire [21:0] ram_addr;
    wire [15:0] ram_data_in, ram_data_out;
-   wire        ram_rd, ram_wr, ram_byte_op;
+   wire        ram_rd, ram_wr, ram_byte_op, ram_done;
 
    wire        pxr_wr;
    wire        pxr_rd;
@@ -99,6 +100,7 @@ module test_bus;
 	    .ram_rd(ram_rd),
 	    .ram_wr(ram_wr),
 	    .ram_byte_op(ram_byte_op),
+	    .ram_done(ram_done),
 
 	    .pxr_wr(pxr_wr),
 	    .pxr_rd(pxr_rd),
@@ -150,7 +152,8 @@ module test_bus;
 		  .wr(ram_wr),
 		  .wr_inhibit(wr_inhibit),
 		  .byte_op(ram_byte_op),
-
+		  .done(ram_done),
+		  
 		  .ram_a(ram_a),
 		  .ram_oe_n(ram_oe_n), .ram_we_n(ram_we_n),
 
@@ -171,68 +174,73 @@ module test_bus;
 		    .ram2_ub_n(ram2_ub_n), .ram2_lb_n(ram2_lb_n));
 `endif
 
+   task bus_transaction;
+      input [21:0] addr;
+      input [15:0] data_out;
+      output [15:0] data_in;
+      input 	   wr;
+      input 	   rd;
+      input 	   op;
+      
+      begin
+	 @(posedge clk);
+	 @(posedge clk);
+	 bus_addr = addr;
+	 bus_in = data_out;
+	 #1 bus_wr = wr;
+	 #1 bus_rd = rd;
+	 bus_byte_op = op;
+
+	 @(posedge clk);
+	 @(posedge clk);
+	 while (bus_ack == 1'b0) @(posedge clk);
+@(posedge clk);
+	 data_in = bus_out;
+	 bus_wr = 0;
+	 bus_rd = 0;
+	 bus_byte_op = 0;
+      end
+   endtask
+   
    task write_io_reg;
       input [12:0] addr;
       input [15:0] data;
+      reg [15:0] d;
 
       begin
-	 repeat(2)@(posedge clk);
-	 bus_addr = {12'b111111111111, addr};
-	 bus_in = data;
-	 bus_wr = 1;
-	 bus_byte_op = 0;
-
-	 @(posedge clk);
-	 bus_wr = 0;
-	 bus_in = 0;
+	 d = 0;
+	 bus_transaction({12'b111111111111, addr}, data, d, 1, 0, 0);
       end
    endtask
 
    task read_io_reg;
       input [12:0] addr;
+      output [15:0]   data;
 
       begin
-	 repeat(2)@(posedge clk);
-	 bus_addr = {12'b111111111111, addr};
-	 bus_rd = 1;
-	 bus_byte_op = 0;
-
-	 @(posedge clk);
-	 bus_rd = 0;
+	 bus_transaction({12'b111111111111, addr}, 0, data, 0, 1, 0);
       end
    endtask
 
    task write_mem22;
       input [21:0] addr;
       input [15:0] data;
+      reg [15:0] d;
 
       begin
-	 repeat(2)@(posedge clk);
-	 bus_addr = addr;
-	 bus_in = data;
-	 bus_byte_op = 0;
-	 bus_wr = 1;
-
-	 @(posedge clk);
-	 bus_in = 0;
-	 bus_wr = 0;
+	 d = 0;
+	 bus_transaction(addr, data, d, 1, 0, 0);
       end
    endtask
 
    task write_mem;
       input [15:0] addr;
       input [15:0] data;
-
+      reg [15:0]   d;
+      
       begin
-	 repeat(2)@(posedge clk);
-	 bus_addr = {6'b0, addr};
-	 bus_in = data;
-	 bus_byte_op = 0;
-	 bus_wr = 1;
-
-	 @(posedge clk);
-	 bus_in = 0;
-	 bus_wr = 0;
+	 d = 0;
+	 bus_transaction(addr, data, d, 1, 0, 0);
       end
    endtask
 
@@ -241,17 +249,7 @@ module test_bus;
       output [15:0] result;
       
       begin
-	 repeat(2)@(posedge clk);
-	 bus_addr = {6'b0, addr};
-	 bus_byte_op = 0;
-	 #1 bus_rd = 1;
-
-	 @(negedge clk);
-	 result = bus_out;
-	 
-	 @(posedge clk);
-	 #1 bus_rd = 0;
-	 @(posedge clk);
+	 bus_transaction(addr, 0, result, 0, 1, 0);
       end
    endtask
 
@@ -280,6 +278,7 @@ module test_bus;
       begin
 	 $display("FAILURE addr %o, data %o, expected %o",
 		  addr, data, expected);
+	 #60 $finish;
       end
    endtask
 
@@ -292,7 +291,7 @@ module test_bus;
       begin
 	 read_mem(addr, result);
 	 if (result != data)
-	   failure(addr, bus_out, data);
+	   failure(addr, result, data);
       end
    endtask
       
@@ -330,25 +329,32 @@ module test_bus;
    endtask
    
    task wait_for_rk;
+      reg [15:0]   result;
       begin
-	 read_io_reg(13'o17404);
-	 while (bus_out[7] == 1'b0) #10;
+	 read_io_reg(13'o17404, result);
+	 while (result[7] == 1'b0)
+	   begin
+	      read_io_reg(13'o17404, result);
+	   end
       end
    endtask
 
    task test_bus_ram_test;
       begin
+	 $display("\n***** bus ram test");
+	 bus_arbitrate = 0;
+
 	 // should bus error
          write_mem22(22'o0776000, 16'h0000);
 
-	 $display("");
+	 $display("\n--write");
          write_mem(16'o0000, 16'ha5a5);
 	 write_mem(16'o0002, 16'h5a5a);
 	 write_mem(16'o0004, 16'o1234);
 	 write_mem(16'o0006, 16'o177777);
 	 write_mem(16'o0010, 16'o54321);
 
-	 $display("");
+	 $display("\n--read");
 	 read_mem_expect(16'o0000, 16'ha5a5);
 	 read_mem_expect(16'o0002, 16'h5a5a);
 	 read_mem_expect(16'o0004, 16'o1234);
@@ -359,6 +365,7 @@ module test_bus;
    
    task test_bus_ram_retest;
       begin
+	 $display("\n***** bus ram re-test");
 	 bus_arbitrate = 0;
 	 read_mem_expect(16'o0000, 16'ha5a5);
 	 read_mem_expect(16'o0002, 16'h5a5a);
@@ -440,7 +447,7 @@ module test_bus;
       reg [15:0] ma;
 
       begin
-	 $display("\n--basic rk test");
+	 $display("\n***** basic rk test");
 
 	 ma = 16'o1000;
 	 
@@ -495,6 +502,8 @@ module test_bus;
    task odd_rk_test;
       reg [15:0] ma;
       begin
+	 $display("\n***** odd rk test");
+
 	 ma = 16'o2000;
 
 	 // read sector 0
@@ -516,6 +525,8 @@ module test_bus;
       reg [15:0] ma;
 
       begin
+	 $display("\n***** block rk test");
+	 
 	 ma = 16'o4000;
 
 	 for (blk = 0; blk < 10; blk = blk + 1)
@@ -540,7 +551,7 @@ module test_bus;
       begin
 	 bus_rk_test;
 	 basic_rk_test;
-//       odd_rk_test;
+	 odd_rk_test;
 //       rk_test;
       end
    endtask
@@ -575,9 +586,9 @@ module test_bus;
        #1 reset = 1;
        #50 reset = 0;
 
-//       test_bus_ram_test;
+       test_bus_ram_test;
        test_bus_rk_test;
-//       test_bus_ram_retest;
+       test_bus_ram_retest;
        
        $finish;
     end

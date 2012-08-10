@@ -61,7 +61,7 @@ module test_rk;
 	      .dma_data_out(dma_data_out),
 	      .dma_rd(dma_rd),
 	      .dma_wr(dma_wr),
-	      .rk_state(rk_state)
+	      .rk_state_out(rk_state)
 	      );
 
    //
@@ -148,7 +148,7 @@ module test_rk;
 
    task basic_rk_test;
       begin
-	 $display("basic rk05 tests");
+	 $display("***** basic rk05 tests");
 
 	 // write sector zero
 	 rk_write_block(0, 256, 0);
@@ -163,7 +163,7 @@ module test_rk;
 
    task odd_rk_test;
       begin
-	 $display("odd rk05 tests");
+	 $display("***** odd rk05 tests");
 
 	 // read sector 0 short
 	 rk_read_block(0, 128, 0);
@@ -183,6 +183,8 @@ module test_rk;
       integer 	   blk;
 
       begin
+	 $display("***** block rk05 tests");
+
 	 for (blk = 0; blk < 10; blk = blk + 1)
 	   begin
 	      rk_read_block(blk, 256, 0);
@@ -206,7 +208,7 @@ module test_rk;
       integer   b, i, file;
 
       begin
-	 $display("preparing rk-test.dsk");
+	 $display("***** preparing rk-test.dsk");
 	 
 	 file = $fopen("rk-test.dsk", "wb");
 
@@ -280,6 +282,7 @@ module test_rk;
 	$pli_ide(ide_data_bus, ide_dior, ide_diow, ide_cs, ide_da);
      end
 
+`ifdef show_rk
    always @(posedge clk)
      #2 begin
 	if (rk.ide1.ata_state == 0 ||
@@ -300,6 +303,7 @@ module test_rk;
 `endif
 
      end
+`endif
    
 endmodule
 

@@ -8,6 +8,7 @@
 `define sim_time	1
 
 `define fake_uart
+`define slower
 
 `define debug_tt_out	1
 `define debug_tt_int	1
@@ -18,9 +19,10 @@
 
 `define debug_cpu_int	1
 
-//`define no_mmu
-//`define use_18bit_phys
-//`define sim_56k
+// for RT-11
+`define no_mmu
+`define use_18bit_phys
+`define sim_56k
 
 `include "../rtl/pdp11.v"
 `include "../rtl/ipl_below.v"
@@ -47,12 +49,19 @@
 
 `include "../rtl/tt_regs.v"
 `include "../rtl/brg.v"
-`include "../rtl/uart.v"
+
+`ifdef fake_uart
+ `include "../rtl/fake_uart.v"
+`else
+ `include "../rtl/uart.v"
+`endif
 
 `include "../rtl/bus.v"
 `include "../rtl/bootrom.v"
 `include "../rtl/iopage.v"
 `include "../rtl/reset_btn.v"
+`include "../rtl/ram_async.v"
+
 
 `include "../rtl/sevensegdecode.v"
 `include "../rtl/display.v"
@@ -85,52 +94,47 @@ module wrap_ide(clk, ide_data_in, ide_data_out, ide_dior, ide_diow, ide_cs, ide_
 
    always @(posedge clk)
      begin
-	dpi_ide(dbi, dbo, {31'b0, ide_dior}, {31'b0, ide_diow}, {30'b0, ide_cs}, {29'b0, ide_da});
-
-//	if (ide_dior == 0)
-//	  $display("wrap_ide: read (%b %b) %x %x", ide_dior, ide_diow, dbo, ide_data_out);
+	dpi_ide(dbi,
+		dbo,
+		{31'b0, ide_dior},
+		{31'b0, ide_diow},
+		{30'b0, ide_cs},
+		{29'b0, ide_da});
      end
 
 endmodule
 
-module ram_async(clk, reset,
-		 addr, data_in, data_out, rd, wr, wr_inhibit, byte_op,
-		 ram_a, ram_oe_n, ram_we_n,
-		 ram1_io, ram1_ce_n, ram1_ub_n, ram1_lb_n,
-		 ram2_io, ram2_ce_n, ram2_ub_n, ram2_lb_n);
+module wrap_s3board_ram(clk,
+			ram_a, ram_oe_n, ram_we_n,
+			ram1_in, ram1_out, ram1_ce_n, ram1_ub_n, ram1_lb_n,
+			ram2_in, ram2_out, ram2_ce_n, ram2_ub_n, ram2_lb_n);
 
    input clk;
-   input reset;
-
-   input [17:0] addr;
-   input [15:0] data_in;
-   output [15:0] data_out;
-   input 	 rd, wr, wr_inhibit, byte_op;
-
-   output [17:0] ram_a;
-   output 	 ram_oe_n, ram_we_n;
-   inout [15:0]  ram1_io;
-   output 	 ram1_ce_n, ram1_ub_n, ram1_lb_n;
-   inout [15:0]  ram2_io;
-   output 	 ram2_ce_n, ram2_ub_n, ram2_lb_n;
-
-   wire [15:0]  ram1_io;
-
-   wire 	wr_short;
-   assign wr_short = (wr & ~clk) && ~wr_inhibit;
+   input [17:0] ram_a;
+   input 	ram_oe_n, ram_we_n;
+   input [15:0]  ram1_in;
+   output [15:0] ram1_out;
+   input 	 ram1_ce_n, ram1_ub_n, ram1_lb_n;
+   input [15:0]  ram2_in;
+   output [15:0] ram2_out;
+   input 	 ram2_ce_n, ram2_ub_n, ram2_lb_n;
 
    wire [31:0] din, dout;
+	   
+   wire [31:0] addr;
+   wire   rd, wr, ub, lb;
 
-   assign din = ~byte_op ? {16'b0, data_in} :
-		{16'b0, data_in[7:0], data_in[7:0]};
-
-   assign data_out = ~byte_op ? dout[15:0] :
-		     {8'b0, addr[0] ? dout[15:8] : dout[7:0]};
-
-   wire   ub, lb;
+   assign addr = {14'b0, ram_a};
    
-   assign ub = ~byte_op || (byte_op && addr[0]);
-   assign lb = ~byte_op || (byte_op && ~addr[0]);
+   assign din = {16'b0, ram1_in};
+
+   assign ram1_out = dout[15:0];
+   assign ram2_out = 0;
+
+   assign rd = ~ram_oe_n;
+   assign wr = ~ram_we_n;
+   assign ub = ~ram1_ub_n;
+   assign lb = ~ram1_lb_n;
 
    import "DPI-C" function void dpi_ram(input integer a,
 					input integer r,
@@ -140,11 +144,12 @@ module ram_async(clk, reset,
 					input integer in,
 					output integer out);
 
-   always @(addr or rd or wr or data_in or data_out)
+//   always @(addr or rd or wr or din or dout)
+   always @(posedge clk or negedge clk)
      begin
-	dpi_ram({15'b0, addr[17:1]},
+	dpi_ram(addr,
 		{31'b0, rd},
-		{31'b0, wr_short},
+		{31'b0, wr},
 		{31'b0, ub},
 		{31'b0, lb},
 		din,
@@ -176,7 +181,7 @@ module test_top;
    wire 	ram1_ub_n;
    wire 	ram1_lb_n;
 
-   wire [15:0]  ram2_io;
+   wire [15:0] 	ram2_io;
    wire 	ram2_ce_n;
    wire 	ram2_ub_n;
    wire 	ram2_lb_n;
@@ -214,6 +219,7 @@ module test_top;
 
    wire [15:0] ide_data_in;
    wire [15:0] ide_data_out;
+
    assign ide_data_bus = ~ide_dior ? ide_data_out : 16'bz;
    assign ide_data_in = ide_data_bus;
 
@@ -224,5 +230,57 @@ module test_top;
 		     .ide_diow(ide_diow),
 		     .ide_cs(ide_cs),
 		     .ide_da(ide_da));
+
+   wire [15:0] ram1_in;
+   wire [15:0] ram1_out;
+
+   assign ram1_io = ram_we_n ? ram1_out : 16'bz;
+   assign ram1_in = ram1_io;
+
+   wire [15:0] ram2_in;
+   wire [15:0] ram2_out;
+
+//   assign ram2_io = ram_we_n ? ram2_out : 16'bz;
+//   assign ram2_in = ram2_io;
+   assign ram2_io = 0;
+   assign ram2_in = 0;
+
+   wrap_s3board_ram wrap_s3board_ram(
+				     .clk(sysclk),
+				     .ram_a(ram_a),
+				     .ram_oe_n(ram_oe_n),
+				     .ram_we_n(ram_we_n),
+				     .ram1_in(ram1_in),
+				     .ram1_out(ram1_out),
+				     .ram1_ce_n(ram1_ce_n),
+				     .ram1_ub_n(ram1_ub_n),
+				     .ram1_lb_n(ram1_lb_n),
+				     .ram2_in(ram2_in),
+				     .ram2_out(ram2_out),
+				     .ram2_ce_n(ram2_ce_n),
+				     .ram2_ub_n(ram2_ub_n),
+				     .ram2_lb_n(ram2_lb_n)
+				     );
+
+   // debug
+   always @(posedge sysclk)
+     if (led[0])
+       begin
+	  $display("cpu halted");
+	  $finish;
+       end
+
+`ifdef slower
+   initial
+     begin
+	button = 0;
+	slideswitch = 8'b0000_0000;
+//	slideswitch = 8'b0000_0001;
+//	slideswitch = 8'b0000_0010;
+//	slideswitch = 8'b0000_0011;
+//	slideswitch = 8'b0000_0100;
+//	slideswitch = 8'b0000_1000;
+     end
+`endif
 
 endmodule

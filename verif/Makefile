@@ -13,11 +13,11 @@ BTESTS := $(filter-out %test17.mem,$(BTESTS))
 DTESTS = $(wildcard ../tests/diags/*.mem)
 #DTESTS := $(filter-out %FKAAC0.mem,$(DTESTS))
 # trap doesn't abort tst (r0)+ increment
-DTESTS := $(filter-out %FKABD0.mem,$(DTESTS))
+#DTESTS := $(filter-out %FKABD0.mem,$(DTESTS))
 #DTESTS := $(filter-out %FKACA0.mem,$(DTESTS))
 # ??
 DTESTS := $(filter-out %FKTGC0.mem,$(DTESTS))
-DTESTS := $(filter-out %FKTHB0.mem,$(DTESTS))
+#DTESTS := $(filter-out %FKTHB0.mem,$(DTESTS))
 
 RTL = \
 	../rtl/pdp11.v ../rtl/ipl_below.v ../rtl/add8.v ../rtl/mmu.v \
@@ -49,13 +49,22 @@ define checkone_basic_code
      @echo checking $(2)
      @grep -a f1 $(1) >/tmp/a;
      @grep -a f1 $(2) | sed -e 's/ 077 / 77 /g' -e 's/(077 /(77 /g' >/tmp/b;
-     @diff -q /tmp/a /tmp/b;
+     @diff -qb /tmp/a /tmp/b;
      @if [ $$? -ne 0 ]; then \
        echo blah; \
      fi;
 endef
 
 define runone_basic_code
+     @echo creating $(2)
+     @eval "cver +loadvpi=../pli/ide/pli_ide.so:vpi_compat_bootstrap \
+	     +loadvpi=../pli/rk/pli_rk.so:vpi_compat_bootstrap \
+	     +loadvpi=../pli/pdp11/pli_pdp11dis.so:vpi_compat_bootstrap \
+	     +test=$(1) +pc=$(3) +w=`basename $(2) .log`.vcd \
+	     run.v" >$(2);
+endef
+
+define runone_diag_code
      @echo creating $(2)
      @eval "cver +loadvpi=../pli/ide/pli_ide.so:vpi_compat_bootstrap \
 	     +loadvpi=../pli/rk/pli_rk.so:vpi_compat_bootstrap \
@@ -78,7 +87,7 @@ basic: $(BTEST_LOGS)
 DTEST_LOGS = $(addsuffix .log,$(basename $(notdir $(DTESTS))))
 
 $(DTEST_LOGS) : %.log : ../tests/diags/%.mem $(RTL)
-	$(call runone_basic_code,$<,$@,200)
+	$(call runone_diag_code,$<,$@,200)
 	$(call checkone_basic_code,$(patsubst %.mem,%.log,$<),$@)
 
 # dec diagnostics

@@ -37,7 +37,7 @@ module test_ide;
 
    task wait_for_ide_idle;
       begin
-	 while (ide1.ata_state == 3'b0) #10;
+	 while (ide1.ata_state != 3'b0) #10;
 	 #20;
       end
    endtask
@@ -73,6 +73,23 @@ module test_ide;
       end
    endtask
    
+   task test_ide_write;
+      input [4:0] addr;
+      input [15:0] data;
+
+      begin
+	 #20 begin
+ 	    ata_wr = 1;
+	    ata_addr = addr;
+	    ata_in = data;
+	 end
+	 wait_for_ide_done;
+	 $display("addr %x in %x out %x", addr, ata_in, ata_out);
+	 ata_wr = 0;
+	 wait_for_ide_idle;
+      end
+   endtask
+   
   initial
     begin
       $timeformat(-9, 0, "ns", 7);
@@ -100,6 +117,10 @@ module test_ide;
        test_ide_read(5'b10100, 16'h0, 16'h0);
        test_ide_read(5'b10101, 16'h0, 16'h0);
        test_ide_read(5'b10110, 16'h0, 16'h0);
+
+       test_ide_write(5'b10000, 16'h0);
+       test_ide_write(5'b10000, 16'h1);
+       test_ide_write(5'b10000, 16'h2);
 
        $finish;
     end
