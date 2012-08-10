@@ -21,6 +21,8 @@
 //
 
 //`define debug_buserr
+`define use_18bit_phys
+`define sim_56k
 
 module bus(clk, brgclk, reset, bus_addr, bus_data_in, bus_data_out,
 	   bus_rd, bus_wr, bus_byte_op,

@@ -3,6 +3,8 @@
 // copyright Brad Parker <brad@heeltoe.com> 2009-2010
 //
 
+`define no_mmu
+
 module top(rs232_txd, rs232_rxd,
 	   button, led, sysclk,
 	   sevenseg, sevenseg_an,
@@ -64,7 +66,7 @@ module top(rs232_txd, rs232_rxd,
    assign initial_pc = 32'o173000;
 
 `ifndef sim_time
-// `define slower
+ `define slower
 `endif
 
 `ifdef slower
