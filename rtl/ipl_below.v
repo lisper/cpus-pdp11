@@ -1,5 +1,7 @@
 //
-module ipl_below(ipl, asserting, result, winner);
+module ipl_below(clk, reset, ipl, asserting, result, winner);
+   input clk;
+   input reset;
    input [2:0] ipl;
    input [7:0] asserting;
    output      result;
@@ -46,7 +48,7 @@ module ipl_below(ipl, asserting, result, winner);
 		  0;
 
 `ifdef debug
-   integer count;
+   wire [7:0] count;
 
    assign count =
 		 (asserting[0] ? 1 : 0) +
@@ -58,7 +60,7 @@ module ipl_below(ipl, asserting, result, winner);
 		 (asserting[6] ? 1 : 0) +
 		 (asserting[7] ? 1 : 0);
 
-   always
+   always @(posedge clk)
      begin
 	if (count > 1) begin
 	   $display("XXX bus_int_ipl count=%d; %t", count, $time);

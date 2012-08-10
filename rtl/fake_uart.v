@@ -12,6 +12,7 @@
 `define dir
 
 `define FAKE_INIT_DELAY	10000000
+//`define FAKE_INIT_DELAY	0
 `define FAKE_CHAR_DELAY	3000
 
 module fake_uart(clk, reset,
@@ -34,6 +35,11 @@ module fake_uart(clk, reset,
    input        rx_enable;
    input        rx_in;
    output       rx_empty;
+
+   reg 		uld_rx_ack;
+   reg 		ld_tx_ack;
+   reg 		rx_empty;
+   reg 		tx_empty;
 
    integer 	 fake_count;
    reg 		 fake_done;
@@ -98,7 +104,7 @@ module fake_uart(clk, reset,
    	       rx_data <= hold;
 	       rx_empty = 1;
 `ifdef debug
-	       $display("fake_uart: rx_data = 0x%2x; empty %t", hold, $time);
+	       $display("fake_uart: rx_data = 0x%0x; empty %t", hold, $time);
 `endif
 	       _rx_delay = `FAKE_CHAR_DELAY;
 	    end
@@ -363,7 +369,7 @@ module fake_uart(clk, reset,
 
 	  if (fake_count >= 0)
 	    begin
-	       $display("fake_uart: holding fake #%0d = 0x%2x %t", fake_count, hold, $time);
+	       $display("fake_uart: holding fake #%0d = 0x%0x %t", fake_count, hold, $time);
 	       fake_count = fake_count + 1;
 	       rx_empty = 0;
 	    end

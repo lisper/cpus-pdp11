@@ -20,7 +20,6 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    output 	 decode;
 
    output 	 interrupt;
-   reg 		 interrupt;
    output [7:0]  vector;
    reg [7:0]  vector;
 
@@ -33,6 +32,8 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
    wire 	 tti_full;
    wire 	 tti_data_rd;
 
+   reg [1:0] 	 interrupt_out;
+ 	 
    wire 	 asserting_tx_int;
    wire 	 asserting_rx_int;
    
@@ -259,26 +260,31 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
  `endif
    
    // interrupts
+   assign interrupt = |interrupt_out;
+   
    assign asserting_rx_int = rx_int_enable && rx_int;
    assign asserting_tx_int = tx_int_enable && tx_int;
 
    always @(posedge clk)
      if (reset)
-       interrupt <= 0;
+       interrupt_out <= 2'b00;
      else
-       begin
-	  if (asserting_rx_int || asserting_tx_int)
-	    begin
-	       interrupt <= 1;
-	       // assert vector in int priority order
-	       vector <= asserting_rx_int ? 8'o60 :
-			 asserting_tx_int ? 8'o64 :
-			 8'b0;
-	    end
-	  else
-	    if (interrupt_ack)
-	      interrupt <= 0;
-       end
+       // since we have 2 sources, ack must be higher priority
+       if (interrupt_ack)
+	 begin
+	    if (asserting_rx_int)
+	      interrupt_out[0] <= 0;
+	    else
+	      if (asserting_tx_int)
+		interrupt_out[1] <= 0;
+	 end
+       else
+	 begin
+	    interrupt_out[0] <= asserting_rx_int;
+	    interrupt_out[1] <= asserting_tx_int;
+	    // assert vector in int priority order
+	    vector <= asserting_rx_int ? 8'o60 : 8'o64;
+	 end
    
    always @(posedge clk)
      if (reset)

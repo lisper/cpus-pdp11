@@ -389,21 +389,21 @@ module rk_regs (clk, reset, iopage_addr, data_in, data_out, decode,
      if (reset)
        interrupt <= 0;
      else
-	  if (assert_int)
-	    begin
+       if (assert_int)
+	 begin
 `ifdef debug
-	       $display("rk: XXX assert interrupt\n");
+	    $display("rk: XXX assert interrupt\n");
 `endif
-	       interrupt <= 1;
-	    end
-	  else
-	    if (interrupt_ack)
-	      begin
-		 interrupt <= 0;
+	    interrupt <= 1;
+	 end
+       else
+	 if (interrupt_ack)
+	   begin
+	      interrupt <= 0;
 `ifdef debug
-		 $display("rk: XXX ack interrupt\n");
+	      $display("rk: XXX ack interrupt\n");
 `endif
-	      end
+	   end
 
    // grab the dma'd data, later used by ide
    always @(posedge clk)

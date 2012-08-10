@@ -1643,7 +1643,7 @@ assign      enable_s1 = istate == s1 && ~trap_abort && ~trap_bus;
    wire ipl_below;
    wire [7:0] ipl_winner;
 
-   ipl_below ibf(ipl, bus_int_ipl, ipl_below, ipl_winner);
+   ipl_below ibf(clk, reset, ipl, bus_int_ipl, ipl_below, ipl_winner);
    
    always @(posedge clk)
      if (reset)
