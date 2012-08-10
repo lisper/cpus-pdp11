@@ -1,0 +1,143 @@
+	.TITLE inttest
+	.ASECT
+	.ENABL AMA
+
+	.=60
+	kbisr
+	340
+	ttisr
+	340
+
+	.=100
+	clkisr
+	340
+
+	.=500
+start:
+	nop
+	mov	#2000,sp
+init:
+	mov	#msg,r0
+loop1:
+	movb	(r0)+,r1	; copy initial message to tt ring
+	beq	loop2
+	jsr	pc,put1
+	br	loop1
+
+loop2:
+	spl	0		; enable interrupts
+	mov	#100,r0
+	mov	r0,kps
+	mov	r0,tps		; turn on ints on tt
+
+loop3:
+	tst	kbcnt		; kb input?
+	beq	loop3
+	jsr	pc,get1		; get it
+	cmp	r1,#3
+	beq	loop4		; if ^C, exit
+	jsr	pc,put1		; echo back
+	br	loop3
+
+loop4:
+	tst	ttcnt		; wait for output to drain
+	bne	loop4
+
+done:
+	halt
+
+;
+get1:
+	mov	r0,-(sp)
+	mov	kbtail,r0	; r1 <- next kb ring char
+	movb	(r0),r1
+	incb	kbtail
+	dec	kbcnt
+	mov	(sp)+,r0
+	rts	pc
+
+;
+put1:
+	mov	r0,-(sp)
+	mov	tthead,r0	; r1 -> tt ring
+	movb	r1,(r0)
+	incb	tthead
+	inc	ttcnt
+
+	mov	#100,r0
+	mov	r0,tps		; turn on ints on tt
+
+	mov	(sp)+,r0
+	rts	pc
+
+kps = 177560
+kpb = 177562
+tps = 177564
+tpb = 177566
+
+tpchr:
+	tstb	tps
+	bpl	tpchr
+	movb	r1,tpb
+	rts	pc
+
+kpchr:
+	tstb	kps
+	bpl	kpchr
+	movb	kpb,r1
+	rts	pc
+
+msg:
+	.byte	15,12
+	.ascii "Interrupt test"
+	.byte	15,12
+	.byte	0
+
+	.even
+clock:
+	.byte	0,0
+
+
+;
+clkisr:
+	inc clock
+	rti
+
+;
+kbisr:
+	mov	r0,-(sp)
+	mov	kbhead,r0
+	mov	kpb,r1
+	movb	r1,(r0)
+	incb	kbhead
+	inc	kbcnt
+	mov	(sp)+,r0
+	rti
+
+ttisr:
+	mov	r0,-(sp)
+	mov	r1,-(sp)
+	mov	ttcnt,r0
+	beq	ttstop
+
+	mov	tttail,r0
+	movb	(r0),r1
+	mov	r1,tpb
+	incb	tttail
+	dec	ttcnt
+	br	ttdone
+
+ttstop:
+	clr	tps
+ttdone:
+	mov	(sp)+,r1
+	mov	(sp)+,r0
+	rti
+
+ttcnt:	.word	0
+tthead:	.word	5000
+tttail:	.word	5000
+
+kbcnt:	.word	0
+kbhead:	.word	6000
+kbtail:	.word	6000

@@ -1,8 +1,8 @@
-	.TITLE test1
+	.TITLE ttytest
 	.ASECT
 	.ENABL AMA
-;	.=500
-	.=173000	
+	.=500
+;	.=173000	
 	
 start:
 	nop
@@ -10,7 +10,7 @@ start:
 	mov	#msg,r0
 loop:
 	movb	(r0)+,r1
-	beq	done
+	beq	read
 	jsr	pc,tpchr
 	br	loop
 
