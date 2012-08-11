@@ -21,5 +21,21 @@ and actual diagnostics from DEC.
 Booting RT11 is a somewhat high level but does test pretty much
 everything except the MMU.
 
+----
 
+Status of O/S boots:
+
+rt-11		no-mmu, 18bit, 56k;
+		11/34 mmu, 22bit, 256k
+
+rstsv4		11/34 mmu, 22bit, 256k
+
+v6 unix		11/45 mmu, 22bit, 256k
+
+v7 unix		(still debugging split i/d)
+
+2.9 bsd		11/45 mmu, 22bit, 256k
+		11/44 mmu, 22bit, 256k
+
+2.11 bsd	(still debugging split i/d)
 

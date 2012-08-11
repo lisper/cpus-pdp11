@@ -8,7 +8,7 @@
 `define sim_time	1
 
 `define fake_uart
-`define slower
+//`define slower
 
 `define debug_tt_out	1
 `define debug_tt_int	1
@@ -20,9 +20,9 @@
 `define debug_cpu_int	1
 
 // for RT-11
-`define no_mmu
-`define use_18bit_phys
-`define sim_56k
+//`define no_mmu
+//`define use_18bit_phys
+//`define sim_56k
 
 `include "../rtl/pdp11.v"
 `include "../rtl/ipl_below.v"
