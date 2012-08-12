@@ -205,8 +205,9 @@ module tt_regs(clk, brgclk, reset, iopage_addr, data_in, data_out, decode,
 			  (tto_state == 0 && tx_empty_sample[3:2] == 2'b11 &&
 			   iopage_wr && (iopage_addr == 13'o17564) && reg_in[6]);
 
-   assign  clear_tx_int = tto_data_wr;
-
+   assign  clear_tx_int = tto_data_wr/*;*/
+			  || (interrupt_ack && !asserting_rx_int && asserting_tx_int);
+  
    always @(posedge clk)
      if (reset)
        tto_empty <= 0;
